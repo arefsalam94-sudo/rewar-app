@@ -44,8 +44,7 @@ class TicketCard extends StatelessWidget {
       ? AppColors.darkGlassTop
       : AppColors.pageGradientTop;
 
-  static double defaultRadius(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? 24 : 16;
+  static double defaultRadius(BuildContext context) => 28;
 
   @override
   Widget build(BuildContext context) {

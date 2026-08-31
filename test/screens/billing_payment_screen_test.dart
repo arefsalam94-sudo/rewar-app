@@ -64,7 +64,7 @@ void main() {
       final card = tester
           .widgetList<GlassPanel>(find.byType(GlassPanel))
           .singleWhere((panel) => panel.borderRadius == 28);
-      expect(card.fill, GlassFill.sheen);
+      expect(card.depth, GlassDepth.base);
     });
 
     testWidgets('Add Card calls the hosted-flow hook when supplied', (

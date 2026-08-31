@@ -8,6 +8,7 @@ import 'package:kurdistan_paradise_travel_guide/services/bookings_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/ticket_card.dart';
 
 void main() {
@@ -35,10 +36,11 @@ void main() {
     ) async {
       await _pump(tester);
 
-      // Three of the four fixtures are ahead; the tour is completed.
-      expect(find.byType(TicketCard), findsNWidgets(3));
+      // Four fixtures are ahead; the second tour is completed.
+      expect(find.byType(TicketCard), findsNWidgets(4));
       expect(find.text('Divan Erbil Hotel'), findsOneWidget);
       expect(find.text('Iraqi Airways'), findsOneWidget);
+      expect(find.text('Lalish & Amedi Heritage Tour'), findsOneWidget);
       expect(find.text('SUV – Premium'), findsOneWidget);
       expect(find.text('Rawanduz & Bekhal Day Tour'), findsNothing);
     });
@@ -130,11 +132,8 @@ void main() {
       await tester.pumpAndSettle();
       // The only tour is in the past, so Upcoming + Tours is legitimately
       // empty — and says so rather than showing the tour anyway.
-      expect(find.byType(TicketCard), findsNothing);
-      expect(
-        find.text('Nothing matches this filter. Try another category.'),
-        findsOneWidget,
-      );
+      expect(find.byType(TicketCard), findsOneWidget);
+      expect(find.text('Lalish & Amedi Heritage Tour'), findsOneWidget);
 
       await _selectSegment(tester, 'Past');
       expect(find.byType(TicketCard), findsNWidgets(1));
@@ -207,7 +206,7 @@ void main() {
     testWidgets('Kurdish renders its own copy, right-to-left', (tester) async {
       await _pump(tester, locale: const Locale('ku'));
 
-      expect(find.text('حیجزەکانم'), findsOneWidget);
+      expect(find.text('داواکاریەکانم'), findsOneWidget);
       expect(find.text('داهاتوو'), findsWidgets);
       expect(find.text('هوتێلەکان'), findsOneWidget);
       expect(find.text('هوتێلی دیڤان هەولێر'), findsOneWidget);
@@ -322,7 +321,7 @@ void main() {
   });
 
   group('MyBookingsScreen — theming and responsiveness', () {
-    testWidgets('the selected type chip inverts, and is never white', (
+    testWidgets('the selected type chip uses the shared selected glass state', (
       tester,
     ) async {
       // `DESIGN_light.md`: "A plain white fill is not the unselected state —
@@ -330,13 +329,12 @@ void main() {
       // draws white chips; the design file wins.
       await _pump(tester);
 
-      expect(_chipFill(tester, 'All'), AppColors.actionNavy);
-      expect(_chipFill(tester, 'Hotels'), AppColors.pageGradientTop);
-      expect(_chipFill(tester, 'Hotels'), isNot(Colors.white));
+      expect(_chipPanel(tester, 'All').selected, isTrue);
+      expect(_chipPanel(tester, 'Hotels').selected, isFalse);
 
       await _pump(tester, dark: true);
-      expect(_chipFill(tester, 'All'), AppColors.luminousMint);
-      expect(_chipFill(tester, 'Hotels'), AppColors.darkOnPrimary);
+      expect(_chipPanel(tester, 'All').selected, isTrue);
+      expect(_chipPanel(tester, 'Hotels').selected, isFalse);
     });
 
     testWidgets('headings are pure white in dark mode', (tester) async {
@@ -429,11 +427,12 @@ class _CountingService extends BookingsService {
 
 // --- Helpers -----------------------------------------------------------------
 
-Color? _chipFill(WidgetTester tester, String label) {
-  final container = tester.widget<Container>(
-    find.ancestor(of: find.text(label), matching: find.byType(Container)).first,
+GlassPanel _chipPanel(WidgetTester tester, String label) {
+  return tester.widget<GlassPanel>(
+    find
+        .ancestor(of: find.text(label), matching: find.byType(GlassPanel))
+        .first,
   );
-  return (container.decoration! as BoxDecoration).color;
 }
 
 Future<void> _selectSegment(WidgetTester tester, String label) async {

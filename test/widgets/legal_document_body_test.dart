@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/models/legal_document.dart';
-import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/legal_document_body.dart';
 
@@ -128,11 +127,11 @@ void main() {
       );
     });
 
-    testWidgets('headings use the accent token in light mode', (tester) async {
+    testWidgets('headings use the heading token in light mode', (tester) async {
       await _pump(tester, _document());
       expect(
         tester.widget<Text>(find.text('Heading')).style!.color,
-        AppColors.actionNavy,
+        const Color(0xFF1B1B1B), // DESIGN_LIGHT F.md -> text-heading
       );
     });
 

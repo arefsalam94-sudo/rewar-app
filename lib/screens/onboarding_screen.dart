@@ -399,6 +399,15 @@ class _SlideMetrics {
   static const double titleSize1 = 58;
   static const double titleSize2 = 45;
   static const double titleSize2LastSlide = 55;
+
+  /// Slide 2 inverts the emphasis of the other slides: the region's name is
+  /// the headline and the verb above it is the smaller line.
+  static const double titleSize1Slide2 = titleSize2;
+  static const double titleSize2Slide2 = titleSize1;
+
+  /// The header block reserves one height for every slide, so it has to
+  /// budget for the tallest line 2 in use.
+  static const double titleSize2Max = titleSize2Slide2;
   static const double titleDownOffset = 40;
   static const double bodySize = 19;
   static const double bodyLineHeight = 1.32;
@@ -482,8 +491,7 @@ class _SlideMetrics {
     // The complete two-line header is intentionally lowered by the same
     // amount on every slide and in every language.
     final titleTop = (compact ? 24.0 : 48.0) + titleDownOffset;
-    final titleHeight =
-        scaler.scale(titleSize1) * 0.92 + 8 + titleSize2LastSlide;
+    final titleHeight = scaler.scale(titleSize1) * 0.92 + 8 + titleSize2Max;
 
     var fontScale = 1.0;
     // Normally the copy runs nearly the full width, as in the reference, and
@@ -622,9 +630,14 @@ class _Slide extends StatelessWidget {
       languageCode: languageCode,
       line1: titleLine1,
       line2: titleLine2,
-      line2FontSize: index == 2
-          ? _SlideMetrics.titleSize2LastSlide
-          : _SlideMetrics.titleSize2,
+      line1FontSize: index == 1
+          ? _SlideMetrics.titleSize1Slide2
+          : _SlideMetrics.titleSize1,
+      line2FontSize: switch (index) {
+        1 => _SlideMetrics.titleSize2Slide2,
+        2 => _SlideMetrics.titleSize2LastSlide,
+        _ => _SlideMetrics.titleSize2,
+      },
     );
 
     // No background of its own: the shared panorama shows through from
@@ -683,12 +696,14 @@ class _Title extends StatelessWidget {
     required this.languageCode,
     required this.line1,
     required this.line2,
+    required this.line1FontSize,
     required this.line2FontSize,
   });
 
   final String languageCode;
   final String line1;
   final String line2;
+  final double line1FontSize;
   final double line2FontSize;
 
   @override
@@ -707,8 +722,8 @@ class _Title extends StatelessWidget {
           child: Text(
             line1,
             style: TextStyle(
-              fontFamily: isEnglish ? 'Corbel' : fallbackFamily,
-              fontSize: _SlideMetrics.titleSize1,
+              fontFamily: isEnglish ? 'Plus Jakarta Sans' : fallbackFamily,
+              fontSize: line1FontSize,
               height: 0.92,
               // Corbel Light / Dubai Light, both registered at weight 300.
               fontWeight: FontWeight.w300,
@@ -1253,7 +1268,7 @@ class _RoadCarMotion extends StatelessWidget {
 
   final double progress;
 
-  static const String _asset = 'assets/images/3 page/car - 3ed page.webp';
+  static const String _asset = 'assets/images/3 page/car - 3ed page.png';
   static const AssetImage provider = AssetImage(_asset);
 
   static const double _panoramaWidth = 3240;
@@ -1268,11 +1283,11 @@ class _RoadCarMotion extends StatelessWidget {
   static const Offset _end = Offset(2656, 1504);
 
   // The cutout faces mostly left before rotation is applied. Subtracting this
-  // source heading from the path tangent keeps the car turning continuously
-  // with the original generated motion.
+  // source heading from the path tangent keeps the car centred on the road as
+  // it turns.
   static const double _assetForwardHeading = 2.92;
-  static const double _rotationAdjustment = 12 * math.pi / 180;
-  static const double _startBoxWidth = 150;
+
+  static const double _startBoxWidth = 360;
   static const double _endBoxWidth = 360;
   static const double _assetAspectRatio = 1536 / 1024;
   static const Offset _roadAlignmentNudge = Offset.zero;
@@ -1308,20 +1323,37 @@ class _RoadCarMotion extends StatelessWidget {
     final dx = size.width / 2 - (pageProgress + 0.5) * renderedSliceWidth;
     final dy = (size.height - renderedHeight) / 2;
 
-    final sourceAnchor = _pointOnPath(motion);
-    final viewportAnchor = Offset(
-      dx + sourceAnchor.dx * scale,
-      dy + sourceAnchor.dy * scale,
-    );
-    final tangent = _pathTangent(motion);
-    final rotation =
-        math.atan2(tangent.dy, tangent.dx) -
-        _assetForwardHeading +
-        _rotationAdjustment;
-
     final sourceBoxWidth = lerpDouble(_startBoxWidth, _endBoxWidth, motion)!;
     final boxWidth = sourceBoxWidth * scale;
     final boxHeight = boxWidth / _assetAspectRatio;
+
+    final sourceAnchor = _pointOnPath(motion);
+    final tangent = _pathTangent(motion);
+    final endTangent = _pathTangent(1);
+    final endLevelingAdjustment =
+        _assetForwardHeading - math.atan2(endTangent.dy, endTangent.dx);
+    final previousRotation =
+        math.atan2(tangent.dy, tangent.dx) -
+        _assetForwardHeading +
+        endLevelingAdjustment;
+    const rotation = 0.0;
+
+    // Keep the requested fixed angle while retaining the rear's established
+    // contact point. The car remains rigid: only its transform changes.
+    final rearVector = Offset(sourceBoxWidth * 0.27, 0);
+    Offset rotateVector(Offset vector, double angle) => Offset(
+      vector.dx * math.cos(angle) - vector.dy * math.sin(angle),
+      vector.dx * math.sin(angle) + vector.dy * math.cos(angle),
+    );
+    final frontAlignmentOffset =
+        rotateVector(rearVector, previousRotation) -
+        rotateVector(rearVector, rotation);
+    final carAnchor = sourceAnchor + frontAlignmentOffset;
+
+    final viewportAnchor = Offset(
+      dx + carAnchor.dx * scale,
+      dy + carAnchor.dy * scale,
+    );
 
     return IgnorePointer(
       child: ClipRect(

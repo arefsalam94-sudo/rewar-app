@@ -103,13 +103,31 @@ Order matters here — build and approve in this exact sequence:
 
 ## Phase 4 — Where to Stay
 - [ ] Where to Stay search/filter screen (reads from Firestore `hotels`)
-- [ ] Hotel detail screen
-- [ ] Room selection screen
+- [ ] Hotel detail screen — IN PROGRESS. Built 2026-08-25 from the supplied
+      `hotel` reference: outside-image back button, swipeable gallery with
+      dynamic indicators, hotel/stay summary card with a Change sheet,
+      Facilities, review-score breakdown, map, Nearby, Ratings & Comments
+      (the shared Explore Nature reviews screen through a service adapter),
+      an expandable Property policies section, and a frozen Select Room CTA.
+      Light + dark, all three languages, RTL. Every hotel card in the app now
+      opens this one route. Unticked like the screen above it: it reads
+      `PreviewHotelService`, not Firestore (see PROGRESS.md), and the CTA has
+      nowhere to go until the room screen below exists.
+- [ ] Room selection screen — NOT STARTED. `Select Room` shows the standard
+      "coming soon" snackbar. The Dart model layer it needs (`HotelRoomType`,
+      `HotelRoomOffer`, prices, taxes/fees, breakfast, cancellation,
+      prepayment, remaining inventory) was added with the detail page and is
+      documented in `DATA_MODEL.md`, so this screen has a shape to build
+      against. **The checkout rule from Phase 6 applies here too:** the charge
+      must be re-priced and availability re-checked server-side, in one
+      transaction — a client-side check is a suggestion, not a check.
 
 ## Phase 5 — Car Rental
 - [ ] Car Rental search/filter screen (reads from Firestore `cars`)
 - [ ] Car search results screen
-- [ ] Car booking/options screen
+- [ ] Car booking/options screen — Car Rental **Details** screen built 2026-08-24.
+      Unticked like the two above it: it reads
+      `PreviewCarRentalService`, not Firestore (see PROGRESS.md).
 
 ## Phase 6 — Explore Tours
 

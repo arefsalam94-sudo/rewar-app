@@ -46,6 +46,7 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
       widget.locationService ?? const DeviceLocationService();
   late final PlaceWeatherService _weatherService =
       widget.weatherService ?? const PlaceWeatherService();
+
   /// Not `final`: it is re-issued when the user returns from the Reviews &
   /// Ratings page, which may have added or edited their review.
   late Future<List<NatureReview>> _reviewsFuture;
@@ -69,7 +70,7 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
 
   /// Shared by the location and weather cards so the row reads as one band
   /// rather than two boxes with mismatched bottoms.
-  static const double _sideCardHeight = 230;
+  static const double _sideCardHeight = 210;
 
   @override
   void initState() {
@@ -102,16 +103,10 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
         widget.spot.photosAreAssets && widget.spot.photos.isNotEmpty
         ? widget.spot.photos.first
         : exploreNatureBackgroundAsset;
-    final backgroundUrl =
-        !widget.spot.photosAreAssets && widget.spot.photos.isNotEmpty
-        ? widget.spot.photos.first
-        : null;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: PageBackground(
         imageAsset: background,
-        imageUrl: backgroundUrl,
         child: SafeArea(
           bottom: false,
           child: CustomScrollView(
@@ -247,19 +242,24 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
                     itemCount: photos.length,
                     onPageChanged: (index) =>
                         setState(() => _photoIndex = index),
-                    itemBuilder: (_, index) => _SpotPhoto(
+                    itemBuilder: (_, index) => _GalleryPhoto(
+                      index: index,
                       source: photos[index],
                       asset: widget.spot.photosAreAssets,
+                      featherLeft: index > 0,
+                      featherRight: index < photos.length - 1,
                     ),
                   ),
           ),
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x4D000000), Color(0x00000000)],
-                stops: [0, 0.42],
+          const IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0x4D000000), Color(0x00000000)],
+                  stops: [0, 0.42],
+                ),
               ),
             ),
           ),
@@ -278,10 +278,9 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
             ),
           if (photos.length > 1)
             Positioned(
-              // Sits at the fade line rather than the hero's true bottom edge,
-              // which is now transparent. Outside the ShaderMask, so the dots
-              // stay fully opaque.
-              bottom: _heroHeight * (1 - _heroFadeStart),
+              // Keep the dots above the overlapping About card, in the clear
+              // photo area marked in the design reference.
+              bottom: _cardOverlap + 48,
               left: 0,
               right: 0,
               child: Center(
@@ -393,19 +392,8 @@ class _AboutCard extends StatelessWidget {
         final details = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // "Name: Bekhal Waterfall" as one wrapping line, exactly as the
-            // reference draws it — the label is part of the sentence, so it
-            // has to share the paragraph rather than sit on its own line.
-            Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: '${l10n.placeNameLabel} ',
-                    style: TextStyle(color: AppColors.accent(context)),
-                  ),
-                  TextSpan(text: spot.name(language)),
-                ],
-              ),
+            Text(
+              spot.name(language),
               style: TextStyle(
                 fontSize: 24,
                 height: 30 / 24,
@@ -659,7 +647,7 @@ class _LocationCard extends StatelessWidget {
                     ? null
                     : _MapLocateButton(label: openMapLabel, onTap: onOpenMap!),
                 plate: GlassPanel(
-                  elevated: true,
+                  depth: GlassDepth.middle,
                   borderRadius: 16,
                   padding: EdgeInsets.all(compact ? 9 : 12),
                   child: Row(
@@ -727,7 +715,10 @@ class _LocationOverlay extends StatelessWidget {
     if (!compact) {
       return Row(
         children: [
-          if (locateButton != null) ...[locateButton!, const SizedBox(width: 10)],
+          if (locateButton != null) ...[
+            locateButton!,
+            const SizedBox(width: 10),
+          ],
           Expanded(child: plate),
         ],
       );
@@ -754,7 +745,7 @@ class _MapLocateButton extends StatelessWidget {
     button: true,
     label: label,
     child: GlassPanel(
-      elevated: true,
+      depth: GlassDepth.middle,
       borderRadius: 999,
       padding: EdgeInsets.zero,
       child: Material(
@@ -810,78 +801,78 @@ class _WeatherCard extends StatelessWidget {
       child: SizedBox(
         height: height - pad * 2,
         child: future == null
-          ? _WeatherUnavailable()
-          : FutureBuilder<PlaceWeather>(
-              future: future,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      color: AppColors.accent(context),
-                    ),
-                  );
-                }
-                final weather = snapshot.data;
-                if (weather == null) return _WeatherUnavailable();
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: compact ? 13 : 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.heading(context),
+            ? _WeatherUnavailable()
+            : FutureBuilder<PlaceWeather>(
+                future: future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.accent(context),
                       ),
-                    ),
-                    SizedBox(height: compact ? 6 : 8),
-                    Row(
-                      children: [
-                        Icon(
-                          _weatherIcon(weather.weatherCode),
-                          size: compact ? 26 : 40,
-                          color: AppColors.accent(context),
+                    );
+                  }
+                  final weather = snapshot.data;
+                  if (weather == null) return _WeatherUnavailable();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: compact ? 13 : 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.heading(context),
                         ),
-                        SizedBox(width: compact ? 6 : 10),
-                        Expanded(
-                          // The condition word plus the temperature is the
-                          // widest run of text in the card; at half width it
-                          // scales down rather than wrapping or clipping.
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Text(
-                              '${_weatherLabel(context, weather.weatherCode)}, ${weather.temperature}°',
-                              maxLines: 1,
-                              style: TextStyle(
-                                fontSize: compact ? 18 : 24,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.heading(context),
+                      ),
+                      SizedBox(height: compact ? 6 : 8),
+                      Row(
+                        children: [
+                          Icon(
+                            _weatherIcon(weather.weatherCode),
+                            size: compact ? 26 : 40,
+                            color: AppColors.accent(context),
+                          ),
+                          SizedBox(width: compact ? 6 : 10),
+                          Expanded(
+                            // The condition word plus the temperature is the
+                            // widest run of text in the card; at half width it
+                            // scales down rather than wrapping or clipping.
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                '${_weatherLabel(context, weather.weatherCode)}, ${weather.temperature}°',
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontSize: compact ? 18 : 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.heading(context),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    Divider(height: compact ? 16 : 22),
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Three columns at half width — four would collide.
-                          for (final hour in weather.hourly.take(
-                            compact ? 3 : 4,
-                          ))
-                            _HourWeather(hour: hour, compact: compact),
                         ],
                       ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      Divider(height: compact ? 16 : 22),
+                      Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Three columns at half width — four would collide.
+                            for (final hour in weather.hourly.take(
+                              compact ? 3 : 4,
+                            ))
+                              _HourWeather(hour: hour, compact: compact),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
       ),
     );
   }
@@ -971,7 +962,7 @@ class _ReviewsCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (score != null) _RatingPair(score: score!, compact: true),
+                  if (score != null) _RatingPair(score: score!),
                 ],
               ),
               if (count > 0) ...[
@@ -1109,9 +1100,8 @@ class _ReviewRow extends StatelessWidget {
 }
 
 class _RatingPair extends StatelessWidget {
-  const _RatingPair({required this.score, this.compact = false});
+  const _RatingPair({required this.score});
   final double score;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -1120,10 +1110,7 @@ class _RatingPair extends StatelessWidget {
       _RatingBadge(
         child: Text(
           score.toStringAsFixed(1),
-          style: TextStyle(
-            fontSize: compact ? 16 : 20,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
       const SizedBox(width: 6),
@@ -1133,7 +1120,8 @@ class _RatingPair extends StatelessWidget {
         // would restyle two already-built screens as a side effect.
         child: _Stars(
           filled: NatureSpot.starsForScore(score).toDouble(),
-          size: compact ? 14 : 18,
+          size: 15,
+          spacing: 4,
         ),
       ),
     ],
@@ -1178,8 +1166,9 @@ class _RatingBadge extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final content = dark ? AppColors.darkOnPrimary : AppColors.actionNavy;
     return Container(
-      constraints: const BoxConstraints(minHeight: 42),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      constraints: const BoxConstraints(minHeight: 32),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: dark
             ? AppColors.luminousMint
@@ -1199,20 +1188,23 @@ class _RatingBadge extends StatelessWidget {
 }
 
 class _Stars extends StatelessWidget {
-  const _Stars({required this.filled, required this.size});
+  const _Stars({required this.filled, required this.size, this.spacing = 0});
 
   /// 0.0–5.0. A **double** since reviews became half-star: a 3.5-star review
   /// has no honest whole-star drawing.
   final double filled;
   final double size;
+  final double spacing;
 
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     textDirection: TextDirection.ltr,
     children: [
-      for (var index = 0; index < 5; index++)
+      for (var index = 0; index < 5; index++) ...[
         Icon(_iconFor(index), size: size),
+        if (index != 4) SizedBox(width: spacing),
+      ],
     ],
   );
 
@@ -1230,29 +1222,23 @@ class _GalleryDots extends StatelessWidget {
   final int current;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    elevated: true,
-    borderRadius: 999,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      textDirection: TextDirection.ltr,
-      children: [
-        for (var index = 0; index < count; index++) ...[
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: index == current
-                  ? AppColors.accent(context)
-                  : AppColors.secondaryText(context),
-            ),
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    textDirection: TextDirection.ltr,
+    children: [
+      for (var index = 0; index < count; index++) ...[
+        Container(
+          key: ValueKey('nature-detail-gallery-dot-$index'),
+          width: index == current ? 9 : 7,
+          height: index == current ? 9 : 7,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withValues(alpha: index == current ? 1 : 0.5),
           ),
-          if (index != count - 1) const SizedBox(width: 8),
-        ],
+        ),
+        if (index != count - 1) const SizedBox(width: 7),
       ],
-    ),
+    ],
   );
 }
 
@@ -1276,6 +1262,41 @@ class _SpotPhoto extends StatelessWidget {
             errorBuilder: (_, _, _) => const _PhotoFallback(),
           );
   }
+}
+
+/// Softens only the edges shared with another gallery page. During a swipe,
+/// both facing edges feather into the hero background instead of meeting at a
+/// hard vertical seam.
+class _GalleryPhoto extends StatelessWidget {
+  const _GalleryPhoto({
+    required this.index,
+    required this.source,
+    required this.asset,
+    required this.featherLeft,
+    required this.featherRight,
+  });
+
+  final int index;
+  final String source;
+  final bool asset;
+  final bool featherLeft;
+  final bool featherRight;
+
+  @override
+  Widget build(BuildContext context) => ShaderMask(
+    key: ValueKey('nature-detail-gallery-photo-$index'),
+    shaderCallback: (bounds) => LinearGradient(
+      colors: [
+        featherLeft ? Colors.transparent : Colors.white,
+        Colors.white,
+        Colors.white,
+        featherRight ? Colors.transparent : Colors.white,
+      ],
+      stops: const [0, 0.12, 0.88, 1],
+    ).createShader(bounds),
+    blendMode: BlendMode.dstIn,
+    child: _SpotPhoto(source: source, asset: asset),
+  );
 }
 
 class _PhotoFallback extends StatelessWidget {

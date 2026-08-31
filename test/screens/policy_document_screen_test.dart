@@ -7,7 +7,6 @@ import 'package:kurdistan_paradise_travel_guide/models/policy_topic.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/policy_document_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/policy_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/legal_document_service.dart';
-import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
@@ -155,7 +154,7 @@ void main() {
           .where((p) => p.borderRadius == 28)
           .toList();
       expect(cards, hasLength(1));
-      expect(cards.single.fill, GlassFill.brandGradient);
+      expect(cards.single.depth, GlassDepth.base);
     });
 
     testWidgets('renders every heading, paragraph and bullet from the text', (
@@ -409,7 +408,7 @@ void main() {
       await _pump(tester);
       expect(
         tester.widget<Text>(find.text('Information we collect')).style!.color,
-        AppColors.actionNavy,
+        const Color(0xFF1B1B1B), // DESIGN_LIGHT F.md -> text-heading
       );
     });
 

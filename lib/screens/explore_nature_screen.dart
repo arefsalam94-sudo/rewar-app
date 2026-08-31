@@ -311,47 +311,38 @@ class _ExploreNatureScreenState extends State<ExploreNatureScreen> {
 
 // --- Chrome -----------------------------------------------------------------
 
-/// The back-button bar and the screen's page title.
-///
-/// The button inset is `EdgeInsets.fromLTRB(20, 8, 20, 16)`, exactly as Login
-/// and Verification Code place theirs (`DESIGN_SYSTEM.md` → "Back button
-/// placement"). The title beneath it names the section the user has entered —
-/// this screen was the only one in the app without one.
-///
-/// Sized by its content rather than a fixed height, so the title can wrap at a
-/// large system font size instead of being clipped (`DESIGN_SYSTEM.md` § 19,
-/// "avoid fixed-height containers that clip text").
+/// The back button and page title share the top row. It remains sized by its
+/// content so large system text can grow instead of being clipped.
 class _BackBar extends StatelessWidget {
   const _BackBar();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final textDirection = Directionality.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        // Keep the back button on the physical left in every language.
+        textDirection: TextDirection.ltr,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Align(
-            // Left, not start: GlassBackButton stays on the left in every
-            // language, RTL included.
-            alignment: Alignment.centerLeft,
-            child: GlassBackButton(
-              onTap: () => Navigator.of(context).maybePop(),
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            l10n.exploreNature,
-            // `page-title` from the DESIGN_SYSTEM.md type scale: 28 / 700 / 36.
-            style: TextStyle(
-              fontSize: 28,
-              height: 36 / 28,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.02 * 28,
-              color: AppColors.heading(context),
+          GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Directionality(
+              textDirection: textDirection,
+              child: Text(
+                l10n.exploreNature,
+                style: TextStyle(
+                  fontSize: 28,
+                  height: 36 / 28,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.02 * 28,
+                  color: AppColors.heading(context),
+                ),
+              ),
             ),
           ),
         ],
@@ -612,7 +603,7 @@ class _ScoreBox extends StatelessWidget {
       // language.
       textDirection: TextDirection.ltr,
       style: TextStyle(
-        fontSize: 17,
+        fontSize: 15,
         fontWeight: FontWeight.w700,
         color: _BadgeShell.contentColor(context),
       ),
@@ -642,10 +633,10 @@ class _StarBox extends StatelessWidget {
           children: [
             for (var i = 0; i < 5; i++)
               Padding(
-                padding: EdgeInsets.only(right: i == 4 ? 0 : 5),
+                padding: EdgeInsets.only(right: i == 4 ? 0 : 4),
                 child: Icon(
                   i < filled ? Icons.star_rounded : Icons.star_outline_rounded,
-                  size: 17,
+                  size: 15,
                   color: color,
                 ),
               ),
@@ -663,6 +654,10 @@ class _BadgeShell extends StatelessWidget {
 
   final Widget child;
 
+  // Text and icons report different intrinsic heights. A shared minimum keeps
+  // the numeric score and star badges level without clipping scaled text.
+  static const double minHeight = 32;
+
   /// `DESIGN light.md` → "Search Inputs: 12px corner radius"; these are the
   /// same small rounded-rect family.
   static const double radius = 12;
@@ -678,7 +673,9 @@ class _BadgeShell extends StatelessWidget {
     return Container(
       // The reference draws a green outline on these badges. Brand green at
       // partial opacity — an approved token, not a new colour.
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      constraints: const BoxConstraints(minHeight: minHeight),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.luminousMint
@@ -797,20 +794,10 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // `DESIGN light.md` shapes: "Selection Chips: Fully rounded (pill-shaped)".
     final enabled = onTap != null;
-    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-    final selectedContent = isDark
-        ? AppColors.darkOnPrimary
-        : AppColors.pageGradientTop;
-    final restingFill = isDark
-        ? AppColors.darkOnPrimary.withValues(alpha: enabled ? 1 : 0.4)
-        : AppColors.pageGradientTop.withValues(alpha: enabled ? 1 : 0.4);
-    final restingContent =
-        (isDark ? AppColors.luminousMint : AppColors.actionNavy).withValues(
-          alpha: enabled ? 1 : 0.4,
-        );
+    final content = AppColors.selectionAccent(
+      context,
+    ).withValues(alpha: enabled ? 1 : 0.4);
 
     return Semantics(
       button: true,
@@ -820,67 +807,66 @@ class _FilterChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height: visualHeight,
-          margin: const EdgeInsets.symmetric(vertical: (48 - visualHeight) / 2),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: selected ? selectedFill : restingFill,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? selectedContent : restingContent,
-              width: 1,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: (48 - visualHeight) / 2,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 17,
-                color: selected ? selectedContent : restingContent,
-              ),
-              const SizedBox(width: 6),
-              // Allowed to shrink rather than overflow — the "text next to
-              // text must be allowed to shrink" rule.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: selected ? selectedContent : restingContent,
+          child: GlassPanel(
+            borderRadius: 999,
+            depth: GlassDepth.top,
+            selected: selected,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: SizedBox(
+              height: visualHeight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 17, color: content),
+                  const SizedBox(width: 6),
+                  // Allowed to shrink rather than overflow — the "text next to
+                  // text must be allowed to shrink" rule.
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          color: content,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-              if (badgeCount > 0) ...[
-                const SizedBox(width: 6),
-                Container(
-                  constraints: const BoxConstraints(minWidth: 18),
-                  height: 18,
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent(context),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '$badgeCount',
-                    // A count reads the same way in every language.
-                    textDirection: TextDirection.ltr,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? AppColors.darkOnPrimary : Colors.white,
+                  if (badgeCount > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      constraints: const BoxConstraints(minWidth: 18),
+                      height: 18,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent(context),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$badgeCount',
+                        // A count reads the same way in every language.
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ],
+                  ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

@@ -20,10 +20,22 @@ void main() {
       'Country',
       'ZIP Code',
       'Save this card for future bookings',
-      'Add Card',
     ]) {
-      expect(find.text(text), findsOneWidget, reason: text);
+      expect(
+        find.text(text),
+        text == 'Cardholder Name' ? findsNWidgets(2) : findsOneWidget,
+        reason: text,
+      );
     }
+
+    // The form lives in a lazy ListView, so the submit button at its foot is
+    // only built once it is scrolled into view.
+    await tester.scrollUntilVisible(
+      find.text('Add Card'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Add Card'), findsOneWidget);
   });
 
   testWidgets('updates the card preview while typing', (tester) async {

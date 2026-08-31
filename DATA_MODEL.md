@@ -490,35 +490,132 @@ Weather is not stored in Firestore. It is fetched from Open-Meteo using the
 place geopoint so the detail card cannot show stale catalog temperatures.
 
 ## `hotels`
-| field | type | notes |
-|---|---|---|
-| name | string | |
-| address | string | |
-| city | string | |
-| location | geopoint | |
-| imageUrls | array<string> | |
-| starRating | number | 0-5 |
-| reviewScore | number | 0-10 |
-| pricePerNightFrom | number | for list-card display |
-| amenities | array<string> | e.g. Pool, Bar, Restaurant, Parking |
 
-### `hotels/{hotelId}/rooms` (subcollection)
+> **Nothing reads this collection yet.** Where to Stay and the Hotel Details
+> page both read `PreviewHotelService` (see `SEED_DATA.md`), so the shape below
+> is the agreed target, not a live schema. It is written down now because the
+> Dart model layer added for the Hotel Details page (2026-08-25) already has
+> these fields, and the two must not drift.
+>
+> Nothing here is a destructive change: the collection has no documents.
+
 | field | type | notes |
 |---|---|---|
-| name | string | e.g. "Ocean View Suite" |
-| bedConfiguration | array<{type, count}> | |
-| sizeSqm | number | |
-| facilities | array<string> | |
-| pricingOptions | array<{title, infoLines, pricePerNight}> | |
-| availableCount | number | |
+| name | map<lang,string> | `{en, ku, ar}`, like every other catalog collection |
+| address | map<lang,string> | street line under the hotel name; falls back to `city` |
+| city | map<lang,string> | |
+| region | string | |
+| country | string | |
+| location | geopoint | drives the map card; absent hides the map, never fakes it |
+| imageUrls | array<string> | Storage URLs, in gallery order. The first is the card photo |
+| starRating | number | 0–5, the **official classification** |
+| reviewScore | number | 0–10, the **guest score**. Server-owned (see below) |
+| ratingCount | number | server-owned |
+| ratingBreakdown | map<1–5, number> | server-owned |
+| categoryScores | map<category, number> | 0–10 per category, server-owned or provider-supplied |
+| checkInTime | string | `HH:mm` wall-clock at the property, not a timestamp |
+| checkOutTime | string | `HH:mm` |
+| pricePerNightFrom | number | list-card display only — never the charged price |
+| amenities | array<string> | the seven filter chips on the search screen |
+| facilities | array<{id, iconKey, name{en,ku,ar}, category}> | the detail page's Facilities card |
+| nearby | array<{id, name{}, placeType, distanceMeters, minutes, lat, lng}> | the Nearby card |
+| policies | map | see **Property policies** below |
+
+`starRating` and `reviewScore` are **two different measurements** and are drawn
+as two separate badges. Never merge them.
+
+`categoryScores` keys: `location`, `cleanliness`, `comfort`, `service`,
+`value`, `facilities`, `wifi`. A category with no data is **absent**, not zero —
+a bar drawn at zero reads as "rated badly", which is a different claim.
+
+### The rating aggregates are server-owned
+
+`reviewScore`, `ratingCount`, `ratingBreakdown` and `categoryScores` follow the
+same rule as `nature_spots` and `tours`: they are derived by a Cloud Function
+from the reviews subcollection, and the admin panel must show them read-only. A
+hand-typed average is overwritten by the next review.
+
+Until then, `PreviewHotelReviewService` derives them in memory — in the service,
+never in a widget.
+
+### `hotels/{hotelId}/rooms` (subcollection) — permanent room data
+
+| field | type | notes |
+|---|---|---|
+| name | map<lang,string> | e.g. "Deluxe King Room" |
+| description | map<lang,string> | optional |
+| imageUrls | array<string> | |
+| sizeSqm | number | optional |
+| adultCapacity | number | |
+| childCapacity | number | |
+| maxOccupancy | number | the ceiling the guest counters enforce |
+| bedConfiguration | array<{type, count}> | `single/twin/double/queen/king/sofa/bunk` |
+| facilities | array<facility> | same shape as the hotel's |
+
+Price and availability are **not** here — they change per search, and a stale
+number on a permanent document is worse than no number.
+
+### `hotels/{hotelId}/offers` (subcollection) — a priced, bookable rate
+
+| field | type | notes |
+|---|---|---|
+| roomTypeId | string | our id, from `rooms` |
+| currency | string | |
+| nightlyPrice | number | |
+| totalPrice | number | for the searched stay |
+| taxes | number | |
+| fees | number | |
+| taxesIncluded | bool | **stored, not inferred** — the UI must always be able to state which figure it is showing |
+| breakfast | string | `included` / `extra` / `unavailable` |
+| cancellationType | string | `free` / `partial` / `nonRefundable` |
+| cancellationDeadline | timestamp | optional |
+| cancellationPenalty | number | optional |
+| prepayment | string | `none` / `partial` / `full` |
+| paymentTiming | string | `payNow` / `payLater` / `payAtProperty` |
+| availableQuantity | number | the **only** source for "Only N rooms left". Scarcity copy is never manufactured |
+| providerId, providerHotelId, providerRoomId, ratePlanId, searchSessionId | string | optional, provider-side ids |
+
+Provider ids are kept separate from our own so a room can be re-priced or booked
+through whichever provider supplied it **without any provider-specific branch
+reaching a widget** — normalization belongs in the repository layer.
+
+Taxes and fees are never silently omitted. The checkout rule that already
+applies to tours applies here too: the charge must be re-priced and
+re-checked server-side, in one transaction, at booking time. A client-side
+availability or price check is a suggestion, not a check.
+
+### Property policies (`hotels/{hotelId}.policies`)
+
+| field | type |
+|---|---|
+| checkInFrom, checkOutUntil | string `HH:mm` |
+| childPolicy, cribPolicy, extraBedPolicy | map<lang,string> |
+| minimumAge | number |
+| petPolicy, smokingPolicy, accessibility | map<lang,string> |
+| acceptedPaymentMethods | array<string> |
+| specialRequestsSupported | bool |
+
+Every field is optional and **each row hides without data**. A property that
+has published nothing shows nothing, rather than a default a guest could act on.
 
 ### `hotels/{hotelId}/reviews` (subcollection)
+
+Same shape and same rules as `nature_spots/{spotId}/reviews`, deliberately: the
+Hotel Details page reuses that screen through a service adapter, exactly as
+Explore Tours does. **The document id is the author's uid**, which is what makes
+one review per person per hotel enforceable in the rules rather than merely
+intended.
+
 | field | type | notes |
 |---|---|---|
-| userId | string | |
-| name | string | |
-| comment | string | |
-| stars | number | |
+| userId | string | equals the document id |
+| userName | string | denormalized, so a deleted account keeps its attribution |
+| avatarUrl | string | optional |
+| comment | string | 3–1000 characters, mirrored in `firestore.rules` |
+| rating | number | 0.5–5.0 in half-star steps |
+| createdAt | timestamp | |
+| status | string | `published` |
+| helpfulCount | number | server-owned, from the `votes` subcollection |
 
 ## `cars`
 | field | type | notes |
@@ -535,6 +632,47 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 | paymentInfo | string | |
 | location | geopoint | |
 | pricePerDay | number | |
+| transmission | string | `"automatic"` \| `"manual"` — added for the Car Rental Details screen's facilities row |
+| extras | array<map> | optional add-ons, see below |
+| conditions | map | supplier terms, see below — **every key optional** |
+
+**Not yet read by the app.** The Car Rental, Car Rental Results and Car Rental
+Details screens all read `PreviewCarRentalService` (typed mock data), not this
+collection — see `SEED_DATA.md`. The three rows added above document what the
+Details screen expects once a rental provider is connected, so the admin panel
+and a future importer agree on shape before anything is written.
+
+### `cars.extras[]` — optional add-ons
+| field | type | notes |
+|---|---|---|
+| id | string | stable per supplier; the app keys the user's selection on it |
+| name | map | keyed by locale `{ en, ku, ar }` |
+| pricePerDay | number | charged per rental day, matching how the screen labels it |
+| selection | string | `"checkbox"` (0 or 1) \| `"quantity"` (stepper) |
+| minQuantity | number | default 0 |
+| maxQuantity | number | supplier ceiling — the stepper's `+` disables here. Default 1 |
+
+Per-vehicle rather than a global catalogue, so two suppliers can offer the same
+add-on at different prices without a schema change.
+
+### `cars.conditions` — supplier terms
+| field | type | notes |
+|---|---|---|
+| fuelPolicy | string | `"fullToFull"` \| `"fullToEmpty"` \| `"sameToSame"` |
+| mileagePolicy | map | `{ unlimited: bool, kilometresPerDay?, extraKilometrePrice? }` |
+| depositAmount | number | in the vehicle's `currencyCode` |
+| damageExcess | number | |
+| freeCancellationUntil | timestamp | |
+| minimumDriverAge | number | |
+| requiredDocuments | array<map> | each keyed by locale `{ en, ku, ar }` |
+| guaranteedModel | boolean | `false` renders the "or a similar vehicle" disclaimer |
+
+> **Every field here is optional on purpose.** These are contractual and
+> financial terms a user would act on, so none may be invented for review data.
+> Absent fields hide their row, and a fully empty `conditions` hides the Rental
+> Conditions card altogether — the same rule the distance line already follows
+> when the device has no position fix. Nothing here is populated in the preview
+> service today.
 
 ## `tours`
 
@@ -553,7 +691,7 @@ this shape.
 | locationLabel | map | same shape. The readable place line, e.g. "Rawanduz, Erbil". **New** — a geopoint cannot be shown to a user and a label cannot be measured against, so the collection needs both |
 | companyTag | string | the operator badge in the card's corner, e.g. `"AB group"`. Deliberately **not** a locale map: it is a company's own name, and translating a brand is wrong in the same way translating "Booking.com" would be |
 | durationDays | number | **Replaces `duration: "3 days travel"`.** A stored sentence would make the Kurdish and Arabic cards read English; the app builds the line in all three languages from this number |
-| features | array<string> | what the tour includes, as the ids in `lib/models/tour.dart` (`TourFeature`): `camping`, `hiking`, `guide`, `food`, `swimming`, `campfire`, `transport`, `photography`. The list card draws the **first four** and drops any id the app has no icon for, so a new tag here needs a matching enum value in the app |
+| features | array<string> | what the tour includes, as the ids in `lib/models/tour.dart` (`TourFeature`): `camping`, `hiking`, `guide`, `food`, `swimming`, `campfire`, `transport`, `photography`, and — **added with the Explore Tours reference rebuild** — `activity`, `wifi`, `electricity`, `tent`. The list card draws the **first five** (the reference card shows five) and drops any id the app has no icon for, so a new tag here still needs a matching enum value in the app. The four new ids are additive: no seeded document needs migrating |
 | imageUrls | array<string> | Storage download URLs. The first is the list-card thumbnail; the carousel shows them all for a highlighted tour |
 | location | geopoint | the meeting point, used to compute the live distance; never displayed directly |
 | pricePerPerson | number | **Optional.** Absent hides the price box rather than drawing a zero — a tour whose price is not set yet is not free |
@@ -562,6 +700,7 @@ this shape.
 | ratingCount | number | how many reviews `reviewScore` averages — an 8.7 from one review is not an 8.7 from two hundred, which is why the card prints both. **Server-owned** |
 | ratingBreakdown | map | `{ "1": n … "5": n }`, the 5★→1★ distribution. **Server-owned.** Not drawn on the list card; it is what a Tour Reviews screen would use |
 | capacity | number | **Optional.** How many travellers the departure takes. Absent means the operator published none, and the availability line is simply not drawn rather than guessed at |
+| minAge | number | **Optional. Added for the Traveler Info (checkout step 1) screen.** The operator's minimum traveller age in years. Absent means the departure has no age restriction, so no existing document needs migrating. Enforced against every traveller's entered date of birth before the form may advance — a group tour that says 18+ must not be able to accept a 12-year-old, and the check belongs where the birth dates are collected |
 | bookedCount | number | how many places are taken. **Server-owned** — see the availability note below |
 | cancellationPolicy | string | one of `free_24h`, `free_48h`, `free_7d`, `non_refundable` — a **tier**, not free text. The wording lives in `legal_documents/cancellation_refunds`; a per-tour paragraph would drift from the policy the app actually enforces |
 | guideLanguages | array&lt;string&gt; | ISO 639-1 codes the guide speaks: `en`, `ku`, `ar`, `tr`, `fa`. A closed set, so the filter chips and the card label can be localized |
@@ -798,6 +937,49 @@ Keyed by nothing; a flat map, because it is written once and read whole.
 | imageUrl | string | Storage download URL for the card thumbnail. **Copied, not referenced** — same reasoning as above. Flights have no thumbnail and omit it |
 | guestCount | number | guests (hotel) / travelers (tour) / drivers (car) / passengers (flight). One field, four labels — the label comes from `type`, so the schema does not need four near-identical fields |
 | guestLabel | string | `"adults"` \| `"children"` \| `"mixed"` — which noun the count is rendered with |
+
+### `bookingDetails.travelers[]` — who is actually going
+
+**Added for the Traveler Info screen (checkout step 1).** `display.guestCount`
+is only a number; it cannot tell the operator who to expect. The named
+travellers live under `bookingDetails`, which the schema already reserves for
+"anything not shown on the card".
+
+| field | type | notes |
+|---|---|---|
+| fullName | string | 2–80 characters, as entered by the person booking |
+| dateOfBirth | timestamp | stored as a **date, not an age**, for the same reason as `users.dateOfBirth` — an age goes stale, a birth date does not, so a `tours.minAge` check stays correct however long after booking it is re-run |
+| isLead | boolean | exactly one traveller is the lead — the person the booking is issued to. Defaults to the first traveller, and the form does not allow zero or two |
+
+Alongside it, `bookingDetails.contact` holds the contact person — `{ fullName,
+email, phone, dialCode }` — who is **not necessarily travelling**. That is why
+the contact block and the traveller list are separate on the screen rather than
+the first traveller doubling as the contact.
+
+> **Step 1 writes nothing to Firestore.** The traveller list is held in memory
+> and handed to the Payment step as an argument. `bookings` is created only by
+> the checkout Cloud Function after the provider confirms the charge (see "Who
+> may write" below) — so there is no client path that could persist this, and
+> deliberately no draft collection holding named minors' birth dates before any
+> purchase exists.
+
+### PROPOSED for checkout step 3 — **not approved, nothing writes these yet**
+
+Raised while building the Review & Confirm screen (2026-08-20). The screen
+itself needs none of them — it writes nothing — but a checkout Cloud Function
+that turns it into a real booking would, and both Agoda and Booking.com store
+them. **Do not implement until signed off.**
+
+| field | type | why |
+|---|---|---|
+| `bookingDetails.transport` | boolean | whether the optional bus add-on was bought. It currently has nowhere structured to live, so the operator cannot tell who is on the bus |
+| `bookingDetails.priceBreakdown` | map | `{ pricePerPerson, travelers, transportPricePerPerson, transportTotal, subtotal, currency }`. `totalPrice` alone cannot reproduce the line items the user agreed to, and a receipt that only shows a grand total is what refund disputes are made of |
+| `bookingDetails.termsVersion` + `termsAcceptedAt` | number + timestamp | which Terms version was in force **for this purchase**. `users.termsAcceptedAt` records signup consent, which is a different event and can be years earlier |
+| `bookingDetails.cancellationPolicy` | string | a snapshot of the `tours.cancellationPolicy` tier the departure was **sold under**. The live tier can change; `bookings.cancellable` is a boolean and cannot say "free until 48h before" |
+
+All four are server-written from the checkout function's own request, never
+client-supplied — `bookings` stays admin/function-write per `SECURITY.md` 1.
+
 
 ### Type-specific fields, all under `display`
 

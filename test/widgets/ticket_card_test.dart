@@ -31,18 +31,18 @@ void main() {
       );
     });
 
-    testWidgets('takes the per-mode card radius: 16 light, 24 dark', (
+    testWidgets('uses the shared 28px card radius in both themes', (
       tester,
     ) async {
       // Same precedent as the Home screen — dark mode is a different design
       // language, not a recolour.
       await _pump(tester, const SizedBox.shrink());
       final lightContext = tester.element(find.byType(SizedBox).first);
-      expect(TicketCard.defaultRadius(lightContext), 16);
+      expect(TicketCard.defaultRadius(lightContext), 28);
 
       await _pump(tester, const SizedBox.shrink(), dark: true);
       final darkContext = tester.element(find.byType(SizedBox).first);
-      expect(TicketCard.defaultRadius(darkContext), 24);
+      expect(TicketCard.defaultRadius(darkContext), 28);
     });
 
     testWidgets('clips its child, so the notch is a real cut-out', (

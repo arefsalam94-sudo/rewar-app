@@ -12,6 +12,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/glass_back_button.dart';
+import '../widgets/glass_panel.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/page_background.dart';
@@ -450,7 +451,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Fill/border come straight from `DESIGN light.md`
                     // ("Card Fill: a 20% opacity version of the brand
                     // gradient", "1px white inner border (20% opacity)") via
-                    // GlassFill.brandGradient, and from `DESIGN dark.md`'s
+                    // old brand-gradient card fill, and from the former
                     // emerald glass in dark mode. Radius is the light file's
                     // "Standard Cards: 16px".
                     AppLiquidGlass(
@@ -787,23 +788,10 @@ class _SheetOptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? accent : Colors.white.withValues(alpha: 0.70),
-            width: selected ? 1.8 : 1.2,
-          ),
-          // White glow rather than the usual dark drop shadow, so each tile
-          // lifts off the glass instead of sinking into it.
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withValues(alpha: 0.35),
-              blurRadius: 12,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
+      child: GlassPanel(
+        borderRadius: 14,
+        depth: GlassDepth.top,
+        selected: selected,
         child: Material(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(14),

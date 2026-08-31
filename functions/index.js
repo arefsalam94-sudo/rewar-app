@@ -29,9 +29,13 @@ const { getFirestore, FieldValue, Timestamp } =
   require("firebase-admin/firestore");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
+const { searchAirports } = require("./airport-search");
 
 initializeApp();
 const db = getFirestore();
+
+// Public, read-only worldwide airport autocomplete for the flight form.
+exports.searchAirports = searchAirports;
 
 const CODE_LENGTH = 6;
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes

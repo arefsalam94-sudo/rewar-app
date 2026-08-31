@@ -9,6 +9,8 @@
   "scripts": {
     "serve": "firebase emulators:start --only functions,firestore",
     "deploy": "firebase deploy --only functions",
+    "sync-airports": "node ../tool/sync_airports.js",
+    "test": "node --test test/*.test.js",
     "logs": "firebase functions:log"
   },
   "dependencies": {

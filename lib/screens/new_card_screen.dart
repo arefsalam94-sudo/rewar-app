@@ -168,7 +168,6 @@ class _NewCardScreenState extends State<NewCardScreen> {
                   constraints: const BoxConstraints(maxWidth: 680),
                   child: GlassPanel(
                     borderRadius: 28,
-                    fill: GlassFill.sheen,
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                     child: Form(
                       key: _formKey,

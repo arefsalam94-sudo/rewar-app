@@ -79,8 +79,8 @@ function inDays(days) {
  *
  * `features` are the ids in `lib/models/tour.dart` (`TourFeature`):
  *   camping | hiking | guide | food | swimming | campfire | transport |
- *   photography
- * The app draws the first four on a list card and drops any id it has no icon
+ *   photography | activity | wifi | electricity | tent
+ * The app draws the first five on a list card and drops any id it has no icon
  * for, so adding a new tag here needs a matching enum value in the app.
  */
 const TOURS = [
@@ -109,7 +109,7 @@ const TOURS = [
     },
     companyTag: "AB group",
     durationDays: 2,
-    features: ["camping", "guide", "food", "swimming"],
+    features: ["guide", "activity", "wifi", "food", "electricity"],
     imageUrls: [],
     location: new GeoPoint(36.6289, 44.5311),
     pricePerPerson: 55,
@@ -153,7 +153,7 @@ const TOURS = [
     },
     companyTag: "Ava group",
     durationDays: 1,
-    features: ["camping", "hiking", "food", "campfire"],
+    features: ["campfire", "tent", "wifi", "swimming"],
     imageUrls: [],
     location: new GeoPoint(37.0469, 43.0892),
     pricePerPerson: 32,
@@ -162,6 +162,10 @@ const TOURS = [
     endAt: inDays(12),
     capacity: 16,
     bookedCount: 4,
+    // The only seeded tour with an age restriction, so the Traveler Info
+    // screen's age gate can be seen firing against real data. The other two
+    // omit the field on purpose — absent must read as "no restriction".
+    minAge: 18,
     cancellationPolicy: "free_24h",
     guideLanguages: ["ku", "ar"],
     transportAvailable: true,
@@ -197,7 +201,7 @@ const TOURS = [
     },
     companyTag: "Zagros Trips",
     durationDays: 1,
-    features: ["guide", "food", "transport", "photography"],
+    features: ["guide", "food", "transport", "photography", "activity"],
     imageUrls: [],
     location: new GeoPoint(36.652, 44.44),
     pricePerPerson: 40,

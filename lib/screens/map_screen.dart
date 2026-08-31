@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../widgets/glass_back_button.dart';
+import '../widgets/glass_panel.dart';
 
 /// A native, interactive Google Map shown entirely inside the app.
 class MapScreen extends StatefulWidget {
@@ -96,8 +98,6 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backLabel = MaterialLocalizations.of(context).backButtonTooltip;
-
     return Scaffold(
       body: Stack(
         children: [
@@ -123,26 +123,13 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Semantics(
-                button: true,
-                label: backLabel,
-                child: Material(
-                  color: isDark ? AppColors.darkForestFloor : Colors.white,
-                  elevation: 4,
-                  shape: const CircleBorder(),
-                  clipBehavior: Clip.antiAlias,
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    tooltip: backLabel,
-                    icon: Icon(
-                      Directionality.of(context) == TextDirection.rtl
-                          ? Icons.arrow_forward_rounded
-                          : Icons.arrow_back_rounded,
-                      color: isDark ? Colors.white : AppColors.actionNavy,
-                    ),
-                  ),
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: GlassBackButton(
+                  onTap: () => Navigator.of(context).pop(),
+                  dark: isDark,
                 ),
               ),
             ),
@@ -153,15 +140,19 @@ class _MapScreenState extends State<MapScreen> {
               child: IgnorePointer(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 18),
-                  child: Text(
-                    widget.title ?? AppLocalizations.of(context).navMap,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : AppColors.actionNavy,
-                      shadows: const [
-                        Shadow(color: Colors.white, blurRadius: 5),
-                      ],
+                  child: GlassPanel(
+                    borderRadius: 28,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      widget.title ?? AppLocalizations.of(context).navMap,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.heading(context),
+                      ),
                     ),
                   ),
                 ),

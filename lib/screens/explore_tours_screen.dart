@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -34,8 +36,10 @@ const String exploreToursBackgroundAsset =
 /// Tours" list. Every colour, radius and text size comes from tokens already
 /// approved in `DESIGN_SYSTEM.md` / `DESIGN_LIGHT.md` / `DESIGN_DARK.md`.
 ///
-/// The rating placement is as requested: **leading edge** on the carousel
-/// slide, **trailing edge** on a list card.
+/// The rating placement is as requested and as the reference draws it: on the
+/// **trailing** edge in both places — above the tour name on a carousel slide,
+/// and beside the tour name on a list card, with the score and the five stars
+/// sharing one row.
 ///
 /// Catalog data is public read, so a guest sees exactly what a signed-in user
 /// sees (`SECURITY.md` section 1, `firestore.rules` → `tours`). Only the
@@ -253,13 +257,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
     if (picked != null && mounted) setState(() => _pendingRange = picked);
   }
 
-  void _setTravellers(int value) => setState(
-    () => _pendingTravellers = value.clamp(
-      TourFilters.minTravellers,
-      TourFilters.maxTravellers,
-    ),
-  );
-
   Future<void> _onFavoriteTapped(Tour tour) async {
     final l10n = AppLocalizations.of(context);
 
@@ -306,7 +303,7 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
           padding: const EdgeInsets.all(16),
           child: GlassPanel(
             borderRadius: 28,
-            elevated: true,
+            depth: GlassDepth.middle,
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -391,39 +388,15 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
             children: [
               const _BackBar(),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildCarousel(l10n, languageCode),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildSearchControls(l10n),
               ),
               const SizedBox(height: 18),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _RefineBar(
-                  filters: _filters,
-                  onToggleFeature: (id) =>
-                      setState(() => _filters = _filters.toggleFeature(id)),
-                  onToggleLanguage: (code) => setState(
-                    () => _filters = _filters.toggleGuideLanguage(code),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _SortBar(
-                  sort: _filters.sort,
-                  // Offering "Nearest to me" without a fix would be offering
-                  // an order the screen cannot produce.
-                  locationAvailable: _deviceLocation != null,
-                  onChanged: (sort) =>
-                      setState(() => _filters = _filters.copyWith(sort: sort)),
-                ),
-              ),
-              const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
@@ -437,9 +410,9 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: _buildTourList(l10n, languageCode),
               ),
             ],
@@ -505,7 +478,7 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
   /// The recessed-glass inputs, the traveller stepper and the Apply button.
   ///
   /// Every field is the shared [AppRecessedGlassField] — `DESIGN_SYSTEM.md`
-  /// section 8 requires one input family across the whole app, and section 22
+  /// section 8 requires one input family across the whole app, and section 23
   /// lists "different input families on different screens" as prohibited.
   Widget _buildSearchControls(AppLocalizations l10n) {
     final range = _pendingRange;
@@ -515,54 +488,77 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
         ? ''
         : l10n.tourDateRange(range.start, range.end);
 
+    final search = AppRecessedGlassField(
+      key: exploreToursSearchFieldKey,
+      controller: _searchController,
+      hint: l10n.toursSearchHint,
+      prefixIcon: Icons.search_rounded,
+      compact: true,
+      textInputAction: TextInputAction.search,
+      onFieldSubmitted: (_) => _apply(),
+      suffix: _searchController.text.isEmpty
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              tooltip: l10n.clearSearch,
+              onPressed: () {
+                _searchController.clear();
+                _apply();
+              },
+            ),
+    );
+
+    final date = AppRecessedGlassField(
+      key: exploreToursDateFieldKey,
+      controller: _dateController,
+      hint: l10n.toursDateRangeHint,
+      prefixIcon: Icons.calendar_month_outlined,
+      compact: true,
+      // Read-only rather than a free-text date: a typed date has to be
+      // parsed, and a parser that has to cover three languages is a source
+      // of wrong dates, not convenience.
+      readOnly: true,
+      onTap: _pickDateRange,
+      suffix: range == null
+          ? null
+          : IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              tooltip: l10n.clearDate,
+              onPressed: () => setState(() => _pendingRange = null),
+            ),
+    );
+
+    // Side by side, as the reference draws them. Below the Compact breakpoint
+    // the two halves are too narrow for a legible hint even at the compact
+    // type size, so they stack instead of clipping — `DESIGN_SYSTEM.md` 19:
+    // "components stack vertically when necessary".
+    final width = MediaQuery.sizeOf(context).width;
+    final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+    final sideBySide = width >= 340 && textScale <= 1.3;
+
     return Column(
       children: [
-        AppRecessedGlassField(
-          key: exploreToursSearchFieldKey,
-          controller: _searchController,
-          hint: l10n.toursSearchHint,
-          prefixIcon: Icons.search_rounded,
-          textInputAction: TextInputAction.search,
-          onFieldSubmitted: (_) => _apply(),
-          suffix: _searchController.text.isEmpty
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  tooltip: l10n.clearSearch,
-                  onPressed: () {
-                    _searchController.clear();
-                    _apply();
-                  },
-                ),
-        ),
-        const SizedBox(height: 12),
-        AppRecessedGlassField(
-          key: exploreToursDateFieldKey,
-          controller: _dateController,
-          hint: l10n.toursDateRangeHint,
-          prefixIcon: Icons.calendar_month_outlined,
-          // Read-only rather than a free-text date: a typed date has to be
-          // parsed, and a parser that has to cover three languages is a source
-          // of wrong dates, not convenience.
-          readOnly: true,
-          onTap: _pickDateRange,
-          suffix: range == null
-              ? null
-              : IconButton(
-                  icon: const Icon(Icons.close_rounded, size: 20),
-                  tooltip: l10n.clearDate,
-                  onPressed: () => setState(() => _pendingRange = null),
-                ),
-        ),
-        const SizedBox(height: 12),
-        _TravellerStepper(value: _pendingTravellers, onChanged: _setTravellers),
-        const SizedBox(height: 20),
-        // Not full width: the reference draws a compact centred action. The
-        // token geometry (56dp, radius 14, solid action fill) is unchanged —
-        // only the width is constrained, per `DESIGN_SYSTEM.md` 9.4.
+        if (sideBySide)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: search),
+              const SizedBox(width: 12),
+              Expanded(child: date),
+            ],
+          )
+        else ...[
+          search,
+          const SizedBox(height: 12),
+          date,
+        ],
+        const SizedBox(height: 16),
+        // Not full width: the reference draws a compact action centred under
+        // the gap between the two fields. The token geometry (56dp, radius 14,
+        // solid action fill) is unchanged — only the width is constrained.
         Center(
           child: SizedBox(
-            width: 200,
+            width: 190,
             child: PrimaryButton(label: l10n.toursApply, onTap: _apply),
           ),
         ),
@@ -659,12 +655,6 @@ const Key exploreToursSearchFieldKey = ValueKey('explore-tours-search');
 @visibleForTesting
 const Key exploreToursDateFieldKey = ValueKey('explore-tours-date');
 
-@visibleForTesting
-const Key exploreToursTravellerPlusKey = ValueKey('explore-tours-travellers+');
-
-@visibleForTesting
-const Key exploreToursTravellerMinusKey = ValueKey('explore-tours-travellers-');
-
 // --- Chrome -----------------------------------------------------------------
 
 /// The back button and the page title, on one row, as the reference draws it.
@@ -708,7 +698,7 @@ class _BackBar extends StatelessWidget {
 }
 
 /// Both design files specify the organic 28px `rounded-card` silhouette.
-const double _cardRadius = 28;
+const double _cardRadius = 22;
 
 // --- Pricing ----------------------------------------------------------------
 
@@ -772,7 +762,9 @@ class TourPricing {
 /// other number in the app is drawn (see `AppLocalizations.bookingDate`).
 /// A currency with no well-known glyph keeps its ISO code, because an invented
 /// symbol is worse than three unambiguous letters.
-@visibleForTesting
+///
+/// Public rather than `@visibleForTesting`: checkout step 2 prints the booking
+/// total and must format it identically to the tour cards it came from.
 String formatMoney(num amount, String currency) {
   final symbol = CurrencyRatesService.symbolFor(currency);
   // Sub-unit precision only where it exists and matters: 55 is "$55", 55.5 is
@@ -851,11 +843,12 @@ class _HighlightCard extends StatelessWidget {
       1.0,
       1.6,
     );
-    return 288 * factor;
+    return 308 * factor;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final score = tour.reviewScore;
 
@@ -892,28 +885,42 @@ class _HighlightCard extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Rating on the **leading** edge of the slide, as
-                            // asked. Score and stars stay visually separate
-                            // (`DESIGN_SYSTEM.md` 13).
-                            if (score != null) ...[
-                              _ScoreBox(score: score),
-                              const SizedBox(width: 8),
-                              _StarBox(score: score),
+                        // Rating on the **trailing** edge, above the tour
+                        // name, as the reference draws it: the score and the
+                        // stars share one row, with the operator tag beneath
+                        // them. Score and stars stay two separate badges
+                        // (`DESIGN_SYSTEM.md` 13).
+                        // `Align` rather than a bare `Column`: the parent
+                        // column is start-aligned, so a shrink-wrapped child
+                        // would sit on the leading edge instead.
+                        Align(
+                          alignment: AlignmentDirectional.topEnd,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (score != null)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _ScoreBox(score: score),
+                                    const SizedBox(width: 8),
+                                    _StarBox(score: score),
+                                  ],
+                                ),
+                              if (tour.companyTag.isNotEmpty) ...[
+                                if (score != null) const SizedBox(height: 8),
+                                _CompanyTag(
+                                  label: tour.companyTag,
+                                  onPhoto: true,
+                                ),
+                              ],
                             ],
-                            const Spacer(),
-                            if (tour.companyTag.isNotEmpty)
-                              _CompanyTag(
-                                label: tour.companyTag,
-                                onPhoto: true,
-                              ),
-                          ],
+                          ),
                         ),
                         const Spacer(),
                         FittedBox(
@@ -924,7 +931,7 @@ class _HighlightCard extends StatelessWidget {
                             maxLines: 1,
                             style: const TextStyle(
                               // headline-lg
-                              fontSize: 26,
+                              fontSize: 22,
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.02 * 26,
                               color: Colors.white,
@@ -942,29 +949,34 @@ class _HighlightCard extends StatelessWidget {
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
-                                tour.locationLabel(languageCode),
+                                // "Rawanduz, Erbil | 2 days travel" — one line,
+                                // as the reference draws it. The separator is
+                                // punctuation, not copy, so it is not
+                                // translated.
+                                '${tour.locationLabel(languageCode)} | '
+                                '${l10n.tourDuration(tour.durationDays)}',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 13,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Padding(
                           // Keeps the copy clear of the dot row in the opposite
                           // corner, which is drawn outside this slide.
                           padding: const EdgeInsetsDirectional.only(end: 70),
                           child: Text(
                             tour.description(languageCode),
-                            maxLines: 3,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               fontSize: 13,
-                              height: 17 / 13,
+                              height: 18 / 13,
                               color: Colors.white.withValues(alpha: 0.88),
                             ),
                           ),
@@ -1080,6 +1092,9 @@ class _Dots extends StatelessWidget {
 // --- Rating badges ----------------------------------------------------------
 
 /// The 0–10 review score, in the shared rating-badge shell.
+///
+/// The carousel slide only: the list card was asked to drop the number and
+/// keep the stars alone, laid over the photo.
 class _ScoreBox extends StatelessWidget {
   const _ScoreBox({required this.score});
 
@@ -1103,6 +1118,8 @@ class _ScoreBox extends StatelessWidget {
 
 /// Five stars, filled from the same 0–10 score. Derived, never stored — see
 /// [Tour.starsForScore].
+///
+/// The carousel slide only, like [_ScoreBox]: the list card shows no rating.
 class _StarBox extends StatelessWidget {
   const _StarBox({required this.score});
 
@@ -1172,356 +1189,12 @@ class _BadgeShell extends StatelessWidget {
   }
 }
 
-// --- Refine and sort --------------------------------------------------------
-
-/// The refinement chips: what a tour includes, and what the guide speaks.
-///
-/// These write straight through rather than waiting for Apply. They refine a
-/// result set the user is already looking at, which is how both reference
-/// products behave — and it keeps Apply meaning "run this search" rather than
-/// "commit the eight things I touched".
-class _RefineBar extends StatelessWidget {
-  const _RefineBar({
-    required this.filters,
-    required this.onToggleFeature,
-    required this.onToggleLanguage,
-  });
-
-  final TourFilters filters;
-  final ValueChanged<String> onToggleFeature;
-  final ValueChanged<String> onToggleLanguage;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-
-    return GlassPanel(
-      borderRadius: _cardRadius,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _GroupLabel(label: l10n.toursIncludes),
-          const SizedBox(height: 8),
-          _ChipScroller(
-            children: [
-              for (final feature in TourFeature.values)
-                _ChoiceChip(
-                  label: l10n.tourFeatureLabel(feature),
-                  selected: filters.features.contains(feature.id),
-                  onTap: () => onToggleFeature(feature.id),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _GroupLabel(label: l10n.tourGuideLanguages),
-          const SizedBox(height: 8),
-          _ChipScroller(
-            children: [
-              for (final language in TourGuideLanguage.values)
-                _ChoiceChip(
-                  label: l10n.tourGuideLanguageLabel(language),
-                  selected: filters.guideLanguages.contains(language.code),
-                  onTap: () => onToggleLanguage(language.code),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The sort control. Single-select, so it uses the same chip with
-/// `Semantics(inMutuallyExclusiveGroup)` rather than a second control family.
-class _SortBar extends StatelessWidget {
-  const _SortBar({
-    required this.sort,
-    required this.locationAvailable,
-    required this.onChanged,
-  });
-
-  final TourSort sort;
-
-  /// "Nearest to me" is hidden without a fix — offering an order the screen
-  /// cannot produce is worse than offering one fewer.
-  final bool locationAvailable;
-
-  final ValueChanged<TourSort> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final options = TourSort.values
-        .where((value) => locationAvailable || !value.needsLocation)
-        .toList(growable: false);
-
-    return GlassPanel(
-      borderRadius: _cardRadius,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _GroupLabel(label: l10n.toursSortLabel),
-          const SizedBox(height: 8),
-          _ChipScroller(
-            children: [
-              for (final option in options)
-                _ChoiceChip(
-                  label: l10n.tourSortLabel(option),
-                  selected: option == sort,
-                  exclusive: true,
-                  onTap: () => onChanged(option),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GroupLabel extends StatelessWidget {
-  const _GroupLabel({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    label,
-    // `label` from the type scale: 12 / 600.
-    style: TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: AppColors.secondaryText(context),
-    ),
-  );
-}
-
-/// A horizontally scrollable chip row — a fixed row of eight localized labels
-/// does not fit on a 320dp phone, and certainly not at a raised font size.
-class _ChipScroller extends StatelessWidget {
-  const _ChipScroller({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: [
-        for (final child in children) ...[
-          child,
-          if (child != children.last) const SizedBox(width: 8),
-        ],
-      ],
-    ),
-  );
-}
-
-/// The one selectable chip used by both the refinement groups and the sort
-/// control, per `DESIGN_SYSTEM.md` 12.1: pill geometry, ~38dp visual height
-/// inside a 48dp target, accent stroke **only when selected**.
-class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.exclusive = false,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  /// True for the sort row, where exactly one option is active — announced to
-  /// assistive technology as a radio group rather than eight toggles.
-  final bool exclusive;
-
-  static const double visualHeight = 38;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-    final selectedContent = isDark
-        ? AppColors.darkOnPrimary
-        : AppColors.pageGradientTop;
-    final restingContent = isDark
-        ? AppColors.luminousMint
-        : AppColors.actionNavy;
-
-    return Semantics(
-      button: true,
-      selected: selected,
-      inMutuallyExclusiveGroup: exclusive,
-      label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height: visualHeight,
-          margin: const EdgeInsets.symmetric(vertical: (48 - visualHeight) / 2),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            // Unselected keeps the neutral glass tint and **no** accent
-            // stroke; selected strengthens the tint and adds the 1.5px accent
-            // stroke (`DESIGN_SYSTEM.md` 7.1 / 7.2).
-            color: selected
-                ? selectedFill
-                : AppColors.selectionTint(
-                    context,
-                  ).withValues(alpha: isDark ? 0.10 : 0.55),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected
-                  ? selectedContent
-                  : restingContent.withValues(alpha: 0.35),
-              width: selected ? AppColors.selectionStrokeWidth : 1,
-            ),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-              color: selected ? selectedContent : restingContent,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// "Travellers  −  2  +".
-///
-/// A stepper rather than a text field: the value is a small integer with hard
-/// bounds, and a keyboard would invite "0" and "300".
-class _TravellerStepper extends StatelessWidget {
-  const _TravellerStepper({required this.value, required this.onChanged});
-
-  final int value;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final canDecrease = value > TourFilters.minTravellers;
-    final canIncrease = value < TourFilters.maxTravellers;
-
-    return GlassPanel(
-      borderRadius: AppRecessedGlassField.radius,
-      padding: const EdgeInsetsDirectional.only(start: 18, end: 8),
-      child: SizedBox(
-        // The same 56dp control height as every other field on the screen.
-        height: 56,
-        child: Row(
-          children: [
-            Icon(
-              Icons.group_outlined,
-              size: 22,
-              color: AppColors.selectionAccent(context),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l10n.tourTravellers,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.secondaryText(context),
-                ),
-              ),
-            ),
-            _StepperButton(
-              buttonKey: exploreToursTravellerMinusKey,
-              icon: Icons.remove_rounded,
-              semanticLabel: l10n.tourTravellerCount(value - 1),
-              onTap: canDecrease ? () => onChanged(value - 1) : null,
-            ),
-            // The count is a measurement, so it stays LTR in every language.
-            SizedBox(
-              width: 34,
-              child: Text(
-                '$value',
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.ltr,
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.heading(context),
-                ),
-              ),
-            ),
-            _StepperButton(
-              buttonKey: exploreToursTravellerPlusKey,
-              icon: Icons.add_rounded,
-              semanticLabel: l10n.tourTravellerCount(value + 1),
-              onTap: canIncrease ? () => onChanged(value + 1) : null,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StepperButton extends StatelessWidget {
-  const _StepperButton({
-    required this.buttonKey,
-    required this.icon,
-    required this.semanticLabel,
-    required this.onTap,
-  });
-
-  final Key buttonKey;
-  final IconData icon;
-  final String semanticLabel;
-
-  /// Null disables the button at the range's ends.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    final accent = AppColors.accent(
-      context,
-    ).withValues(alpha: enabled ? 1 : 0.35);
-
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: semanticLabel,
-      child: SizedBox(
-        // 48dp target around a 32dp circle, per `DESIGN_SYSTEM.md` 19.
-        width: 48,
-        height: 48,
-        child: InkWell(
-          key: buttonKey,
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Center(
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: accent, width: 1.5),
-              ),
-              child: Icon(icon, size: 18, color: accent),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // --- Tour card --------------------------------------------------------------
+
+/// The photo panel on one list card, keyed so a test can measure it against the
+/// card it bleeds into.
+@visibleForTesting
+Key tourCardThumbnailKey(String tourId) => ValueKey('tour-thumb-$tourId');
 
 /// One tour in the list.
 ///
@@ -1549,26 +1222,86 @@ class _TourCard extends StatelessWidget {
   final VoidCallback onFavorite;
   final VoidCallback onTap;
 
-  static const double thumbnailWidth = 140;
-  static const double minHeight = 246;
+  // --- Base geometry --------------------------------------------------------
+  //
+  // The whole card is laid out once at this fixed size and then scaled to the
+  // width it is given, so every phone shows the *same* card, only larger or
+  // smaller — the approved reference is a proportion, not a pixel size. Nothing
+  // inside reflows between devices, which is what the reference asks for.
 
-  /// How many feature icons the list card draws.
-  ///
-  /// The reference shows four, and a fifth does not fit beside a 140dp
-  /// thumbnail at any readable label size. A tour tagged with more keeps them
-  /// all in Firestore — the detail screen is where the full set belongs.
-  static const int maxFeaturesOnCard = 4;
+  /// The width the layout below is written against.
+  static const double baseWidth = 360;
+
+  /// Height of that layout. `baseWidth / baseHeight` is the card's aspect
+  /// ratio, held on every screen.
+  static const double baseHeight = 184;
+
+  /// Beyond this the card would stop looking like a card on a tablet, so the
+  /// scaling stops and the card centres instead.
+  static const double maxWidth = 520;
+
+  static const double _pad = 9;
+  static const double _photoWidth = 102;
+  static const double _photoGap = 10;
+
+  /// The trailing column: the operator tag, the facility grid and the price
+  /// badge all share this width.
+  static const double _badgeColumnWidth = 84;
+
+  /// How wide the place block (6 and 7) is allowed to run before it would
+  /// reach under the trailing column.
+  static const double _placeColumnWidth = 130;
+
+  /// How far the price and the facility grid ride above where they would
+  /// otherwise sit, as requested.
+  static const double _lift = 5;
+
+  /// How far the date is nudged off the trailing edge, as requested — 2, then
+  /// 3 more.
+  static const double _dateNudge = 5;
+
+  /// How many facility icons fit the 2x3 grid. A tour tagged with more keeps
+  /// them all in Firestore — opening the card shows the full set on the Tour
+  /// Detail screen.
+  static const int maxFeaturesOnCard = 6;
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = math.min(
+          constraints.maxWidth.isFinite ? constraints.maxWidth : baseWidth,
+          maxWidth,
+        );
+        return Center(
+          child: SizedBox(
+            width: width,
+            height: width * baseHeight / baseWidth,
+            child: FittedBox(
+              fit: BoxFit.fill,
+              child: MediaQuery.withNoTextScaling(
+                // The card is a scaled drawing: letting the system font size
+                // grow the text inside a fixed box would overflow it. The text
+                // still grows with the card itself on a larger phone.
+                child: SizedBox(
+                  width: baseWidth,
+                  height: baseHeight,
+                  child: _buildCard(context),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCard(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final distance = _distanceText(l10n);
     final features = tour.knownFeatures.take(maxFeaturesOnCard).toList();
-    final start = tour.startAt;
-    final score = tour.reviewScore;
-    final policy = tour.cancellationPolicy;
-    final languages = tour.knownGuideLanguages;
     final price = tour.pricePerPerson;
+    final start = tour.startAt;
 
     return Semantics(
       button: true,
@@ -1578,233 +1311,261 @@ class _TourCard extends StatelessWidget {
         onTap: onTap,
         child: GlassPanel(
           borderRadius: _cardRadius,
-          padding: const EdgeInsets.all(12),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: minHeight),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: thumbnailWidth,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(_cardRadius - 4),
-                          child: _TourPhoto(tour: tour, index: 0),
-                        ),
-                        PositionedDirectional(
-                          top: 0,
-                          start: 0,
-                          child: _FavoriteButton(
-                            isFavorite: isFavorite,
-                            pending: favoritePending,
-                            onTap: onFavorite,
-                          ),
-                        ),
-                      ],
+          padding: const EdgeInsets.all(_pad),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1 — the photo, inset from the rim on all four sides, with the
+              // favourite heart laid over the top of it. No rating is drawn on
+              // a list card at all now: neither the number nor the stars.
+              SizedBox(
+                key: tourCardThumbnailKey(tour.id),
+                width: _photoWidth,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _TourPhoto(tour: tour, index: 0),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                tour.name(languageCode),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  // headline-md
-                                  fontSize: 19,
-                                  height: 24 / 19,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.heading(context),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            // Rating on the **trailing** edge of the card, as
-                            // asked. The score badge alone rather than score +
-                            // five stars: the column is ~230dp wide, and
-                            // `DESIGN_SYSTEM.md` 13 approves either form.
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (tour.companyTag.isNotEmpty)
-                                  _CompanyTag(label: tour.companyTag),
-                                if (score != null) ...[
-                                  const SizedBox(height: 6),
-                                  _ScoreBox(score: score),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    l10n.tourReviewCount(tour.ratingCount),
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.secondaryText(context),
-                                    ),
-                                  ),
-                                ] else ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    l10n.tourNoReviews,
-                                    maxLines: 1,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.secondaryText(context),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          l10n.tourDuration(tour.durationDays),
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: AppColors.secondaryText(context),
-                          ),
-                        ),
-                        if (features.isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          _FeatureRow(features: features),
-                        ],
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: 16,
-                              color: AppColors.heading(context),
-                            ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                tour.locationLabel(languageCode),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.heading(context),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (tour.isLowAvailability) ...[
-                          const SizedBox(height: 6),
-                          _MetaLine(
-                            icon: Icons.event_seat_outlined,
-                            text: l10n.tourSpotsLeft(tour.spotsLeft!),
-                            // The one line on the card that is a warning rather
-                            // than information, so it takes the semantic warning
-                            // token instead of the quiet body colour.
-                            color: Theme.of(context).colorScheme.error,
-                            bold: true,
-                          ),
-                        ],
-                        if (policy != null) ...[
-                          const SizedBox(height: 6),
-                          _MetaLine(
-                            icon: policy.isFree
-                                ? Icons.event_available_outlined
-                                : Icons.event_busy_outlined,
-                            text: l10n.tourCancellationLabel(policy),
-                            color: policy.isFree
-                                ? AppColors.statusSuccessContent(context)
-                                : AppColors.secondaryText(context),
-                          ),
-                        ],
-                        if (languages.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          _MetaLine(
-                            icon: Icons.translate_rounded,
-                            text: languages
-                                .map(l10n.tourGuideLanguageLabel)
-                                .join(' · '),
-                          ),
-                        ],
-                        const SizedBox(height: 8),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (distance != null) ...[
-                                    Text(
-                                      distance,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.secondaryText(context),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                  ],
-                                  Text(
-                                    tour.description(languageCode),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      // body-sm
-                                      fontSize: 13,
-                                      height: 19 / 13,
-                                      color: AppColors.secondaryText(context),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (start != null) ...[
-                                  Text(
-                                    l10n.tourDateRange(start, tour.endAt),
-                                    textAlign: TextAlign.end,
-                                    maxLines: 2,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.secondaryText(context),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                ],
-                                if (price != null)
-                                  _PriceBox(
-                                    price: price,
-                                    currency: tour.currency,
-                                    pricing: pricing,
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
+                    PositionedDirectional(
+                      top: 2,
+                      start: 2,
+                      child: _FavoriteButton(
+                        isFavorite: isFavorite,
+                        pending: favoritePending,
+                        onTap: onFavorite,
+                        targetSize: 30,
+                        circleSize: 24,
+                        iconSize: 14,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: _photoGap),
+              // Everything else is placed against the card's own height rather
+              // than stacked in one flow: the place block sits on the card's
+              // vertical centre, the description on its floor, and the trailing
+              // column rides 5dp above both. A Column could not hold all three
+              // at once.
+              Expanded(
+                child: Stack(
+                  children: [
+                    PositionedDirectional(
+                      top: 0,
+                      start: 0,
+                      end: 0,
+                      child: _buildHeader(context, l10n),
+                    ),
+                    // 6 and 7 — centred on the card's own vertical middle.
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: SizedBox(
+                        width: _placeColumnWidth,
+                        child: _buildPlaceBlock(context, l10n, distance),
+                      ),
+                    ),
+                    // 8–13, on the card's vertical middle beside the place
+                    // block, lifted just clear of the date above the price.
+                    PositionedDirectional(
+                      top: 0,
+                      bottom: _lift * 2,
+                      end: 0,
+                      width: _badgeColumnWidth,
+                      child: _buildBadgeColumn(context, features),
+                    ),
+                    // The description sits on the card's floor; the date and
+                    // the price (5) ride 5dp above it on the trailing side.
+                    PositionedDirectional(
+                      bottom: 0,
+                      start: 0,
+                      end: 0,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              tour.description(languageCode),
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                height: 12.4 / 9.5,
+                                color: AppColors.secondaryText(context),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Transform.translate(
+                            offset: const Offset(0, -_lift),
+                            child: _buildPriceStack(
+                              context,
+                              l10n,
+                              start,
+                              price,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The tour name and its duration on the leading side; the operator tag (4)
+  /// on the card's top trailing corner.
+  Widget _buildHeader(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                tour.name(languageCode),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 19 / 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.heading(context),
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                l10n.tourDuration(tour.durationDays),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 9.5,
+                  color: AppColors.secondaryText(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 6),
+        if (tour.companyTag.isNotEmpty)
+          _CompanyTag(label: tour.companyTag, compact: true),
+      ],
+    );
+  }
+
+  /// 6 (the place) with the distance beneath it, then 7 (availability).
+  Widget _buildPlaceBlock(
+    BuildContext context,
+    AppLocalizations l10n,
+    String? distance,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _CardIconLine(
+          icon: Icons.location_on_outlined,
+          text: tour.locationLabel(languageCode),
+          fontSize: 11.5,
+          bold: true,
+          color: AppColors.heading(context),
+        ),
+        if (distance != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: _CardIconLine.circleSize + _CardIconLine.gap,
+              top: 1,
+            ),
+            child: Text(
+              distance,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 8.5,
+                color: AppColors.secondaryText(context),
               ),
             ),
           ),
-        ),
+        if (tour.isLowAvailability) ...[
+          const SizedBox(height: 3),
+          _CardIconLine(
+            icon: Icons.event_seat_outlined,
+            text: l10n.tourSpotsLeft(tour.spotsLeft!),
+            fontSize: 11,
+            bold: true,
+            // The one line on the card that is a warning rather than
+            // information, so it keeps the semantic warning token.
+            color: Theme.of(context).colorScheme.error,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// 8–13 — the facility icons, icon-only. The operator tag that used to sit
+  /// above them now rides in the header, on the card's top trailing corner.
+  ///
+  /// Centred on the card's own height, level with the place block across the
+  /// card. The band it centres in stops short of the card's floor so the grid
+  /// cannot land on the date above the price.
+  Widget _buildBadgeColumn(BuildContext context, List<TourFeature> features) {
+    if (features.isEmpty) return const SizedBox.shrink();
+    return Align(
+      alignment: AlignmentDirectional.centerEnd,
+      child: _FeatureGrid(features: features),
+    );
+  }
+
+  /// The departure dates directly over 5 (the price), sharing its width.
+  Widget _buildPriceStack(
+    BuildContext context,
+    AppLocalizations l10n,
+    DateTime? start,
+    num? price,
+  ) {
+    return SizedBox(
+      width: _badgeColumnWidth,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (start != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(
+                bottom: 2,
+                // Off the trailing edge by 2, as asked — mirrored in Kurdish
+                // and Arabic so it stays on the same side as the price.
+                end: _dateNudge,
+              ),
+              child: Text(
+                l10n.tourDateRange(start, tour.endAt),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 8.5,
+                  height: 11 / 8.5,
+                  color: AppColors.secondaryText(context),
+                ),
+              ),
+            ),
+          if (price != null)
+            _PriceBox(
+              price: price,
+              currency: tour.currency,
+              pricing: pricing,
+              compact: true,
+            ),
+        ],
       ),
     );
   }
@@ -1822,6 +1583,95 @@ class _TourCard extends StatelessWidget {
   }
 }
 
+/// One icon-and-text line on the card — 6 (the place) and 7 (availability).
+///
+/// The icon sits in the stroke-only circle every feature icon in the app uses
+/// (`DESIGN_SYSTEM.md` 11.1), which is what the reference draws around both.
+class _CardIconLine extends StatelessWidget {
+  const _CardIconLine({
+    required this.icon,
+    required this.text,
+    required this.fontSize,
+    required this.color,
+    this.bold = false,
+  });
+
+  final IconData icon;
+  final String text;
+  final double fontSize;
+  final Color color;
+  final bool bold;
+
+  static const double circleSize = 15;
+  static const double gap = 4;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1),
+          ),
+          child: Icon(icon, size: circleSize - 6, color: color),
+        ),
+        const SizedBox(width: gap),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: fontSize,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+              color: color,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// 8–13: the facilities, as a 2x3 grid of icon-only circles.
+///
+/// No label under them, on request — the name of each is still announced to a
+/// screen reader, and the full labelled list is on the Tour Detail screen.
+class _FeatureGrid extends StatelessWidget {
+  const _FeatureGrid({required this.features});
+
+  final List<TourFeature> features;
+
+  static const int columns = 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var i = 0; i < features.length; i += columns) {
+      final slice = features.skip(i).take(columns).toList();
+      rows.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            for (final feature in slice) _FeatureIcon(feature: feature),
+            // Keeps a short last row aligned under the first one instead of
+            // spreading three icons' worth of gap between two.
+            for (var pad = slice.length; pad < columns; pad++)
+              const SizedBox(width: _FeatureIcon.circleSize),
+          ],
+        ),
+      );
+      if (i + columns < features.length) {
+        rows.add(const SizedBox(height: 6));
+      }
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
+}
+
 /// Metres under a kilometre, then one decimal up to 10 km, then whole
 /// kilometres — "0.3 km" and "127.4 km" are both worse than "300 m" and
 /// "127 km".
@@ -1836,48 +1686,7 @@ String formatTourDistance(double meters) {
   return km < 10 ? '${km.toStringAsFixed(1)} km' : '${km.round()} km';
 }
 
-/// A small icon-and-text line on a card — availability, cancellation policy,
-/// guide languages. One widget rather than three, so they cannot drift apart.
-class _MetaLine extends StatelessWidget {
-  const _MetaLine({
-    required this.icon,
-    required this.text,
-    this.color,
-    this.bold = false,
-  });
-
-  final IconData icon;
-  final String text;
-  final Color? color;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) {
-    final resolved = color ?? AppColors.secondaryText(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 14, color: resolved),
-        const SizedBox(width: 5),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12,
-              height: 16 / 12,
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
-              color: resolved,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// The heart, overlaid on the card's photo.
+/// The heart drawn on a tour photo.
 ///
 /// Mirrors the Home screen's featured-card control exactly — a favourite is
 /// one concept, so it must not look like two.
@@ -1886,6 +1695,9 @@ class _FavoriteButton extends StatelessWidget {
     required this.isFavorite,
     required this.pending,
     required this.onTap,
+    this.targetSize = 48,
+    this.circleSize = 34,
+    this.iconSize = 19,
   });
 
   final bool isFavorite;
@@ -1894,6 +1706,13 @@ class _FavoriteButton extends StatelessWidget {
   final bool pending;
 
   final VoidCallback onTap;
+
+  /// The three sizes shrink together on the list card, whose photo is drawn at
+  /// the card's own scale rather than at device pixels — see
+  /// [_TourCard.baseWidth]. The carousel keeps the full-size defaults.
+  final double targetSize;
+  final double circleSize;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1908,15 +1727,15 @@ class _FavoriteButton extends StatelessWidget {
       child: SizedBox(
         // 34dp circle inside a 48dp target — the GlassBackButton pattern,
         // trimmed to sit on a 140dp thumbnail.
-        width: 48,
-        height: 48,
+        width: targetSize,
+        height: targetSize,
         child: InkWell(
           onTap: pending ? null : onTap,
           customBorder: const CircleBorder(),
           child: Center(
             child: Container(
-              width: 34,
-              height: 34,
+              width: circleSize,
+              height: circleSize,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: isDark
@@ -1927,7 +1746,7 @@ class _FavoriteButton extends StatelessWidget {
                 isFavorite
                     ? Icons.favorite_rounded
                     : Icons.favorite_border_rounded,
-                size: 19,
+                size: iconSize,
                 color: accent.withValues(alpha: pending ? 0.4 : 1),
               ),
             ),
@@ -1944,7 +1763,11 @@ class _FavoriteButton extends StatelessWidget {
 /// another glass surface use the shared material at the next layer up (6.1),
 /// which is what `elevated` selects.
 class _CompanyTag extends StatelessWidget {
-  const _CompanyTag({required this.label, this.onPhoto = false});
+  const _CompanyTag({
+    required this.label,
+    this.onPhoto = false,
+    this.compact = false,
+  });
 
   final String label;
 
@@ -1952,21 +1775,29 @@ class _CompanyTag extends StatelessWidget {
   /// card, which is the one case its label is white in both themes.
   final bool onPhoto;
 
+  /// The list card draws this pill inside a 90dp trailing column
+  /// ([_TourCard.baseWidth]), which the full-size padding cannot share.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 110),
+      constraints: BoxConstraints(maxWidth: compact ? 90 : 110),
       child: GlassPanel(
         borderRadius: 999,
-        elevated: true,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        depth: GlassDepth.top,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 12,
+          vertical: compact ? 4 : 6,
+        ),
         child: Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
           style: TextStyle(
             // `label` from the type scale: 12 / 600.
-            fontSize: 12,
+            fontSize: compact ? 9 : 12,
             fontWeight: FontWeight.w600,
             color: onPhoto ? Colors.white : AppColors.heading(context),
           ),
@@ -1976,32 +1807,21 @@ class _CompanyTag extends StatelessWidget {
   }
 }
 
-/// The row of "what's included" icons.
+/// One "what's included" icon.
 ///
-/// Stroke-only circles with the label beneath, per `DESIGN_SYSTEM.md` 11.1 —
-/// the same feature-icon family the Home screen and Explore Nature already use.
-class _FeatureRow extends StatelessWidget {
-  const _FeatureRow({required this.features});
-
-  final List<TourFeature> features;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      for (final feature in features)
-        Expanded(child: _FeatureIcon(feature: feature)),
-    ],
-  );
-}
-
+/// A stroke-only circle, per `DESIGN_SYSTEM.md` 11.1 — the same feature-icon
+/// family the Home screen and Explore Nature already use. The list card draws
+/// these **without** their label, on request, so the name reaches a screen
+/// reader through [Semantics] and a sighted user through the Tour Detail
+/// screen, where the full labelled list lives.
 class _FeatureIcon extends StatelessWidget {
   const _FeatureIcon({required this.feature});
 
   final TourFeature feature;
 
-  /// `DESIGN_SYSTEM.md` 11.1: circle 44–46dp, icon 22–24dp, stroke 1.5px.
-  static const double circleSize = 44;
+  /// Sized for the card's 2x3 trailing grid, drawn at the card's own scale
+  /// rather than at device pixels — see [_TourCard.baseWidth].
+  static const double circleSize = 22;
 
   @override
   Widget build(BuildContext context) {
@@ -2011,36 +1831,18 @@ class _FeatureIcon extends StatelessWidget {
 
     return Semantics(
       label: label,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: circleSize,
-            height: circleSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // Stroke only — no fill, per 11.1.
-              border: Border.all(color: accent, width: 1.5),
-            ),
-            child: Icon(_iconFor(feature), size: 22, color: accent),
+      child: Tooltip(
+        message: label,
+        child: Container(
+          width: circleSize,
+          height: circleSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Stroke only — no fill, per 11.1.
+            border: Border.all(color: accent, width: 1.2),
           ),
-          const SizedBox(height: 4),
-          // Allowed to shrink rather than overflow: "Photography" is far wider
-          // than "Food", and the four columns are equal.
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                // `label` from the type scale: 12 / 600.
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: AppColors.heading(context),
-              ),
-            ),
-          ),
-        ],
+          child: Icon(_iconFor(feature), size: 12, color: accent),
+        ),
       ),
     );
   }
@@ -2054,6 +1856,10 @@ class _FeatureIcon extends StatelessWidget {
     TourFeature.campfire => Icons.local_fire_department_outlined,
     TourFeature.transport => Icons.directions_bus_outlined,
     TourFeature.photography => Icons.photo_camera_outlined,
+    TourFeature.activity => Icons.directions_run_rounded,
+    TourFeature.wifi => Icons.wifi_rounded,
+    TourFeature.electricity => Icons.bolt_outlined,
+    TourFeature.tent => Icons.festival_outlined,
   };
 }
 
@@ -2065,11 +1871,18 @@ class _PriceBox extends StatelessWidget {
     required this.price,
     required this.currency,
     required this.pricing,
+    this.compact = false,
   });
 
   final num price;
   final String currency;
   final TourPricing pricing;
+
+  /// The list card's badge column is 90dp wide ([_TourCard.baseWidth]), too
+  /// narrow for the amount and the "per person" label side by side — compact
+  /// stacks the label under the figure instead. Radius, material and colour
+  /// tokens are unchanged.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -2085,50 +1898,148 @@ class _PriceBox extends StatelessWidget {
           : perPerson,
       child: GlassPanel(
         borderRadius: 12,
-        elevated: true,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
+        depth: GlassDepth.top,
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 7 : 10,
+          vertical: compact ? 5 : 8,
+        ),
+        child: compact
+            ? _buildCompact(context, perPerson, total, l10n)
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Amount and "per person" side by side on one row, as the
+                  // reference draws it — the label wraps onto two short lines
+                  // beside the figure rather than sitting under it.
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          // A price is a measurement sequence: it stays
+                          // left-to-right in every language (`DESIGN_SYSTEM.md` 21).
+                          perPerson,
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 20,
+                            height: 24 / 20,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.heading(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      ConstrainedBox(
+                        // Wide enough for "Per Person" on two lines and for the
+                        // Kurdish and Arabic labels, narrow enough that the badge
+                        // stays a badge.
+                        constraints: const BoxConstraints(maxWidth: 46),
+                        child: Text(
+                          l10n.tourPerPersonBadge,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            height: 12 / 10,
+                            color: AppColors.secondaryText(context),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (total != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.tourTotalFor(total),
+                      textAlign: TextAlign.center,
+                      textDirection: TextDirection.ltr,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accent(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+      ),
+    );
+  }
+
+  /// The card's version: the amount on the leading side with "per person"
+  /// beside it on the same row, as the full-size badge draws it, squeezed to
+  /// fit the card's trailing column.
+  Widget _buildCompact(
+    BuildContext context,
+    String perPerson,
+    String? total,
+    AppLocalizations l10n,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text(
-              // A price is a measurement sequence: it stays left-to-right in
-              // every language (`DESIGN_SYSTEM.md` 20).
-              perPerson,
-              textDirection: TextDirection.ltr,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 20,
-                height: 24 / 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.heading(context),
-              ),
-            ),
-            Text(
-              l10n.tourPerPerson,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                height: 14 / 11,
-                color: AppColors.secondaryText(context),
-              ),
-            ),
-            if (total != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                l10n.tourTotalFor(total),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.ltr,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accent(context),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  // A price is a measurement sequence: it stays left-to-right
+                  // in every language (`DESIGN_SYSTEM.md` 21).
+                  perPerson,
+                  textDirection: TextDirection.ltr,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 17 / 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.heading(context),
+                  ),
                 ),
               ),
-            ],
+            ),
+            const SizedBox(width: 3),
+            ConstrainedBox(
+              // Two short lines of "Per Person" beside the figure — the same
+              // shape the full-size badge uses, at the card's scale. Wide
+              // enough for the Kurdish and Arabic labels too.
+              constraints: const BoxConstraints(maxWidth: 30),
+              child: Text(
+                l10n.tourPerPersonBadge,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 8,
+                  height: 10 / 8,
+                  color: AppColors.secondaryText(context),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
+        if (total != null)
+          Text(
+            l10n.tourTotalFor(total),
+            textAlign: TextAlign.center,
+            textDirection: TextDirection.ltr,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 8.5,
+              height: 11 / 8.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.accent(context),
+            ),
+          ),
+      ],
     );
   }
 }

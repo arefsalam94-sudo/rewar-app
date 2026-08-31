@@ -623,7 +623,6 @@ class _EditShell extends StatelessWidget {
                 constraints: const BoxConstraints(maxWidth: 620),
                 child: GlassPanel(
                   borderRadius: 28,
-                  fill: GlassFill.sheen,
                   padding: const EdgeInsets.all(24),
                   child: child,
                 ),

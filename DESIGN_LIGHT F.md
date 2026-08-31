@@ -1,3 +1,6 @@
+| `step-complete-fill` | `#0E2A44` |
+| `step-complete-content` | `#FFFFFF` |
+| `step-connector-done` | `#0E2A44` |
 # DESIGN_LIGHT.md
 ## Lush Horizon — Light Theme Tokens
 
@@ -191,7 +194,32 @@ Do not use a different rating structure on different screens.
 
 ---
 
-## 10. Semantic states
+## 10. Step indicator
+
+Tokens for the multi-step flow indicator (`DESIGN_SYSTEM.md` section 14).
+
+Step state is drawn in `primary-container`, **not** `action`: the approved
+checkout references draw the ring and the completed fill in the palette green,
+and `action` is the navy reserved for primary buttons.
+
+| Token | Value |
+|---|---|
+| `step-active-ring` | `#187C64` |
+| `step-active-number` | `#187C64` |
+| `step-complete-fill` | `#187C64` |
+| `step-complete-content` | `#FFFFFF` |
+| `step-connector-done` | `#187C64` |
+| `step-inactive-number` | `#1B1B1B` |
+| `step-connector-dot` | `#3E4945` at approximately `0.45` |
+| `step-label` | `#1B1B1B` |
+| `step-label-active` | `#187C64` |
+
+An upcoming circle takes the standard glass fill; only the ring, the fill, the
+number/check, and the label carry step state.
+
+---
+
+## 11. Semantic states
 
 | State | Token |
 |---|---|
@@ -204,7 +232,7 @@ These colors modify semantic state indicators only. Component geometry and glass
 
 ---
 
-## 11. Font mapping
+## 12. Font mapping
 
 - English: Plus Jakarta Sans
 - Arabic: Dubai

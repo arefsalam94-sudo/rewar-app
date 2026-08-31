@@ -81,7 +81,7 @@ class AppColors {
   /// *"When `outline` is used for its actual purpose — a border or stroke —
   /// it must be applied at 10-15% opacity. A solid, fully opaque white
   /// border is wrong."*
-  static const double darkBorderOpacity = 0.20;
+  static const double darkBorderOpacity = 0.14;
 
   /// Primary interactive accent for the active appearance.
   static Color accent(BuildContext context) =>
@@ -91,9 +91,8 @@ class AppColors {
 
   /// Heading / title colour for a screen's own copy.
   ///
-  /// Light mode uses [actionNavy] rather than `on-surface` (`#1B1B1B`, a
-  /// near-black): the approved references draw headings in navy, and widening
-  /// that token's use is a deliberate decision recorded in `DESIGN_SYSTEM.md`.
+  /// Light mode uses `on-surface` (`#1B1B1B`) — `DESIGN_LIGHT F.md` sets
+  /// `text-heading` to that near-black, not to [actionNavy].
   /// Dark mode is pure white at 100% — `DESIGN dark.md`: *"if a heading looks
   /// dim, it is a bug."*
   ///
@@ -102,7 +101,7 @@ class AppColors {
   static Color heading(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
       ? Colors.white
-      : actionNavy;
+      : const Color(0xFF1B1B1B);
 
   /// Returns the correct helper/secondary text colour for the current
   /// theme, so the dark-mode 70-80% rule is applied in one place instead of
@@ -122,63 +121,49 @@ class AppColors {
         : onPhotoBackground;
   }
 
-  // --- Status tokens (added for the My Bookings screen) -------------------
-  //
-  // The palette had `error` but no success or info colour, so a CONFIRMED or
-  // ECONOMY pill had nothing correct to reach for. These follow the **rating
-  // badge rule** already approved in both design files, because a status pill
-  // is the same kind of object — a small badge that must stay legible on both
-  // glass and photography:
-  //
-  //   light — pale container fill, dark content on top
-  //   dark  — solid bright container fill, deep content on top
-  //
-  // Dark mode is solid rather than translucent for the reason `DESIGN dark.md`
-  // gives for the rating badge: a translucent tint over a dark background
-  // muddies into the backdrop and drops the content below 4.5:1.
+  /// `step-connector-dot` — the dots between step circles in a multi-step
+  /// flow (`DESIGN_SYSTEM.md` 14).
+  ///
+  /// Both theme files define it as the secondary text colour at 45%: white in
+  /// dark, `on-surface-variant` (`#3E4945`) in light. Read from the scheme
+  /// rather than typed as a hex, so the two cannot drift.
+  static Color stepConnectorDot(BuildContext context) =>
+      (_isDark(context)
+              ? Colors.white
+              : Theme.of(context).colorScheme.onSurfaceVariant)
+          .withValues(alpha: 0.45);
 
-  /// "Confirmed" / positive status. Light content colour.
-  static const Color successContentLight = Color(0xFF0F7A4E);
+  /// `step-active-ring` / `step-complete-fill` — the accent a multi-step
+  /// indicator draws its state in (`DESIGN_SYSTEM.md` 14).
+  ///
+  /// **`primary-container`, not [actionNavy].** Both theme files are explicit:
+  /// the approved checkout references draw the ring and the completed fill in
+  /// the palette green (`#187C64` light / `#2AF598` dark), while `action` is
+  /// the navy reserved for primary buttons. Using the button colour here was a
+  /// bug — the two are different tokens and only coincide in dark mode.
+  static Color stepAccent(BuildContext context) =>
+      Theme.of(context).colorScheme.primaryContainer;
 
-  /// "Confirmed" / positive status. Light fill colour.
-  static const Color successFillLight = Color(0xFFD7F0E2);
-
-  /// Dark mode's solid success fill…
-  static const Color successFillDark = Color(0xFF2FD98A);
-
-  /// …and the deep content drawn on it.
-  static const Color successContentDark = Color(0xFF00311F);
-
-  /// Informational / neutral status ("Economy", "Upcoming"). Light content.
-  static const Color infoContentLight = Color(0xFF2F5DA8);
-
-  /// Informational / neutral status. Light fill.
-  static const Color infoFillLight = Color(0xFFDCE7FB);
-
-  /// Dark mode's solid info fill…
-  static const Color infoFillDark = Color(0xFF8FC0FF);
-
-  /// …and the deep content drawn on it.
-  static const Color infoContentDark = Color(0xFF0A2A52);
+  /// Content drawn on top of [stepAccent] when a step is filled — the check
+  /// glyph on a completed step.
+  static Color onStepAccent(BuildContext context) =>
+      _isDark(context) ? darkOnPrimary : Colors.white;
 
   static bool _isDark(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark;
 
-  /// Fill for a positive status pill (Confirmed).
+  /// Status pills reuse the approved semantic-state tokens.
   static Color statusSuccessFill(BuildContext context) =>
-      _isDark(context) ? successFillDark : successFillLight;
+      _isDark(context) ? luminousMint : pageGradientBottom;
 
-  /// Text/icon drawn on [statusSuccessFill].
   static Color statusSuccessContent(BuildContext context) =>
-      _isDark(context) ? successContentDark : successContentLight;
+      _isDark(context) ? darkOnPrimary : Colors.white;
 
-  /// Fill for an informational status pill (Economy, Upcoming).
   static Color statusInfoFill(BuildContext context) =>
-      _isDark(context) ? infoFillDark : infoFillLight;
+      _isDark(context) ? const Color(0xFFAACCD4) : const Color(0xFF3F5774);
 
-  /// Text/icon drawn on [statusInfoFill].
   static Color statusInfoContent(BuildContext context) =>
-      _isDark(context) ? infoContentDark : infoContentLight;
+      _isDark(context) ? const Color(0xFF12353B) : Colors.white;
 
   /// Fill for a negative status pill (Cancelled).
   ///
@@ -220,15 +205,15 @@ class AppColors {
 
   /// Base glass backdrop blur (L1 — outer card / main glass surface).
   /// Per DESIGN_SYSTEM.md 5.1 and 6.1.
-  static const double glassBlurBaseL1 = 14.0;
+  static const double glassBlurBaseL1 = 18.0;
 
   /// Middle-layer glass blur (L2 — group card / sheet on L1).
   /// Per DESIGN_SYSTEM.md 6.1.
-  static const double glassBlurMiddleL2 = 18.0;
+  static const double glassBlurMiddleL2 = 22.0;
 
   /// Top-layer glass blur (L3 — glass control / chip on L2).
   /// Per DESIGN_SYSTEM.md 6.1.
-  static const double glassBlurTopL3 = 22.0;
+  static const double glassBlurTopL3 = 26.0;
 
   /// Base glass neutral edge thickness (pixels).
   /// Per DESIGN_SYSTEM.md 5.1: 1px soft light-catching edge.
@@ -242,8 +227,8 @@ class AppColors {
 
   /// Soft floating shadow geometry.
   /// Per DESIGN_SYSTEM.md 5.3.
-  static const double glassFloatingShadowOffsetY = 5.0;
-  static const double glassFloatingShadowBlurRadius = 24.0;
+  static const double glassFloatingShadowOffsetY = 6.0;
+  static const double glassFloatingShadowBlurRadius = 22.0;
   static const double glassFloatingShadowSpreadRadius = 0.0;
   static const double glassFloatingShadowOpacity = 0.14;
 
@@ -279,7 +264,7 @@ class AppColors {
   static const Color lightGlassInnerShadowColor = Color(0xFF0E2A44);
 
   /// Light mode glass inner shadow opacity.
-  static const double lightGlassInnerShadowOpacity = 0.18;
+  static const double lightGlassInnerShadowOpacity = 0.14;
 
   /// Light mode glass inner highlight color (opposite edge of inset shadow).
   /// Per DESIGN_SYSTEM.md 8.3: inner highlight to show depth.
@@ -314,7 +299,7 @@ class AppColors {
   static const Color darkGlassInnerShadowColor = Color(0xFF000000);
 
   /// Dark mode glass inner shadow opacity.
-  static const double darkGlassInnerShadowOpacity = 0.18;
+  static const double darkGlassInnerShadowOpacity = 0.14;
 
   /// Dark mode glass inner highlight color (opposite edge of inset shadow).
   /// Per DESIGN_SYSTEM.md 8.3: inner highlight to show depth.

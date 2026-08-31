@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 
-enum GlassFill { sheen, brandGradient }
+enum GlassDepth { base, middle, top }
 
 /// Shared liquid-glass surface used by auth cards, secondary buttons, sheets,
 /// and selectable surfaces.
@@ -12,29 +12,17 @@ class GlassPanel extends StatelessWidget {
   const GlassPanel({
     super.key,
     required this.child,
-    this.borderRadius = 20,
+    this.borderRadius = 28,
     this.padding = EdgeInsets.zero,
     this.borderColor,
     this.borderWidth,
     this.dark,
-    this.fill = GlassFill.sheen,
-    this.elevated = false,
-    this.lightFillOpacity,
-    this.darkFillOpacity,
-    this.lightBorderOpacity,
-    this.darkBorderOpacity,
-    this.lightBlurSigma,
-    this.darkBlurSigma,
+    this.depth = GlassDepth.base,
+    this.selected = false,
   });
 
-  final bool elevated;
-  final double? lightFillOpacity;
-  final double? darkFillOpacity;
-  final double? lightBorderOpacity;
-  final double? darkBorderOpacity;
-  final double? lightBlurSigma;
-  final double? darkBlurSigma;
-  final GlassFill fill;
+  final GlassDepth depth;
+  final bool selected;
   final Widget child;
   final double borderRadius;
   final EdgeInsetsGeometry padding;
@@ -45,24 +33,20 @@ class GlassPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = dark ?? Theme.of(context).brightness == Brightness.dark;
-    final blur = isDark
-        ? (darkBlurSigma ??
-              (elevated ? AppColors.glassBlurTopL3 : AppColors.glassBlurBaseL1))
-        : (lightBlurSigma ??
-              (elevated
-                  ? AppColors.glassBlurTopL3
-                  : AppColors.glassBlurBaseL1));
-    final tintColor = isDark
-        ? AppColors.darkGlassTintBase
-        : AppColors.lightGlassTintBase;
-    final tintOpacity =
-        (isDark
-            ? (darkFillOpacity ?? AppColors.darkGlassTintOpacity)
-            : (lightFillOpacity ?? AppColors.lightGlassTintOpacity)) +
-        (elevated ? 0.02 : 0.0);
-    final rimOpacity = isDark
-        ? (darkBorderOpacity ?? 0.55)
-        : (lightBorderOpacity ?? 0.55);
+    final blur = switch (depth) {
+      GlassDepth.base => AppColors.glassBlurBaseL1,
+      GlassDepth.middle => AppColors.glassBlurMiddleL2,
+      GlassDepth.top => AppColors.glassBlurTopL3,
+    };
+    final tintColor = selected
+        ? AppColors.selectionTint(context)
+        : (isDark ? AppColors.darkGlassTintBase : AppColors.lightGlassTintBase);
+    final tintOpacity = selected
+        ? AppColors.selectionTintOpacity
+        : (isDark
+              ? AppColors.darkGlassTintOpacity
+              : AppColors.lightGlassTintOpacity);
+    const rimOpacity = 0.55;
     final shadowColor = isDark
         ? AppColors.darkGlassShadowColor
         : AppColors.lightGlassShadowColor;
@@ -109,11 +93,20 @@ class GlassPanel extends StatelessWidget {
                 ),
                 border: Border.all(
                   color:
-                      borderColor ?? Colors.white.withValues(alpha: rimOpacity),
-                  width: borderWidth ?? 1.2,
+                      borderColor ??
+                      (selected
+                          ? AppColors.selectionAccent(context).withValues(
+                              alpha: AppColors.selectionStrokeOpacity,
+                            )
+                          : Colors.white.withValues(alpha: rimOpacity)),
+                  width:
+                      borderWidth ??
+                      (selected
+                          ? AppColors.selectionStrokeWidth
+                          : AppColors.glassEdgeThickness),
                 ),
               ),
-              child: child,
+              child: Material(color: Colors.transparent, child: child),
             ),
           ),
         ),

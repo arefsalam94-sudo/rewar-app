@@ -27,7 +27,10 @@ class RecessedLiquidGlassField extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.onChanged,
+    this.autofocus = false,
+    this.focusNode,
     this.textCapitalization = TextCapitalization.none,
+    this.compact = false,
   });
 
   final TextEditingController controller;
@@ -60,7 +63,20 @@ class RecessedLiquidGlassField extends StatelessWidget {
   final int? maxLength;
 
   final ValueChanged<String>? onChanged;
+  final bool autofocus;
+  final FocusNode? focusNode;
   final TextCapitalization textCapitalization;
+
+  /// Shrinks only the *type size and inner padding* so this same field can be
+  /// used at half width — the Explore Tours search row puts two of them side
+  /// by side, and a 16px hint cannot fit there.
+  ///
+  /// The material, the 56dp control height, the 14px radius, the recessed
+  /// depth and every state stroke are unchanged: this is the responsive
+  /// concession `DESIGN_SYSTEM.md` 19/20 asks for ("labels beside icons must
+  /// have room to shrink safely"), not a second input family — which 23 still
+  /// prohibits.
+  final bool compact;
 
   static const double radius = 14;
 
@@ -77,7 +93,7 @@ class RecessedLiquidGlassField extends StatelessWidget {
     final tintOpacity = isDark
         ? AppColors.darkGlassTintOpacity
         : AppColors.lightGlassTintOpacity;
-    final edge = Colors.white.withValues(alpha: isDark ? 0.14 : 0.62);
+    final edge = Colors.white.withValues(alpha: 0.55);
 
     OutlineInputBorder borderWith(Color color, double width) {
       return OutlineInputBorder(
@@ -114,11 +130,12 @@ class RecessedLiquidGlassField extends StatelessWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.black.withValues(alpha: isDark ? 0.15 : 0.035),
-                  Colors.black.withValues(alpha: isDark ? 0.05 : 0.015),
-                  Colors.white.withValues(alpha: 0.045),
+                  Colors.white.withValues(
+                    alpha: AppColors.glassSheenBottomOpacity,
+                  ),
+                  Colors.white.withValues(alpha: 0.02),
                 ],
-                stops: const [0.0, 0.58, 1.0],
+                stops: const [0.0, 1.0],
               ),
               border: Border.all(color: edge, width: 1.1),
             ),
@@ -133,12 +150,17 @@ class RecessedLiquidGlassField extends StatelessWidget {
               readOnly: readOnly,
               onTap: onTap,
               onChanged: onChanged,
+              autofocus: autofocus,
+              focusNode: focusNode,
               minLines: minLines,
               maxLines: maxLines,
               maxLength: maxLength,
               textCapitalization: textCapitalization,
               showCursor: !readOnly,
-              style: TextStyle(color: colorScheme.onSurface, fontSize: 16),
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: compact ? 14 : 16,
+              ),
               decoration: InputDecoration(
                 // The character counter would sit outside the glass and break
                 // the recessed shape; `maxLength` is kept for the input limit
@@ -151,14 +173,14 @@ class RecessedLiquidGlassField extends StatelessWidget {
                           alpha: AppColors.darkHintOpacity,
                         )
                       : colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
-                  fontSize: 16,
+                  fontSize: compact ? 14 : 16,
                 ),
                 prefixIcon: (prefixIcon == null && prefix == null)
                     ? null
                     : Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: 18,
-                          end: 12,
+                        padding: EdgeInsetsDirectional.only(
+                          start: compact ? 14 : 18,
+                          end: compact ? 8 : 12,
                         ),
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -167,7 +189,11 @@ class RecessedLiquidGlassField extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               if (prefixIcon != null)
-                                Icon(prefixIcon, color: accent, size: 22),
+                                Icon(
+                                  prefixIcon,
+                                  color: accent,
+                                  size: compact ? 20 : 22,
+                                ),
                               if (prefix != null) ...[
                                 const SizedBox(width: 10),
                                 prefix!,
@@ -180,15 +206,25 @@ class RecessedLiquidGlassField extends StatelessWidget {
                 suffixIcon: suffix,
                 filled: true,
                 fillColor: Colors.transparent,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 18,
+                constraints: const BoxConstraints(minHeight: 56),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: compact ? 10 : 16,
+                  vertical: 16,
                 ),
                 enabledBorder: borderWith(Colors.transparent, 0),
                 border: borderWith(Colors.transparent, 0),
-                focusedBorder: borderWith(accent, 1.6),
-                errorBorder: borderWith(colorScheme.error, 1.4),
-                focusedErrorBorder: borderWith(colorScheme.error, 1.6),
+                focusedBorder: borderWith(
+                  accent,
+                  AppColors.selectionStrokeWidth,
+                ),
+                errorBorder: borderWith(
+                  colorScheme.error,
+                  AppColors.selectionStrokeWidth,
+                ),
+                focusedErrorBorder: borderWith(
+                  colorScheme.error,
+                  AppColors.selectionStrokeWidth,
+                ),
                 errorStyle: TextStyle(
                   color: colorScheme.error,
                   fontSize: 13,

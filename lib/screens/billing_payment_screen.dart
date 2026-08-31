@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/saved_payment_method.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/glass_panel.dart';
@@ -49,9 +50,9 @@ class BillingPaymentScreen extends StatefulWidget {
 
 class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   /// Every saved card, newest first. Empty means the add-method empty state.
-  final List<_SavedMethodData> _methods = [];
+  final List<SavedPaymentMethod> _methods = [];
 
-  /// Which card carries the "Default" badge, by [_SavedMethodData.id]. Null
+  /// Which card carries the "Default" badge, by [SavedPaymentMethod.id]. Null
   /// only while the list is empty.
   String? _defaultId;
 
@@ -76,29 +77,22 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
     super.dispose();
   }
 
-  /// The two design fixtures. They are ordinary entries — deletable and
-  /// re-assignable like any added card — so the screen behaves consistently
-  /// rather than having two magic rows that ignore the buttons.
+  /// The two design fixtures, taken from the shared list so this screen and
+  /// checkout step 2 cannot show different cards. They are ordinary entries —
+  /// deletable and re-assignable like any added card — so the screen behaves
+  /// consistently rather than having two magic rows that ignore the buttons.
   void _seedMethods() {
     _methods.addAll([
-      _SavedMethodData(
-        id: 'seed-${_nextId++}',
-        issuer: _CardIssuer.kurdistanInternationalBank,
-        kind: _CardKind.debit,
-        last4: '4832',
-        expiry: '06/28',
-        brand: 'VISA',
-        colors: const [Color(0xFF57C6C1), Color(0xFF07516B), Color(0xFF092E50)],
-      ),
-      _SavedMethodData(
-        id: 'seed-${_nextId++}',
-        issuer: _CardIssuer.firstIraqiBank,
-        kind: _CardKind.credit,
-        last4: '7219',
-        expiry: '11/29',
-        brand: 'MC',
-        colors: const [Color(0xFF254C7E), Color(0xFF112B50), Color(0xFF071C35)],
-      ),
+      for (final card in demoSavedPaymentMethods())
+        SavedPaymentMethod(
+          id: 'seed-${_nextId++}',
+          issuer: card.issuer,
+          kind: card.kind,
+          last4: card.last4,
+          expiry: card.expiry,
+          brand: card.brand,
+          colors: card.colors,
+        ),
     ]);
     _defaultId = _methods.first.id;
   }
@@ -125,10 +119,10 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
   /// Appends rather than replaces — the previous behaviour overwrote a single
   /// `NewCardSummary?` slot, so a second card silently erased the first.
   void _appendCard(NewCardSummary card) {
-    final entry = _SavedMethodData(
+    final entry = SavedPaymentMethod(
       id: 'card-${_nextId++}',
-      issuer: _CardIssuer.saved,
-      kind: _CardKind.debitOrCredit,
+      issuer: CardIssuer.saved,
+      kind: CardKind.debitOrCredit,
       last4: card.last4,
       expiry: card.expiry,
       brand: card.brand,
@@ -316,7 +310,6 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                     constraints: const BoxConstraints(maxWidth: 680),
                     child: GlassPanel(
                       borderRadius: 28,
-                      fill: GlassFill.sheen,
                       padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -422,7 +415,7 @@ class _SavedBillingContent extends StatelessWidget {
     required this.onDelete,
   });
 
-  final List<_SavedMethodData> methods;
+  final List<SavedPaymentMethod> methods;
   final String? defaultId;
   final PageController controller;
   final int page;
@@ -477,7 +470,6 @@ class _SavedBillingContent extends StatelessWidget {
           children: [
             GlassPanel(
               borderRadius: 28,
-              fill: GlassFill.sheen,
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -545,7 +537,6 @@ class _SavedBillingContent extends StatelessWidget {
             const SizedBox(height: 14),
             GlassPanel(
               borderRadius: 28,
-              fill: GlassFill.sheen,
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
@@ -574,49 +565,11 @@ class _SavedBillingContent extends StatelessWidget {
 /// Who issued the card, as a key rather than a resolved string — the label has
 /// to be localized at build time, and the list itself is built in `initState`
 /// where there is no `AppLocalizations` yet.
-enum _CardIssuer { kurdistanInternationalBank, firstIraqiBank, saved }
-
-enum _CardKind { debit, credit, debitOrCredit }
-
-class _SavedMethodData {
-  const _SavedMethodData({
-    required this.id,
-    required this.issuer,
-    required this.kind,
-    required this.last4,
-    required this.expiry,
-    required this.brand,
-    required this.colors,
-  });
-
-  /// Stable handle for Change/Delete. Two cards can share a brand and last
-  /// four, so position and display text are both unsafe to target by.
-  final String id;
-
-  final _CardIssuer issuer;
-  final _CardKind kind;
-  final String last4;
-  final String expiry;
-  final String brand;
-  final List<Color> colors;
-
-  String issuerLabel(AppLocalizations l10n) => switch (issuer) {
-    _CardIssuer.kurdistanInternationalBank => l10n.kurdistanInternationalBank,
-    _CardIssuer.firstIraqiBank => l10n.firstIraqiBank,
-    _CardIssuer.saved => l10n.savedCard,
-  };
-
-  String kindLabel(AppLocalizations l10n) => switch (kind) {
-    _CardKind.debit => l10n.debitCard,
-    _CardKind.credit => l10n.creditCard,
-    _CardKind.debitOrCredit => l10n.debitOrCreditCard,
-  };
-}
 
 class _SavedMethodTile extends StatelessWidget {
   const _SavedMethodTile({required this.data, required this.isDefault});
 
-  final _SavedMethodData data;
+  final SavedPaymentMethod data;
 
   /// Owned by the screen, not the card — exactly one card carries the badge,
   /// and it moves when Change is used.
@@ -714,7 +667,7 @@ class _SavedMethodTile extends StatelessWidget {
 class _MiniBankCard extends StatelessWidget {
   const _MiniBankCard({required this.data});
 
-  final _SavedMethodData data;
+  final SavedPaymentMethod data;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -893,7 +846,7 @@ class _PaymentActions extends StatelessWidget {
 class _DefaultCardSheet extends StatelessWidget {
   const _DefaultCardSheet({required this.methods, required this.defaultId});
 
-  final List<_SavedMethodData> methods;
+  final List<SavedPaymentMethod> methods;
   final String? defaultId;
 
   @override
@@ -906,7 +859,7 @@ class _DefaultCardSheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: GlassPanel(
-          borderRadius: 20,
+          borderRadius: 28,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

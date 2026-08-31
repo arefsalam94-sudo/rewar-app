@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,6 +8,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/page_background.dart';
 import '../widgets/theme_mode_toggle.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -103,131 +102,103 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
         value: (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
             .copyWith(statusBarColor: Colors.transparent),
         child: Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Background photo — same asset and same blur in both modes.
-              ImageFiltered(
-                imageFilter: ImageFilter.blur(
-                  sigmaX: 2,
-                  sigmaY: 2,
-                  tileMode: TileMode.clamp,
-                ),
-                child: Image.asset(
-                  'assets/images/Language.webp',
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => ColoredBox(
-                    color: isDark
-                        ? AppColors.darkForestFloor
-                        : AppColors.pageGradientBottom,
-                  ),
-                ),
-              ),
-              // Gradient wash at a flat 45% in both modes; only the two
-              // gradient colours differ. Light: mint→green.
-              // Dark: the "Moonlit" pair `#0C1F1F → #062C32`.
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: isDark
-                        ? const [
-                            Color(0x730C1F1F), // deep emerald, 45%
-                            Color(0x73062C32), // forest floor, 45%
-                          ]
-                        : const [
-                            Color(0x73E1F4E5), // light mint, 45%
-                            Color(0x73187C64), // deep green, 45%
-                          ],
-                  ),
-                ),
-              ),
-              // Content. Scrollable so it can't overflow on short screens —
-              // it stays vertically centred whenever there is room, and
-              // scrolls instead of overflowing when there isn't.
-              SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) => SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight - 32,
+          backgroundColor: Colors.transparent,
+          body: PageBackground(
+            dark: isDark,
+            imageAsset: 'assets/images/Language.webp',
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background photo — same asset and same blur in both modes.
+                // Gradient wash at a flat 45% in both modes; only the two
+                // gradient colours differ. Light: mint→green.
+                // Dark: the "Moonlit" pair `#0C1F1F → #062C32`.
+                // Content. Scrollable so it can't overflow on short screens —
+                // it stays vertically centred whenever there is room, and
+                // scrolls instead of overflowing when there isn't.
+                SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
                       ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Image.asset(
-                              isDark
-                                  ? 'assets/images/language_logo dark.png'
-                                  : 'assets/images/language_logo light.png',
-                              height: 84,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
-                                    Icons.public,
-                                    size: 76,
-                                    color: isDark
-                                        ? AppColors.luminousMint
-                                        : AppColors.actionNavy,
-                                  ),
-                            ),
-                            const SizedBox(height: 24),
-                            Text(
-                              l10n.chooseYourLanguage,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 30,
-                                height: 1.1,
-                                color: colorScheme.onSurface,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight - 32,
+                        ),
+                        child: IntrinsicHeight(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Image.asset(
+                                isDark
+                                    ? 'assets/images/language_logo dark.png'
+                                    : 'assets/images/language_logo light.png',
+                                height: 84,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(
+                                      Icons.public,
+                                      size: 76,
+                                      color: isDark
+                                          ? AppColors.luminousMint
+                                          : AppColors.actionNavy,
+                                    ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              l10n.selectLanguageToContinue,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontWeight: FontWeight.w400,
-                                fontSize: 16,
-                                color: AppColors.secondaryText(context),
+                              const SizedBox(height: 24),
+                              Text(
+                                l10n.chooseYourLanguage,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 30,
+                                  height: 1.1,
+                                  color: colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 40),
-                            for (var i = 0; i < _options.length; i++) ...[
-                              _LanguageButton(
-                                option: _options[i],
-                                selected: _selectedIndex == i,
-                                dark: isDark,
-                                onTap: () => _selectLanguage(i),
+                              const SizedBox(height: 8),
+                              Text(
+                                l10n.selectLanguageToContinue,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 16,
+                                  color: AppColors.secondaryText(context),
+                                ),
                               ),
-                              if (i != _options.length - 1)
-                                const SizedBox(height: 18),
+                              const SizedBox(height: 40),
+                              for (var i = 0; i < _options.length; i++) ...[
+                                _LanguageButton(
+                                  option: _options[i],
+                                  selected: _selectedIndex == i,
+                                  dark: isDark,
+                                  onTap: () => _selectLanguage(i),
+                                ),
+                                if (i != _options.length - 1)
+                                  const SizedBox(height: 18),
+                              ],
+                              const SizedBox(height: 32),
+                              // The app's single light/dark switch. Lives here
+                              // rather than on Login so the choice is made
+                              // before the rest of the flow starts; Login reads
+                              // the same notifier.
+                              Align(
+                                child: ThemeModeToggle(
+                                  isDark: isDark,
+                                  onChanged: ThemePreference.setDarkMode,
+                                ),
+                              ),
                             ],
-                            const SizedBox(height: 32),
-                            // The app's single light/dark switch. Lives here
-                            // rather than on Login so the choice is made
-                            // before the rest of the flow starts; Login reads
-                            // the same notifier.
-                            Align(
-                              child: ThemeModeToggle(
-                                isDark: isDark,
-                                onChanged: ThemePreference.setDarkMode,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -277,7 +248,7 @@ class _LanguageButton extends StatelessWidget {
                   option.label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'Corbel',
+                    fontFamily: 'Plus Jakarta Sans',
                     fontWeight: FontWeight.w700,
                     fontSize: 22,
                     color: colorScheme.onSurface,

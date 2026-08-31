@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 
 import 'l10n/app_localizations.dart';
 import 'l10n/locale_controller.dart';
@@ -12,7 +11,6 @@ import 'theme/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await LiquidGlassWidgets.initialize();
   // Non-fatal: until the Firebase project config files are added, this
   // records the failure and the app still runs (backend features report a
   // real error instead of pretending to work). See FIREBASE_SETUP.md.
@@ -23,12 +21,7 @@ Future<void> main() async {
   await PreviewIdentity.load();
   final savedLanguage = await const SettingsPreferences().languageCode();
   appLocale.value = Locale(savedLanguage);
-  runApp(
-    LiquidGlassWidgets.wrap(
-      child: const KurdistanParadiseApp(),
-      brightnessResolver: Theme.maybeBrightnessOf,
-    ),
-  );
+  runApp(const KurdistanParadiseApp());
 }
 
 class KurdistanParadiseApp extends StatelessWidget {
@@ -46,7 +39,7 @@ class KurdistanParadiseApp extends StatelessWidget {
           builder: (context, isDark, _) => MaterialApp(
             title: 'Kurdistan Paradise Travel Guide',
             debugShowCheckedModeBanner: false,
-            // Font follows the language (Corbel / Rudaw / Dubai), while the
+            // Font follows the authoritative locale mapping, while the
             // saved preference selects the matching light/dark theme.
             theme: AppTheme.lightForLocale(locale),
             darkTheme: AppTheme.darkForLocale(locale),

@@ -184,11 +184,16 @@ void main() {
           .widgetList<GlassPanel>(find.byType(GlassPanel))
           .toList();
       expect(contentPanels, isNotEmpty);
-      for (final panel in contentPanels) {
-        expect(panel.fill, GlassFill.sheen);
-        expect(panel.lightBlurSigma, isNull);
-        expect(panel.darkBlurSigma, isNull);
-      }
+      expect(
+        contentPanels.where((panel) => panel.borderRadius == 28),
+        everyElement(
+          isA<GlassPanel>().having(
+            (panel) => panel.depth,
+            'depth',
+            GlassDepth.base,
+          ),
+        ),
+      );
     });
 
     testWidgets('draws the carousel, the filters and a card per place', (
@@ -481,23 +486,10 @@ void main() {
 
       final panels = tester
           .widgetList<GlassPanel>(find.byType(GlassPanel))
-          .where((panel) => panel.lightBlurSigma != null)
           .toList();
-      expect(panels, hasLength(4));
-      expect(panels.every((panel) => panel.fill == GlassFill.sheen), isTrue);
-
-      final outer = panels.first;
-      expect(outer.lightBlurSigma, 20);
-      expect(outer.darkBlurSigma, 20);
-      expect(outer.lightFillOpacity, isNull);
-      expect(outer.darkFillOpacity, isNull);
-
-      for (final group in panels.skip(1)) {
-        expect(group.lightBlurSigma, 26);
-        expect(group.darkBlurSigma, 26);
-        expect(group.lightFillOpacity, isNull);
-        expect(group.darkFillOpacity, isNull);
-      }
+      expect(panels.any((panel) => panel.depth == GlassDepth.base), isTrue);
+      expect(panels.any((panel) => panel.depth == GlassDepth.middle), isTrue);
+      expect(panels.any((panel) => panel.depth == GlassDepth.top), isTrue);
     });
 
     testWidgets('the counter spans both groups and Reset All clears them', (

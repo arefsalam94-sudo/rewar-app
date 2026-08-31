@@ -56,7 +56,7 @@ void main() {
       final cards = panels.where((p) => p.borderRadius == 28).toList();
       expect(cards.length, PolicyTopic.values.length);
       for (final card in cards) {
-        expect(card.fill, GlassFill.sheen);
+        expect(card.depth, GlassDepth.base);
       }
     });
 
@@ -221,6 +221,10 @@ void main() {
       expect(icon.color, AppColors.luminousMint);
 
       await _pump(tester);
+      expect(
+        tester.widget<Text>(find.text('Privacy Policy')).style!.color,
+        AppTheme.lightColorScheme.onSurface,
+      );
       final lightIcon = tester.widget<Icon>(
         find.byIcon(Icons.security_outlined),
       );

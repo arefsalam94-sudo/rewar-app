@@ -159,7 +159,6 @@ class _CardShell extends StatelessWidget {
     // `rounded-card`, and the low-opacity brand-gradient fill from the design
     // files' "Liquid Glass Cards" — so the background photo reads through.
     borderRadius: 28,
-    fill: GlassFill.brandGradient,
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
     child: child,
   );

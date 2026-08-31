@@ -6,7 +6,12 @@ import 'package:image_picker/image_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../screens/billing_payment_screen.dart';
+import '../screens/car_rental_screen.dart';
+import '../screens/explore_nature_screen.dart';
+import '../screens/explore_tours_screen.dart';
+import '../screens/flight_ticketing_screen.dart';
 import '../screens/help_support_screen.dart';
+import '../screens/hotel_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/my_bookings_screen.dart';
 import '../screens/policy_screen.dart';
@@ -27,7 +32,9 @@ import 'sign_in_required.dart';
 /// reference screenshot; opening plays a short ripple on that edge which
 /// decays into the resting shape — see [_WavyEdgeClipper].
 ///
-/// Services expands in place; Currency updates `users.preferredCurrency`;
+/// Services expands in place, and each of its five sub-items opens the same
+/// screen as the matching Home journey card; Currency updates
+/// `users.preferredCurrency`;
 /// Billing/Payments, Settings, Policy, and Help/Support open their own
 /// screens. The remaining destinations keep the "coming soon" treatment.
 class HomeDrawer extends StatefulWidget {
@@ -159,6 +166,18 @@ class _HomeDrawerState extends State<HomeDrawer>
         ),
       ),
     );
+  }
+
+  /// Closes the drawer, then opens one of the Services sub-items.
+  ///
+  /// These are the same five destinations as the Home dashboard's journey
+  /// cards, so the drawer is a second route to them rather than a different
+  /// experience — none of them needs `isGuest`, since browsing is open to
+  /// everyone and the per-action gates live inside each screen.
+  Future<void> _onServiceTap(WidgetBuilder builder) async {
+    final navigator = Navigator.of(context, rootNavigator: true);
+    await _close();
+    await navigator.push<void>(MaterialPageRoute<void>(builder: builder));
   }
 
   /// Closes the drawer, then opens My Bookings.
@@ -472,7 +491,7 @@ class _HomeDrawerState extends State<HomeDrawer>
   Widget _buildProfileHeader(AppLocalizations l10n, bool isDark) {
     final accent = isDark ? AppColors.luminousMint : AppColors.actionNavy;
     final onAccent = isDark ? AppColors.darkOnPrimary : Colors.white;
-    final headingColor = isDark ? Colors.white : AppColors.actionNavy;
+    final headingColor = AppColors.heading(context);
 
     if (widget.isGuest) {
       return Column(
@@ -604,22 +623,31 @@ class _HomeDrawerState extends State<HomeDrawer>
                       _ServiceSubItem(
                         icon: Icons.park_outlined,
                         label: l10n.exploreNature,
+                        onTap: () =>
+                            _onServiceTap((_) => const ExploreNatureScreen()),
                       ),
                       _ServiceSubItem(
                         icon: Icons.king_bed_outlined,
                         label: l10n.whereToStay,
+                        onTap: () => _onServiceTap((_) => const HotelScreen()),
                       ),
                       _ServiceSubItem(
                         icon: Icons.directions_car_outlined,
                         label: l10n.carRental,
+                        onTap: () =>
+                            _onServiceTap((_) => const CarRentalScreen()),
                       ),
                       _ServiceSubItem(
                         icon: Icons.flight_takeoff_outlined,
                         label: l10n.flightTicketing,
+                        onTap: () =>
+                            _onServiceTap((_) => const FlightTicketingScreen()),
                       ),
                       _ServiceSubItem(
                         icon: Icons.festival_outlined,
                         label: l10n.exploreToursTitle,
+                        onTap: () =>
+                            _onServiceTap((_) => const ExploreToursScreen()),
                       ),
                     ],
                   ),
@@ -1077,10 +1105,15 @@ class _MenuRow extends StatelessWidget {
 }
 
 class _ServiceSubItem extends StatelessWidget {
-  const _ServiceSubItem({required this.icon, required this.label});
+  const _ServiceSubItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String label;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1090,32 +1123,35 @@ class _ServiceSubItem extends StatelessWidget {
         ? Colors.white.withValues(alpha: AppColors.darkSecondaryTextOpacity)
         : AppColors.secondaryText(context);
 
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 52, top: 5, bottom: 5),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 24),
-        child: Row(
-          children: [
-            Icon(icon, size: 16, color: accent),
-            const SizedBox(width: 10),
-            // Per DESIGN_SYSTEM.md's "text next to text must be allowed to
-            // shrink" rule — the panel is only ~320dp wide, and the icon
-            // column eats into that further.
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.only(start: 52, top: 5, bottom: 5),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 24),
+          child: Row(
+            children: [
+              Icon(icon, size: 16, color: accent),
+              const SizedBox(width: 10),
+              // Per DESIGN_SYSTEM.md's "text next to text must be allowed to
+              // shrink" rule — the panel is only ~320dp wide, and the icon
+              // column eats into that further.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1140,7 +1176,7 @@ class _CurrencySheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: GlassPanel(
-          borderRadius: 20,
+          borderRadius: 28,
           dark: dark,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1197,7 +1233,7 @@ class _ImageSourceSheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: GlassPanel(
-          borderRadius: 20,
+          borderRadius: 28,
           dark: dark,
           child: Column(
             mainAxisSize: MainAxisSize.min,

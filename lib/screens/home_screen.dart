@@ -16,8 +16,12 @@ import '../widgets/home_bottom_nav.dart';
 import '../widgets/home_drawer.dart';
 import 'explore_nature_screen.dart';
 import 'explore_tours_screen.dart';
+import 'flight_ticketing_screen.dart';
+import 'hotel_screen.dart';
+import 'car_rental_screen.dart';
 import 'login_screen.dart';
 import 'map_screen.dart';
+import 'my_bookings_screen.dart';
 
 /// Phase 2 — the main dashboard, shown once the user has logged in or chosen
 /// "Continue as Guest".
@@ -314,9 +318,27 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openExploreTours() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const ExploreToursScreen()));
+  }
+
+  Future<void> _openFlightTicketing() async {
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const ExploreToursScreen()),
+      MaterialPageRoute<void>(builder: (_) => const FlightTicketingScreen()),
     );
+  }
+
+  Future<void> _openCarRental() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const CarRentalScreen()));
+  }
+
+  Future<void> _openHotel() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const HotelScreen()));
   }
 
   Future<void> _onNavSelected(HomeNavTab tab) async {
@@ -329,6 +351,18 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
       case HomeNavTab.trips:
+        // Same destination as the drawer's My Bookings row. A guest is pushed
+        // the same screen rather than blocked here — the screen itself explains
+        // that bookings need an account and offers a route to Login.
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MyBookingsScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
       case HomeNavTab.saved:
         // Phase 8 of ROADMAP.md — not built yet, and not built ahead here.
         _snack(l10n.comingSoon);
@@ -338,13 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // --- Build ----------------------------------------------------------------
 
   static Color _headingColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark
-      // DESIGN dark.md: headings are pure white at 100%. "If a heading looks
-      // dim, it is a bug."
-      ? Colors.white
-      // Matches the reference screenshot, using the already-approved navy
-      // token rather than inventing a heading colour.
-      : AppColors.actionNavy;
+      AppColors.heading(context);
 
   @override
   Widget build(BuildContext context) {
@@ -408,25 +436,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            PositionedDirectional(
-              start: 0,
-              end: 0,
-              bottom: bottomInset + 12,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    maxWidth: HomeBottomNav.barWidth,
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: HomeBottomNav(
-                      current: _currentTab,
-                      onSelect: _onNavSelected,
-                      dark: isDark,
-                    ),
-                  ),
-                ),
-              ),
+            HomeBottomNav.floating(
+              context: context,
+              current: _currentTab,
+              onSelect: _onNavSelected,
+              dark: isDark,
             ),
           ],
         ),
@@ -529,7 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   imageAsset: 'assets/images/journey-stay.png',
                   contentOffsetY: 22,
                   buttonOffsetY: 10,
-                  onTap: () => _snack(l10n.comingSoon),
+                  onTap: _openHotel,
                 ),
               ),
             ],
@@ -545,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> {
           wide: true,
           contentOffsetY: 16,
           buttonOffsetX: -60,
-          onTap: () => _snack(l10n.comingSoon),
+          onTap: _openCarRental,
         ),
         const SizedBox(height: 14),
         IntrinsicHeight(
@@ -561,7 +575,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   imageAsset: 'assets/images/journey-flight.png',
                   contentOffsetY: 18,
                   buttonOffsetY: 10,
-                  onTap: () => _snack(l10n.comingSoon),
+                  onTap: _openFlightTicketing,
                 ),
               ),
               const SizedBox(width: 14),
@@ -706,8 +720,7 @@ class _FeaturedCard extends StatelessWidget {
 
   /// `DESIGN light.md`: "Standard Cards: 16px". `DESIGN dark.md`: cards use
   /// `rounded-xl` (24px).
-  static double radiusFor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? 24 : 16;
+  static double radiusFor(BuildContext context) => 28;
 
   @override
   Widget build(BuildContext context) {
@@ -1012,7 +1025,6 @@ class _CarouselShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     borderRadius: _FeaturedCard.radiusFor(context),
-    fill: GlassFill.brandGradient,
     padding: const EdgeInsets.all(20),
     child: Center(child: child),
   );
@@ -1268,7 +1280,6 @@ class _JourneyCard extends StatelessWidget {
                   Positioned.fill(
                     child: GlassPanel(
                       borderRadius: radius,
-                      fill: GlassFill.brandGradient,
                       child: const SizedBox.expand(),
                     ),
                   ),
@@ -1476,7 +1487,7 @@ class _GlassSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: GlassPanel(
           dark: dark,
-          borderRadius: dark ? 24 : 16,
+          borderRadius: 28,
           padding: const EdgeInsets.all(20),
           child: SingleChildScrollView(child: child),
         ),
@@ -1515,7 +1526,7 @@ class _LanguagePopover extends StatelessWidget {
             child: GlassPanel(
               key: const ValueKey('home-language-popover'),
               dark: dark,
-              borderRadius: 22,
+              borderRadius: 28,
               padding: const EdgeInsets.all(6),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

@@ -413,8 +413,10 @@ void main() {
       service: _FakeReviewsService(reviews: const <NatureReview>[]),
     );
 
-    expect(find.text('No reviews yet. Be the first to share your visit.'),
-        findsOneWidget);
+    expect(
+      find.text('No reviews yet. Be the first to share your visit.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a second page is fetched rather than everything at once', (

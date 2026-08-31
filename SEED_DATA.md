@@ -8,20 +8,29 @@ against (per the "One example, seeded to Firestore, per page" rule in
 Update the **Status** column as each one actually gets added to Firestore —
 don't mark it seeded until it's really there and confirmed rendering.
 
+> **Live project: `rewar-app-1c10e`** (Firestore `eur3`, production mode).
+> Rules and indexes are deployed; five collections are seeded and read back.
+> ✅ below means *the documents exist and were read back from Firestore*, not
+> that the screen has been seen rendering them on a device — no screen has, as
+> `PROGRESS.md` records.
+
 | Collection | Example | Status |
 |---|---|---|
-| legal_documents | **all 7 policy documents** (en/ku/ar) — seed with `node tool/seed_legal_documents.js` | NOT SEEDED (needs a Firebase project) |
-| featured | 4 carousel slides (nature spot, car, flight, tour) — seed with `node tool/seed_home_screen.js` | NOT SEEDED (needs a Firebase project) |
-| nature_spots | Rawanduz Canyon (highlighted), Sami Abdulrahman Park, Erbil Citadel — seed with `node tool/seed_explore_nature.js` | NOT SEEDED (needs a Firebase project) |
-| nature_spots/{id}/reviews | 7 visitor reviews — 3 for Rawanduz (Elena P., Hassan S., Priya N.), 2 each for the other places. Same script | NOT SEEDED (needs a Firebase project **and** deployed functions) |
+| legal_documents | **all 7 policy documents** (en/ku/ar) — seed with `node tool/seed_legal_documents.js` | ✅ **SEEDED** 2026-08-17 — 7 docs. Still `legalReviewed:false` with [placeholders] |
+| featured | 4 carousel slides (nature spot, car, flight, tour) — seed with `node tool/seed_home_screen.js` | ✅ **SEEDED** 2026-08-17 — 4 docs. `imageUrl` still empty on all four |
+| nature_spots | Rawanduz Canyon (highlighted), Sami Abdulrahman Park, Erbil Citadel — seed with `node tool/seed_explore_nature.js` | ✅ **SEEDED** 2026-08-17 — 3 docs. `imageUrls` still empty |
+| nature_spots/{id}/reviews | 7 visitor reviews — 3 for Rawanduz (Elena P., Hassan S., Priya N.), 2 each for the other places. Same script | ✅ **SEEDED** 2026-08-17 — 7 docs. **Scores still absent — `syncNatureReviewAggregates` is not deployed (needs Blaze)** |
 | nature_spots/{id}/reviews/{id}/votes | n/a — written only by a signed-in user tapping the heart | N/A (not seeded by hand) |
-| hotels | Divan Hotel (Iraq, Erbil, 40m Street) | NOT SEEDED |
-| hotels/{id}/rooms | Ocean View Suite | NOT SEEDED |
-| hotels/{id}/reviews | Sarah — "The views are incredible! Highly recommend." | NOT SEEDED |
-| cars | Tesla Model 3 (GreenWheels Rentals) | NOT SEEDED |
-| tours | Gali Alibag Waterfall (highlighted + trending), Gali Sherana (trending), Korek Mountain Day Trip (highlighted) — seed with `node tool/seed_explore_tours.js` | NOT SEEDED (needs a Firebase project) |
-| tours/{id}/reviews | 5 traveller reviews — 3 for Gali Alibag, 2 for Gali Sherana, **none for Korek on purpose**. Same script | NOT SEEDED (needs a Firebase project **and** deployed functions) |
-| currency_rates | `latest` — USD base, IQD and EUR — seed with `node tool/seed_currency_rates.js` | NOT SEEDED (needs a Firebase project) |
+| hotels | Divan Hotel (Iraq, Erbil, 40m Street) | NOT SEEDED — Where to Stay and the **Hotel Details** screen both read `PreviewHotelService`, not Firestore. Its three review hotels (Divan Erbil, Ramada Sulaimani, Duhok Palace) are typed mock data only. Divan carries the full detail set — a five-entry gallery built from **existing bundled photographs** (no per-hotel photos exist yet), fifteen facilities across nine categories, six Erbil nearby places, a five-category review breakdown, two room types, three rates and full policies. Ramada carries a partial set, and Duhok Palace is deliberately bare (no gallery, no coordinates, no facilities, no nearby, no aggregate) so the hidden sections and empty states stay reviewable. **None of it is a claim about these properties** |
+| hotels/{id}/rooms | Ocean View Suite | NOT SEEDED — two preview room types exist in Dart (Deluxe King, Twin City View) purely to give the guest counters a published `maxOccupancy` to enforce |
+| hotels/{id}/offers | n/a | NOT SEEDED — three preview rates exist in Dart with invented prices, taxes, fees, breakfast, cancellation and prepayment values. Nothing on the Hotel Details page displays a price; they exist so the Room Selection screen has a shape to build against |
+| hotels/{id}/reviews | Sarah — "The views are incredible! Highly recommend." | NOT SEEDED — the Hotel Details page's Ratings & Comments card and its full reviews page read `PreviewHotelReviewService`, an **in-memory** store (three sample reviews for Divan, one for Ramada). Reviews written in preview mode survive until the app is closed and reach no database |
+| cars | Tesla Model 3 (GreenWheels Rentals) | NOT SEEDED — the Car Rental and Car Rental Results screens read `PreviewCarRentalService`, not Firestore. Its five review vehicles (Tesla Model 3, Ford Mustang, Toyota Corolla, Range Rover, BMW X5 — ABC Cars / Paradise Rent A Car) are typed mock data only; seed real docs when a rental provider or the `cars` collection is wired up. The Car Rental **Details** screen reads the same mock data: five gallery entries per car (the single `journey-car.png` asset repeated, so the carousel can be exercised) and six add-ons per car with invented prices. `conditions` is left **entirely empty** on all five — fuel policy, mileage, deposit, excess, cancellation deadline, minimum age and required documents are contractual terms and are never invented for review data, so the Rental Conditions card stays hidden until a supplier feed fills them |
+| tours | Gali Alibag Waterfall (highlighted + trending), Gali Sherana (trending), Korek Mountain Day Trip (highlighted) — seed with `node tool/seed_explore_tours.js` | ✅ **SEEDED** 2026-08-17 — 3 docs, both queries verified live. `imageUrls` still empty |
+| tours — `minAge` | **Gali Sherana only**, `minAge: 18`; the other two omit the field so "absent = no restriction" is exercised too | ⚠️ **NOT RE-SEEDED** — added to `tool/seed_explore_tours.js` on 2026-08-18 for the Traveler Info age gate. Re-run the script to push it |
+| tours — `features` | Re-tagged on 2026-08-20 to the Explore Tours reference: Gali Alibag `guide, activity, wifi, food, electricity`; Gali Sherana `campfire, tent, wifi, swimming`; Korek `guide, food, transport, photography, activity` | ⚠️ **NOT RE-SEEDED** — the four new ids (`activity`, `wifi`, `electricity`, `tent`) are additive, so the seeded docs still load; they just draw the old four icons until `node tool/seed_explore_tours.js` is re-run |
+| tours/{id}/reviews | 5 traveller reviews — 3 for Gali Alibag, 2 for Gali Sherana, **none for Korek on purpose**. Same script | ✅ **SEEDED** 2026-08-17 — 5 docs. **Scores still absent — `syncTourReviewAggregates` is not deployed (needs Blaze)** |
+| currency_rates | `latest` — USD base, IQD and EUR — seed with `node tool/seed_currency_rates.js` | ✅ **SEEDED** 2026-08-17 — 1 doc (`USD:1, IQD:1310, EUR:0.92`). Nothing refreshes it |
 | flights | Astra Airlines, Erbil (EBL) → Istanbul | NOT SEEDED |
 | users | (your own test account, created via the Auth screen) | NOT SEEDED |
 | bookings | one per type — hotel, flight, car, tour (upcoming + completed) — seed with `node tool/seed_bookings.js <uid>` | NOT SEEDED (needs a Firebase project) |
@@ -142,10 +151,10 @@ Three things about these documents are easy to get wrong:
   in all three languages; a stored English sentence would print English on a
   Kurdish card.
 - **`features` uses the ids in `lib/models/tour.dart`** — `camping`, `hiking`,
-  `guide`, `food`, `swimming`, `campfire`, `transport`, `photography`. An id
-  the app has no icon for is silently dropped from the card, so a typo shows up
-  as a missing icon rather than an error. The list card draws the **first
-  four**.
+  `guide`, `food`, `swimming`, `campfire`, `transport`, `photography`,
+  `activity`, `wifi`, `electricity`, `tent`. An id the app has no icon for is
+  silently dropped from the card, so a typo shows up as a missing icon rather
+  than an error. The list card draws the **first five**.
 - **`companyTag` is not translated.** It is the operator's own brand name.
 
 > ⚠️ **`startAt` / `endAt` are written relative to the day the script runs**,
@@ -341,7 +350,7 @@ locationLabel: { en: "Rawanduz, Erbil", ku: "ڕەواندز، هەولێر", ar:
 description:   { en: "A popular scenic waterfall destination with cool water, picnic spots, and beautiful mountain views.", ku: "...", ar: "..." }
 companyTag: AB group        # a brand name — NOT translated
 durationDays: 2             # a NUMBER, not "2 Days travel"
-features: [camping, guide, food, swimming]
+features: [guide, activity, wifi, food, electricity]
 location: geopoint(36.6289, 44.5311)
 pricePerPerson: 55
 currency: USD               # what a charge is settled in; display conversion is separate
@@ -349,6 +358,7 @@ startAt: <timestamp>        # departure — drives ordering and the date filter
 endAt:   <timestamp>        # return; omit for a one-day tour
 capacity: 24                # optional; absent hides the availability line
 bookedCount: 21             # SERVER-OWNED once checkout exists — read-only in admin
+minAge: 18                  # optional; absent = no age restriction. Checked on the Traveler Info screen
 cancellationPolicy: free_48h   # free_24h | free_48h | free_7d | non_refundable
 guideLanguages: [en, ku, ar]   # ISO 639-1: en | ku | ar | tr | fa
 transportAvailable: true       # operator-configured per departure

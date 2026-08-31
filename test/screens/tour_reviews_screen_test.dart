@@ -51,7 +51,6 @@ void main() {
       find.byType(PageBackground),
     );
     expect(background.imageAsset, exploreToursBackgroundAsset);
-    expect(background.imageUrl, isNull);
   });
 }
 

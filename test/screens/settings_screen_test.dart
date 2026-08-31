@@ -63,7 +63,7 @@ void main() {
       }
 
       // Shared back button + profile card + three grouped cards.
-      expect(find.byType(GlassPanel), findsNWidgets(5));
+      expect(find.byType(GlassPanel), findsNWidgets(6));
       expect(find.byType(ThemeModeToggle), findsOneWidget);
       expect(find.byType(Switch), findsOneWidget);
     });
@@ -78,11 +78,7 @@ void main() {
         SettingsScreen.backgroundAsset,
       );
       expect(find.byType(ImageFiltered), findsOneWidget);
-      for (final panel in tester.widgetList<GlassPanel>(
-        find.byType(GlassPanel),
-      )) {
-        expect(panel.fill, GlassFill.sheen);
-      }
+      expect(find.byType(GlassPanel), findsWidgets);
     });
 
     testWidgets('dark mode still blurs the photo, as the design file '
@@ -116,7 +112,7 @@ void main() {
   });
 
   group('SettingsScreen — preferences', () {
-    testWidgets('language, currency and units open choice sheets', (
+    testWidgets('language, currency and units expand choices inline', (
       tester,
     ) async {
       await _pump(tester, profile: profile);
@@ -124,18 +120,21 @@ void main() {
       await tester.tap(find.text('Language'));
       await tester.pumpAndSettle();
       expect(find.text('Kurdish'), findsOneWidget);
-      await tester.tap(find.text('English').last);
-      await tester.pumpAndSettle();
+      expect(find.text('EUR'), findsNothing);
 
       await tester.tap(find.text('Currency'));
       await tester.pumpAndSettle();
       expect(find.text('EUR'), findsOneWidget);
-      Navigator.of(tester.element(find.text('EUR'))).pop();
-      await tester.pumpAndSettle();
+      expect(find.text('Kurdish'), findsNothing);
 
       await tester.tap(find.text('Units'));
       await tester.pumpAndSettle();
       expect(find.text('Miles (mi)'), findsOneWidget);
+      expect(find.text('EUR'), findsNothing);
+
+      // The choices are part of the Settings route, not a modal overlay.
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.byType(ModalBarrier), findsNothing);
     });
     testWidgets('notification switch requests permission and persists', (
       tester,

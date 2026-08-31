@@ -320,13 +320,6 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
             photos.isNotEmpty
         ? photos.first
         : widget.backgroundFallbackAsset;
-    final backgroundUrl =
-        widget.useSubjectPhotoForBackground &&
-            !_spot.photosAreAssets &&
-            photos.isNotEmpty
-        ? photos.first
-        : null;
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       // The page background follows DESIGN_SYSTEM.md 4 exactly: the selected
@@ -335,7 +328,6 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
       // uses, so the two read as one flow.
       body: PageBackground(
         imageAsset: background,
-        imageUrl: backgroundUrl,
         child: SafeArea(
           bottom: false,
           child: RefreshIndicator(

@@ -447,7 +447,43 @@ Rating badges are semantic badges, not ordinary base-glass cards.
 
 ---
 
-## 14. Bottom navigation / floating toolbar
+## 14. Step indicator (multi-step flows)
+
+Multi-step flows (checkout, and any future wizard) show progress with one
+shared component. It is drawn once, at the top of the flow, inside its own
+base-glass surface — never re-invented per step.
+
+Structure:
+
+1. one circle per step, containing the step **number**
+2. connector dots between adjacent circles
+3. the step **label** beneath each circle
+
+Rules:
+
+- circle diameter: `56px`; connector dots: `5` per gap, `4px` each
+- the **active** step carries an accent ring (`2px`) around its circle, with
+  its number and label in the accent color
+- a **completed** step is filled solid with the accent and shows a check glyph
+  in place of its number; its connector to the next step is drawn in the accent
+  color rather than the neutral dot color
+- an **upcoming** step is neutral on-glass: no ring, no fill
+- the three states must stay visually distinct without relying on color alone —
+  the check glyph is what separates completed from active for a viewer who
+  cannot tell the ring from the fill
+- circles sit on the shared glass material; the surrounding surface is one
+  base-glass panel, not one panel per step
+- labels use the caption size from the type scale and never truncate mid-word;
+  they wrap instead
+- theme files define the ring, number, dot, and label colors
+- the row **mirrors** in RTL like any other content order — step 1 sits on the
+  reading-start side, per section 21
+- do not attach tap handlers to future steps: a step indicator reports
+  position, it does not navigate forward past unvalidated input
+
+---
+
+## 15. Bottom navigation / floating toolbar
 
 Keep the existing interaction concept, but execute it with the global liquid-glass system.
 
@@ -473,7 +509,7 @@ Keep the current filled-circle active destination concept as an explicit navigat
 
 ---
 
-## 15. Popup menus and bottom sheets
+## 16. Popup menus and bottom sheets
 
 All popup menus, sheets, dropdown surfaces, and floating overlays use the same liquid-glass material.
 
@@ -486,7 +522,7 @@ Their depth level determines whether they use L1, L2, or L3 blur.
 
 ---
 
-## 16. Typography
+## 17. Typography
 
 Typography geometry is shared across themes. Theme files only define text colors.
 
@@ -533,7 +569,7 @@ Theme files define the actual colors/opacity for those roles.
 
 ---
 
-## 17. Spacing and layout
+## 18. Spacing and layout
 
 Use an `8dp` primary rhythm with `4dp` half-step support.
 
@@ -552,7 +588,7 @@ Do not invent arbitrary spacing values when an existing token works.
 
 ---
 
-## 18. Responsive behavior
+## 19. Responsive behavior
 
 The same design system must work across phones, tablets, and wider layouts.
 
@@ -587,7 +623,7 @@ Text may wrap or reflow. Do not solve responsiveness by shrinking text below the
 
 ---
 
-## 19. Accessibility
+## 20. Accessibility
 
 ### Minimum touch target
 
@@ -609,7 +645,7 @@ Every tappable control must provide at least `48 × 48dp` of hit area even when 
 
 ---
 
-## 20. RTL and directionality
+## 21. RTL and directionality
 
 The app supports LTR and RTL.
 
@@ -622,7 +658,7 @@ The app supports LTR and RTL.
 
 ---
 
-## 21. Theme-specific values
+## 22. Theme-specific values
 
 This file must not duplicate Light/Dark color values.
 
@@ -637,7 +673,7 @@ If a token exists in one theme but not the other, the design system is incomplet
 
 ---
 
-## 22. Prohibited legacy patterns
+## 23. Prohibited legacy patterns
 
 Do not reintroduce:
 
@@ -659,7 +695,7 @@ Do not reintroduce:
 
 ---
 
-## 23. Implementation order for a redesign pass
+## 24. Implementation order for a redesign pass
 
 When applying these files to an existing codebase:
 

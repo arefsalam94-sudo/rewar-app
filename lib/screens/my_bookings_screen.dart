@@ -7,10 +7,12 @@ import '../services/bookings_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/glass_panel.dart';
+import '../widgets/home_bottom_nav.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
 import '../widgets/ticket_card.dart';
+import 'map_screen.dart';
 import 'policy_screen.dart';
 
 /// Phase 8 — My Bookings, opened from the side drawer's **My Bookings** row.
@@ -25,7 +27,18 @@ import 'policy_screen.dart';
 /// Everything is filtered in Dart from one Firestore read — see `DATA_MODEL.md`
 /// for why that is cheaper here than a composite index per combination.
 class MyBookingsScreen extends StatefulWidget {
-  const MyBookingsScreen({super.key, this.isGuest = false, this.service});
+  const MyBookingsScreen({
+    super.key,
+    this.isGuest = false,
+    this.service,
+    this.showBottomNav = false,
+  });
+
+  /// True when the screen was reached from the home bar's **My Bookings**
+  /// item. The bar is then kept on screen, in the same place and with the same
+  /// geometry as on Home, so tapping it doesn't make the bar disappear out from
+  /// under the finger. False from the drawer, which has no bar to preserve.
+  final bool showBottomNav;
 
   /// A guest has no bookings by definition — the rules require an auth uid —
   /// so the screen shows a sign-in prompt rather than an empty list. Same
@@ -59,76 +72,116 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
     await future;
   }
 
+  /// Mirrors Home's own handling, so the bar behaves identically from here.
+  ///
+  /// Home is a pop rather than a push: the Home screen is still underneath, and
+  /// pushing a second copy would leave two dashboards on the stack.
+  Future<void> _onNavSelected(HomeNavTab tab) async {
+    switch (tab) {
+      case HomeNavTab.trips:
+        return; // Already here.
+      case HomeNavTab.home:
+        Navigator.of(context).maybePop();
+      case HomeNavTab.map:
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+      case HomeNavTab.saved:
+        // Phase 8 of ROADMAP.md — not built yet, and not built ahead here.
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.comingSoon)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    // With the bar visible the list has to clear it, exactly as Home's does.
+    final bottomInset =
+        MediaQuery.paddingOf(context).bottom +
+        (widget.showBottomNav ? HomeBottomNav.barHeight + 12 : 0);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
+      // The glass bar floats over the photograph rather than sitting in a
+      // solid-coloured slot.
+      extendBody: true,
       body: PageBackground(
         imageAsset: MyBookingsScreen.backgroundAsset,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Align(
-                      // The shared navigation convention keeps back controls on
-                      // the physical left in every language.
-                      alignment: Alignment.centerLeft,
-                      child: GlassBackButton(
-                        onTap: () => Navigator.of(context).maybePop(),
-                      ),
+        child: Stack(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Align(
+                          // The shared navigation convention keeps back controls on
+                          // the physical left in every language.
+                          alignment: Alignment.centerLeft,
+                          child: GlassBackButton(
+                            onTap: () => Navigator.of(context).maybePop(),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text(
+                          l10n.myBookingsTitle,
+                          style: TextStyle(
+                            fontSize: 32,
+                            height: 40 / 32,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.02 * 32,
+                            color: AppColors.heading(context),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _SegmentControl(
+                          value: _segment,
+                          onChanged: (value) =>
+                              setState(() => _segment = value),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 18),
-                    Text(
-                      l10n.myBookingsTitle,
-                      style: TextStyle(
-                        fontSize: 32,
-                        height: 40 / 32,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.02 * 32,
-                        color: AppColors.heading(context),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _SegmentControl(
-                      value: _segment,
-                      onChanged: (value) => setState(() => _segment = value),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 14),
+                  _TypeChipRow(
+                    value: _typeFilter,
+                    onChanged: (value) => setState(() => _typeFilter = value),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: widget.isGuest
+                        // Shared with Billing & Payments and any future screen
+                        // that needs an auth uid — one gate, one wording.
+                        ? SignInRequired(
+                            title: l10n.bookingsSignInTitle,
+                            body: l10n.bookingsSignInBody,
+                          )
+                        : _BookingsList(
+                            future: _future,
+                            segment: _segment,
+                            typeFilter: _typeFilter,
+                            bottomInset: bottomInset,
+                            onRetry: _refresh,
+                          ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 14),
-              _TypeChipRow(
-                value: _typeFilter,
-                onChanged: (value) => setState(() => _typeFilter = value),
+            ),
+            if (widget.showBottomNav)
+              HomeBottomNav.floating(
+                context: context,
+                current: HomeNavTab.trips,
+                onSelect: _onNavSelected,
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: widget.isGuest
-                    // Shared with Billing & Payments and any future screen
-                    // that needs an auth uid — one gate, one wording.
-                    ? SignInRequired(
-                        title: l10n.bookingsSignInTitle,
-                        body: l10n.bookingsSignInBody,
-                      )
-                    : _BookingsList(
-                        future: _future,
-                        segment: _segment,
-                        typeFilter: _typeFilter,
-                        bottomInset: bottomInset,
-                        onRetry: _refresh,
-                      ),
-              ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -421,19 +474,7 @@ class _TypeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Straight colour inversion, per both design files. The stronger/brighter
-    // fill marks selection: navy in light, mint in dark.
-    final Color fill;
-    final Color content;
-    if (isDark) {
-      fill = selected ? AppColors.luminousMint : AppColors.darkOnPrimary;
-      content = selected ? AppColors.darkOnPrimary : AppColors.luminousMint;
-    } else {
-      fill = selected ? AppColors.actionNavy : AppColors.pageGradientTop;
-      content = selected ? AppColors.pageGradientTop : AppColors.actionNavy;
-    }
+    final content = AppColors.selectionAccent(context);
 
     return Semantics(
       selected: selected,
@@ -443,33 +484,33 @@ class _TypeChip extends StatelessWidget {
         onTap: onTap,
         // 38dp visual inside a 48dp tap target, per the shape rules.
         child: Center(
-          child: Container(
-            height: 38,
+          child: GlassPanel(
+            borderRadius: 999,
+            depth: GlassDepth.top,
+            selected: selected,
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: fill,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: content, width: 1),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(_icon(filter), size: 18, color: content),
-                const SizedBox(width: 7),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      l10n.bookingTypeFilterLabel(filter),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: content,
+            child: SizedBox(
+              height: 38,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_icon(filter), size: 18, color: content),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        l10n.bookingTypeFilterLabel(filter),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: content,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -1,10 +1,9 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/app_recessed_glass_field.dart';
-import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/recessed_liquid_glass_field.dart';
 
 Widget _host(Widget child) {
   return MaterialApp(
@@ -20,17 +19,7 @@ Widget _host(Widget child) {
 }
 
 void main() {
-  test('records shader-filter support for renderer diagnostics', () {
-    // This is the same capability check used by liquid_glass_widgets to select
-    // its full Impeller premium renderer versus the lightweight shader.
-    // ignore: avoid_print
-    print(
-      'ImageFilter.isShaderFilterSupported='
-      '${ui.ImageFilter.isShaderFilterSupported}',
-    );
-  });
-
-  testWidgets('wraps standard and premium surfaces with AdaptiveGlass', (
+  testWidgets('uses the shared authoritative glass surface for every shape', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -55,7 +44,7 @@ void main() {
     );
 
     expect(find.byType(AppLiquidGlass), findsNWidgets(3));
-    expect(find.byType(AdaptiveGlass), findsNWidgets(3));
+    expect(find.byType(GlassPanel), findsNWidgets(3));
     expect(tester.takeException(), isNull);
   });
 
@@ -80,8 +69,7 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField), 'hello@example.com');
     expect(controller.text, 'hello@example.com');
-    expect(find.byType(AppLiquidGlass), findsOneWidget);
-    expect(find.byType(AdaptiveGlass), findsOneWidget);
+    expect(find.byType(RecessedLiquidGlassField), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

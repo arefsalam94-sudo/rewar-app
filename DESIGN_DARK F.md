@@ -1,3 +1,6 @@
+| `step-complete-fill` | `#2AF598` |
+| `step-complete-content` | `#00391E` |
+| `step-connector-done` | `#2AF598` |
 # DESIGN_DARK.md
 ## Lush Horizon: Moonlit — Dark Theme Tokens
 
@@ -193,7 +196,32 @@ Do not use a bright solid mint badge unless a future approved reference explicit
 
 ---
 
-## 10. Semantic states
+## 10. Step indicator
+
+Tokens for the multi-step flow indicator (`DESIGN_SYSTEM.md` section 14).
+
+Step state is drawn in `primary-container`, which in Dark is the same Luminous
+Mint as `action` — the distinction matters in Light, and the token names stay
+one-for-one across both files.
+
+| Token | Value |
+|---|---|
+| `step-active-ring` | `#2AF598` |
+| `step-active-number` | `#2AF598` |
+| `step-complete-fill` | `#2AF598` |
+| `step-complete-content` | `#00391E` |
+| `step-connector-done` | `#2AF598` |
+| `step-inactive-number` | `#FFFFFF` at `1.00` |
+| `step-connector-dot` | `#FFFFFF` at `0.45` |
+| `step-label` | `#FFFFFF` at `1.00` |
+| `step-label-active` | `#2AF598` |
+
+An upcoming circle takes the standard glass fill; only the ring, the fill, the
+number/check, and the label carry step state.
+
+---
+
+## 11. Semantic states
 
 | State | Token |
 |---|---|
@@ -206,7 +234,7 @@ These colors modify semantic state indicators only. Component geometry and glass
 
 ---
 
-## 11. Font mapping
+## 12. Font mapping
 
 - English: Plus Jakarta Sans
 - Arabic: Dubai

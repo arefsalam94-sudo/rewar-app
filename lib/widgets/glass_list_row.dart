@@ -72,7 +72,6 @@ class GlassListRow extends StatelessWidget {
         // The design files define one card treatment app-wide: the translucent
         // white sheen. The brand gradient belongs to the full-page background
         // only; using it here makes the rows look like dark backing cards.
-        fill: GlassFill.sheen,
         child: Material(
           color: Colors.transparent,
           child: Column(

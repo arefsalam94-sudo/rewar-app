@@ -38,7 +38,6 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  liquid_glass_widgets: ^0.29.6
   firebase_core: ^4.12.1
   firebase_auth: ^6.5.6
   cloud_firestore: ^6.7.1
@@ -94,14 +93,9 @@ flutter:
     - assets/legal/
 
   fonts:
-    - family: Corbel
+    - family: Plus Jakarta Sans
       fonts:
-        # Light (300) is used for the first line of each onboarding header.
-        - asset: assets/fonts/Corbel-Light.ttf
-          weight: 300
-        - asset: assets/fonts/Corbel-Regular.ttf
-        - asset: assets/fonts/Corbel-Bold.ttf
-          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
     # Arabic UI font.
     - family: Dubai
       fonts:

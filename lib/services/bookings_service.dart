@@ -37,6 +37,15 @@ class BookingsService {
   /// this limit.
   static const int fetchLimit = 50;
 
+  /// Session-only records created by the hotel checkout preview. They are
+  /// never written to Firestore and disappear when the process exits.
+  static final List<Booking> _sessionPreviewBookings = <Booking>[];
+
+  static void addSessionPreviewBooking(Booking booking) {
+    assert(kDebugMode, 'Preview bookings must never be created in release.');
+    _sessionPreviewBookings.insert(0, booking);
+  }
+
   static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
 
   /// The uid whose bookings should be shown, or null when nobody is signed in.
@@ -63,7 +72,7 @@ class BookingsService {
         'Seed the "$collection" collection for live content.',
       );
       await Future<void>.delayed(const Duration(milliseconds: 300));
-      return bundledBookings();
+      return <Booking>[..._sessionPreviewBookings, ...bundledBookings()];
     }
     if (!FirebaseBootstrap.isReady) {
       throw StateError('Firebase is not configured — see FIREBASE_SETUP.md');

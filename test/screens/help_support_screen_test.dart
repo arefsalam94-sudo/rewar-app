@@ -78,7 +78,7 @@ void main() {
           .toList();
       expect(cards.length, HelpTopic.values.length);
       for (final card in cards) {
-        expect(card.fill, GlassFill.sheen);
+        expect(card.depth, GlassDepth.base);
       }
 
       // Aside from the back button's circular glass surface, every panel on
@@ -110,7 +110,7 @@ void main() {
       }
     });
 
-    testWidgets('the background photo is unblurred in both modes', (
+    testWidgets('the background photo uses the shared blur in both modes', (
       tester,
     ) async {
       for (final dark in [false, true]) {
@@ -121,7 +121,7 @@ void main() {
           (image.image as AssetImage).assetName,
           PolicyScreen.backgroundAsset,
         );
-        expect(find.byType(ImageFiltered), findsNothing);
+        expect(find.byType(ImageFiltered), findsOneWidget);
       }
     });
 
@@ -322,6 +322,10 @@ void main() {
       );
 
       await _pump(tester);
+      expect(
+        tester.widget<Text>(find.text('Car Rental')).style!.color,
+        AppTheme.lightColorScheme.onSurface,
+      );
       expect(
         tester.widget<Icon>(find.byIcon(Icons.directions_car_outlined)).color,
         AppColors.actionNavy,

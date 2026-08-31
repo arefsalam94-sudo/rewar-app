@@ -71,7 +71,15 @@ enum TourFeature {
   swimming('swimming'),
   campfire('campfire'),
   transport('transport'),
-  photography('photography');
+  photography('photography'),
+  // Added with the Explore Tours reference rebuild: the approved card
+  // screenshot tags departures with Activity, Wifi, Electricity and Tent.
+  // An id with no enum value here is silently dropped by `knownFeatures`,
+  // so the icons could not be drawn until the ids existed.
+  activity('activity'),
+  wifi('wifi'),
+  electricity('electricity'),
+  tent('tent');
 
   const TourFeature(this.id);
 
@@ -115,6 +123,7 @@ class Tour {
     this.ratingBreakdown = RatingBreakdown.empty,
     this.capacity,
     this.bookedCount = 0,
+    this.minAge,
     this.cancellationPolicy,
     this.guideLanguages = const {},
     this.transportAvailable = false,
@@ -201,6 +210,14 @@ class Tour {
   /// mark a rival's departure full, or clear the count and oversell it.
   final int? capacity;
   final int bookedCount;
+
+  /// The operator's minimum traveller age in years, or null when the departure
+  /// carries no age restriction.
+  ///
+  /// Checked against every entered date of birth on the Traveler Info screen.
+  /// Null is "no restriction", never "0" — an absent field must not read as a
+  /// rule that happens to pass.
+  final int? minAge;
 
   /// Which cancellation tier applies. Null hides the line rather than implying
   /// a policy the operator never agreed to.
@@ -294,6 +311,21 @@ class Tour {
   }
 
   static const int lowAvailabilityThreshold = 5;
+
+  /// What [travelers] people pay, with the optional bus add-on when [transport].
+  ///
+  /// Null when the operator published no [pricePerPerson] — the UI then prints
+  /// a dash rather than a zero, because "free" and "not priced yet" are not the
+  /// same claim.
+  ///
+  /// Lives on the model so the Tour Detail estimate and the checkout summary
+  /// cannot drift into showing two different totals for one booking.
+  num? totalFor({required int travelers, required bool transport}) {
+    final base = pricePerPerson;
+    if (base == null) return null;
+    final bus = transport ? (transportPricePerPerson ?? 0) : 0;
+    return (base + bus) * travelers;
+  }
 
   /// Whether this tour can still take [travellers] people.
   ///
@@ -420,6 +452,7 @@ class Tour {
     final score = data['reviewScore'];
     final ratingCount = data['ratingCount'];
     final capacity = data['capacity'];
+    final minAge = data['minAge'];
     final bookedCount = data['bookedCount'];
     final transportPrice = data['transportPricePerPerson'];
 
@@ -447,6 +480,7 @@ class Tour {
       bookedCount: bookedCount is num && bookedCount >= 0
           ? bookedCount.toInt()
           : 0,
+      minAge: minAge is num && minAge > 0 ? minAge.toInt() : null,
       cancellationPolicy: TourCancellationPolicy.fromId(
         data['cancellationPolicy'],
       ),

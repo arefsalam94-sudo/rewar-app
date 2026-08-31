@@ -15,6 +15,7 @@ class PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.dark,
+    this.trailingIcon,
   });
 
   final String label;
@@ -29,6 +30,11 @@ class PrimaryButton extends StatelessWidget {
   ///
   /// Only the Login screen passes true today.
   final bool? dark;
+
+  /// Optional forward arrow after the label, for a button that advances a
+  /// multi-step flow. It mirrors in RTL — `DESIGN_SYSTEM.md` 21: "forward
+  /// chevrons mirror with direction".
+  final IconData? trailingIcon;
 
   /// `DESIGN light.md` → Shapes → "Action Buttons: 12px corner radius".
   /// `DESIGN dark.md` → "Buttons/Inputs: rounded-lg (1rem / 16px)".
@@ -57,9 +63,25 @@ class PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(radius),
           ),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+        child: Builder(
+          builder: (context) {
+            const textStyle = TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            );
+            final icon = trailingIcon;
+            if (icon == null) return Text(label, style: textStyle);
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: Text(label, style: textStyle)),
+                const SizedBox(width: 10),
+                // Mirrors automatically with the ambient direction.
+                Icon(icon, size: 22, textDirection: Directionality.of(context)),
+              ],
+            );
+          },
         ),
       ),
     );

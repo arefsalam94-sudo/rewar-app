@@ -682,7 +682,15 @@ class NatureSpotsService {
             'شلال بيخال هو أحد أشهر المعالم الطبيعية في منطقة راوندوز بكردستان '
             'العراق. تتدفق مياه الينابيع الباردة على الصخور طوال الصيف.',
       },
-      imageAssets: ['assets/images/featured-rawanduz.png'],
+      // Repeated temporarily so the detail gallery and its five-position
+      // indicator can be reviewed before distinct photos are available.
+      imageAssets: [
+        'assets/images/featured-rawanduz.png',
+        'assets/images/featured-rawanduz.png',
+        'assets/images/featured-rawanduz.png',
+        'assets/images/featured-rawanduz.png',
+        'assets/images/featured-rawanduz.png',
+      ],
       latitude: 36.6089,
       longitude: 44.5286,
       // Server-owned since the Reviews & Ratings screen: these are what the

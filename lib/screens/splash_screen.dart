@@ -4,13 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/page_background.dart';
 import 'language_selection_screen.dart';
 
 /// The first screen shown when the app launches.
 ///
 /// A branded splash: full-screen vertical gradient (light mint at the top,
 /// deep green at the bottom), the app logo with a soft glow, and the app
-/// name below it in Corbel. After a short delay it advances to the Language
+/// name below it in Plus Jakarta Sans. After a short delay it advances to the Language
 /// selection screen.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -47,19 +48,9 @@ class _SplashScreenState extends State<SplashScreen> {
         statusBarColor: Colors.transparent,
       ),
       child: Scaffold(
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.splashGradientTop,
-                AppColors.splashGradientBottom,
-              ],
-            ),
-          ),
+        backgroundColor: Colors.transparent,
+        body: PageBackground(
+          imageAsset: 'assets/images/main screen back image.webp',
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -114,7 +105,7 @@ class _Logo extends StatelessWidget {
   }
 }
 
-/// The app name, two centered lines, in Corbel with a soft shadow.
+/// The app name, two centered lines, in Plus Jakarta Sans with a soft shadow.
 class _Title extends StatelessWidget {
   const _Title();
 
@@ -124,7 +115,7 @@ class _Title extends StatelessWidget {
       'Kurdistan Paradise\nTravel Guide',
       textAlign: TextAlign.center,
       style: TextStyle(
-        fontFamily: 'Corbel',
+        fontFamily: 'Plus Jakarta Sans',
         color: AppColors.splashText,
         fontSize: 34,
         height: 1.15,

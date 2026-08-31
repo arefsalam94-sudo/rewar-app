@@ -13,6 +13,7 @@ import 'package:kurdistan_paradise_travel_guide/services/tours_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/page_background.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
 
@@ -549,38 +550,366 @@ void main() {
       expect(title.left, greaterThan(button.right));
     });
 
-    testWidgets('the carousel rating sits on the leading edge', (tester) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-
-      // The slide's own score badge and its operator tag.
-      final score = tester.getRect(find.text('8.7').first);
-      final tag = tester.getRect(find.text('AB group').first);
-      // Rating left, operator tag right — as asked.
-      expect(score.left, lessThan(tag.left));
-    });
-
-    testWidgets('the card rating sits on the trailing edge', (tester) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-
-      // On a card, the score badge is to the right of the tour name.
-      final name = tester.getRect(find.text('Gali Sherana'));
-      final score = tester.getRect(find.text('8.5'));
-      expect(score.left, greaterThan(name.right - 1));
-    });
-
-    testWidgets('an unrated tour says so rather than showing a zero', (
+    testWidgets('the carousel rating sits trailing, above the tour name', (
       tester,
     ) async {
       await _pumpScreen(tester, service: _FakeToursService());
-      // Korek has no reviews seeded.
-      expect(find.text('No reviews yet'), findsOneWidget);
-      expect(find.text('0.0'), findsNothing);
+
+      final slide = tester.getRect(find.byType(PageView));
+      final score = tester.getRect(find.text('8.7').first);
+      final name = tester.getRect(find.text('Gali Alibag Waterfall').first);
+      final tag = tester.getRect(find.text('AB group').first);
+
+      // Trailing half of the slide, and above the name — as asked.
+      expect(score.left, greaterThan(slide.center.dx));
+      expect(score.bottom, lessThan(name.top));
+      // The operator tag sits under the rating, not beside it.
+      expect(tag.top, greaterThan(score.bottom - 1));
     });
 
-    testWidgets('draws the review count beside the score', (tester) async {
+    testWidgets(
+      'the card puts the heart on the photo and the operator on top',
+      (tester) async {
+        // No rating at all on a list card now — neither the number nor the
+        // stars. The favourite took the stars' place over the photo, and the
+        // operator tag took the corner the favourite used to hold.
+        await _pumpScreen(tester, service: _FakeToursService());
+
+        final photo = tester.getRect(
+          find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+        );
+        final card = tester.getRect(
+          find
+              .ancestor(
+                of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+                matching: find.byType(GlassPanel),
+              )
+              .first,
+        );
+
+        // No score anywhere on a card — 8.5 belongs to Gali Sherana, which has
+        // no carousel slide, so finding it at all would mean a card drew it.
+        expect(find.text('8.5'), findsNothing);
+        // And no stars either: the only ones on screen belong to the carousel.
+        expect(
+          find.descendant(
+            of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is Icon &&
+                  (widget.icon == Icons.star_rounded ||
+                      widget.icon == Icons.star_outline_rounded),
+            ),
+          ),
+          findsNothing,
+        );
+
+        final heart = tester.getRect(
+          find
+              .descendant(
+                of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+                matching: find.byWidgetPredicate(
+                  (widget) =>
+                      widget is Icon &&
+                      (widget.icon == Icons.favorite_rounded ||
+                          widget.icon == Icons.favorite_border_rounded),
+                ),
+              )
+              .first,
+        );
+        // Over the photo, near its top, where the stars used to be.
+        expect(heart.left, greaterThan(photo.left));
+        expect(heart.right, lessThan(photo.right));
+        expect(heart.top, lessThan(photo.top + photo.height / 4));
+
+        final operator = tester.getRect(
+          find
+              .descendant(
+                of: find
+                    .ancestor(
+                      of: find.byKey(
+                        tourCardThumbnailKey('gali-alibag-waterfall'),
+                      ),
+                      matching: find.byType(GlassPanel),
+                    )
+                    .first,
+                matching: find.text('AB group'),
+              )
+              .first,
+        );
+        // Top trailing corner of the card, clear of the photo entirely.
+        expect(operator.left, greaterThan(photo.right));
+        expect(operator.right, lessThan(card.right));
+        expect(operator.top, lessThan(card.top + card.height / 4));
+      },
+    );
+
+    testWidgets('the carousel stands 308dp tall at the default font size', (
+      tester,
+    ) async {
+      // Grown by 100 on request. Asserted rather than left to the eye, because
+      // it is the one number the slide's whole internal layout is budgeted
+      // against.
       await _pumpScreen(tester, service: _FakeToursService());
-      expect(find.text('3 reviews'), findsOneWidget);
-      expect(find.text('2 reviews'), findsOneWidget);
+      expect(tester.getRect(find.byType(PageView)).height, 308);
+    });
+
+    testWidgets('the card photo is inset from the rim on all four sides', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      final thumb = find.byKey(tourCardThumbnailKey('gali-alibag-waterfall'));
+      final photo = tester.getRect(thumb);
+      final card = tester.getRect(
+        find.ancestor(of: thumb, matching: find.byType(GlassPanel)).first,
+      );
+
+      // The approved reference draws the photo as its own rounded panel
+      // floating inside the card, not bled to the rim.
+      expect(photo.left, greaterThan(card.left));
+      expect(photo.top, greaterThan(card.top));
+      expect(photo.bottom, lessThan(card.bottom));
+      expect(photo.right, lessThan(card.right));
+      // Leading third of the card, at the reference's proportion.
+      expect(photo.width / card.width, closeTo(110 / 360, 0.03));
+    });
+
+    testWidgets('every card holds the reference proportions at any width', (
+      tester,
+    ) async {
+      // The card is laid out once at its base size and scaled to fit, so the
+      // *shape* is identical on every phone — which is what was approved.
+      for (final width in <double>[320, 360, 430]) {
+        await _pumpScreen(tester, service: _FakeToursService(), width: width);
+        expect(tester.takeException(), isNull);
+
+        final card = tester.getRect(
+          find
+              .ancestor(
+                of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+                matching: find.byType(GlassPanel),
+              )
+              .first,
+        );
+        expect(
+          card.width / card.height,
+          closeTo(360 / 184, 0.02),
+          reason: 'card aspect ratio drifted at ${width}dp',
+        );
+      }
+    });
+
+    testWidgets('the place block straddles the card\'s vertical middle', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      final card = tester.getRect(
+        find
+            .ancestor(
+              of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+              matching: find.byType(GlassPanel),
+            )
+            .first,
+      );
+      final cardFinder = find
+          .ancestor(
+            of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+            matching: find.byType(GlassPanel),
+          )
+          .first;
+      // Two tours depart from Rawanduz, so the lines are read off this card.
+      final place = tester.getRect(
+        find
+            .descendant(of: cardFinder, matching: find.text('Rawanduz, Erbil'))
+            .first,
+      );
+      final spots = tester.getRect(
+        find
+            .descendant(
+              of: cardFinder,
+              matching: find.text('Only 3 spots left'),
+            )
+            .first,
+      );
+
+      // Centred on the card as a block: the place line above the middle, the
+      // availability line below it.
+      expect(place.top, lessThan(card.center.dy));
+      expect(spots.bottom, greaterThan(card.center.dy));
+      expect(
+        ((place.top + spots.bottom) / 2 - card.center.dy).abs(),
+        lessThan(6),
+      );
+    });
+
+    testWidgets('the facility grid is centred and clears the date', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      final cardFinder = find
+          .ancestor(
+            of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+            matching: find.byType(GlassPanel),
+          )
+          .first;
+      final card = tester.getRect(cardFinder);
+      // Each facility circle carries a Tooltip with its name, which is what
+      // makes them findable now that the labels are gone.
+      final circles = tester
+          .widgetList(
+            find.descendant(of: cardFinder, matching: find.byType(Tooltip)),
+          )
+          .length;
+      expect(circles, greaterThan(1));
+
+      final grid = find.descendant(
+        of: cardFinder,
+        matching: find.byType(Tooltip),
+      );
+      final top = tester.getRect(grid.first).top;
+      final bottom = tester.getRect(grid.last).bottom;
+
+      // Sits on the card's middle rather than under the operator tag.
+      expect(((top + bottom) / 2 - card.center.dy).abs(), lessThan(10));
+      // And stops short of the date above the price badge.
+      final tour = ToursService.bundledTours().firstWhere(
+        (tour) => tour.pricePerPerson == 55,
+      );
+      const en = AppLocalizations(Locale('en'));
+      expect(
+        bottom,
+        lessThan(
+          tester
+              .getRect(find.text(en.tourDateRange(tour.startAt!, tour.endAt)))
+              .top,
+        ),
+      );
+    });
+
+    testWidgets('the departure dates sit directly over the price badge', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      // The bundled tours depart relative to today, so the label is built the
+      // same way the card builds it rather than hard-coded.
+      final tour = ToursService.bundledTours().firstWhere(
+        (tour) => tour.pricePerPerson == 55,
+      );
+      const en = AppLocalizations(Locale('en'));
+
+      final price = tester.getRect(find.text(r'$55'));
+      final date = tester.getRect(
+        find.text(en.tourDateRange(tour.startAt!, tour.endAt)),
+      );
+      // Directly above the badge, inside its horizontal span — the amount
+      // itself sits on the badge's leading half, so the badge is what the
+      // date is measured against.
+      final badge = tester.getRect(
+        find
+            .ancestor(of: find.text(r'$55'), matching: find.byType(GlassPanel))
+            .first,
+      );
+      expect(date.bottom, lessThan(price.top));
+      expect(date.left, greaterThanOrEqualTo(badge.left));
+      expect(date.right, lessThan(badge.right));
+    });
+
+    testWidgets('both search boxes share a row, with Apply centred below', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      final search = tester.getRect(find.byKey(exploreToursSearchFieldKey));
+      final date = tester.getRect(find.byKey(exploreToursDateFieldKey));
+      final apply = tester.getRect(find.byType(PrimaryButton));
+      final page = tester.getRect(find.byType(PageBackground));
+
+      // Same row, search first.
+      expect(search.center.dy, closeTo(date.center.dy, 1));
+      expect(date.left, greaterThan(search.right - 1));
+      // Apply below both, centred between them.
+      expect(apply.top, greaterThan(search.bottom));
+      expect(apply.center.dx, closeTo(page.center.dx, 1));
+      expect(apply.center.dx, greaterThan(search.center.dx));
+      expect(apply.center.dx, lessThan(date.center.dx));
+    });
+
+    testWidgets('the price and its label share a row on a card', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      final price = tester.getRect(find.text(r'$55'));
+      final label = tester.getRect(find.text('Per Person').first);
+      // Amount on the leading side, label beside it — the same shape the
+      // full-size badge on a carousel slide uses.
+      expect(label.left, greaterThan(price.right - 1));
+      expect((label.center.dy - price.center.dy).abs(), lessThan(8));
+    });
+
+    testWidgets('lays out on a phone-width screen without overflowing', (
+      tester,
+    ) async {
+      // The default 900dp test surface is far wider than any phone; the card
+      // is at its tightest at 360dp, which is where a resize regression would
+      // show up first.
+      await _pumpScreen(tester, service: _FakeToursService(), width: 360);
+      expect(tester.takeException(), isNull);
+      expect(find.text('Gali Sherana'), findsOneWidget);
+    });
+
+    testWidgets('at a large system font the search fields stack instead', (
+      tester,
+    ) async {
+      await _pumpScreen(
+        tester,
+        service: _FakeToursService(),
+        width: 360,
+        textScale: 1.6,
+      );
+      expect(tester.takeException(), isNull);
+
+      final search = tester.getRect(find.byKey(exploreToursSearchFieldKey));
+      final date = tester.getRect(find.byKey(exploreToursDateFieldKey));
+      // Two half-width fields cannot hold a legible hint at this size, so they
+      // go one above the other rather than clipping.
+      expect(date.top, greaterThan(search.bottom - 1));
+    });
+
+    testWidgets('an unrated tour draws no badge rather than showing a zero', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+      // Korek has no reviews seeded: it gets no score and no stars, rather
+      // than a 0.0 that reads as a bad tour.
+      expect(find.text('0.0'), findsNothing);
+      expect(find.text('No reviews yet'), findsNothing);
+    });
+
+    testWidgets('facilities are icon-only, capped at six', (tester) async {
+      // The approved card draws them as a 2x3 grid of bare circles — the
+      // labelled list belongs on the Tour Detail screen.
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      expect(find.text('Guide'), findsNothing);
+      expect(find.text('Food'), findsNothing);
+
+      final card = find
+          .ancestor(
+            of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+            matching: find.byType(GlassPanel),
+          )
+          .first;
+      final facilityIcons = tester
+          .widgetList<Icon>(
+            find.descendant(of: card, matching: find.byType(Icon)),
+          )
+          .where((icon) => icon.icon == Icons.person_outline_rounded);
+      expect(facilityIcons.length, lessThanOrEqualTo(1));
     });
 
     testWidgets('low availability is called out; a roomy departure is not', (
@@ -594,18 +923,18 @@ void main() {
       expect(find.textContaining('12 spots'), findsNothing);
     });
 
-    testWidgets('the cancellation tier is shown, free and non-refundable', (
+    testWidgets('the card carries no cancellation tier or language list', (
       tester,
     ) async {
+      // Both were removed from the list card on request. They are still on the
+      // tour and still drawn on the Tour Detail screen — this asserts the card
+      // stays clear of them, so a future edit cannot quietly put them back.
       await _pumpScreen(tester, service: _FakeToursService());
-      expect(find.text('Free cancellation until 48h before'), findsOneWidget);
-      expect(find.text('Non-refundable'), findsOneWidget);
-    });
 
-    testWidgets('the guide languages are listed', (tester) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-      expect(find.text('English · Kurdish · Arabic'), findsOneWidget);
-      expect(find.text('English · Turkish'), findsOneWidget);
+      expect(find.text('Free cancellation until 48h before'), findsNothing);
+      expect(find.text('Non-refundable'), findsNothing);
+      expect(find.text('English · Kurdish · Arabic'), findsNothing);
+      expect(find.text('English · Turkish'), findsNothing);
     });
 
     testWidgets('draws the carousel, the controls and a card per tour', (
@@ -620,100 +949,11 @@ void main() {
       // Controls.
       expect(find.byKey(exploreToursSearchFieldKey), findsOneWidget);
       expect(find.byKey(exploreToursDateFieldKey), findsOneWidget);
-      expect(find.byKey(exploreToursTravellerPlusKey), findsOneWidget);
       expect(find.byType(PrimaryButton), findsOneWidget);
       expect(find.text('Apply'), findsOneWidget);
-      expect(find.text('Sort'), findsOneWidget);
-      expect(find.text('Includes'), findsOneWidget);
       expect(find.text('Trending Tours'), findsOneWidget);
       expect(find.text(r'$55'), findsOneWidget);
-      expect(find.text('per person'), findsNWidgets(3));
-    });
-
-    testWidgets('a refinement chip filters immediately, with no Apply', (
-      tester,
-    ) async {
-      final service = _FakeToursService();
-      await _pumpScreen(tester, service: service);
-      expect(service.catalogReads, 1);
-
-      // `.first` is the refinement chip; the same label also appears under a
-      // feature icon further down the page.
-      // Only Gali Alibag is tagged "swimming".
-      await tester.tap(find.text('Swimming').first);
-      await tester.pumpAndSettle();
-      expect(find.text('Gali Alibag Waterfall'), findsNWidgets(2));
-      expect(find.text('Gali Sherana'), findsNothing);
-
-      // Multi-select is OR: adding Campfire widens it back out.
-      await tester.tap(find.text('Campfire').first);
-      await tester.pumpAndSettle();
-      expect(find.text('Gali Sherana'), findsOneWidget);
-
-      // Still one read — refining costs nothing.
-      expect(service.catalogReads, 1);
-    });
-
-    testWidgets('the sort control reorders without re-reading', (tester) async {
-      final service = _FakeToursService();
-      await _pumpScreen(tester, service: service);
-
-      await tester.tap(find.text('Price: low to high'));
-      await tester.pumpAndSettle();
-
-      // Cheapest first: Sherana $32, Korek $40, Alibag $55.
-      final sherana = tester.getRect(find.text('Gali Sherana'));
-      final korek = tester.getRect(find.text('Korek Mountain Day Trip'));
-      expect(sherana.top, lessThan(korek.top));
-      expect(service.catalogReads, 1);
-    });
-
-    // Two tests rather than one: pumping a second ExploreToursScreen into the
-    // same tester reuses the State (same type, no key), so the injected
-    // services would not be swapped and the assertion would be meaningless.
-    testWidgets('"Nearest to me" is hidden without a device position', (
-      tester,
-    ) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-      expect(find.text('Nearest to me'), findsNothing);
-    });
-
-    testWidgets('"Nearest to me" appears once there is a fix', (tester) async {
-      await _pumpScreen(
-        tester,
-        service: _FakeToursService(),
-        location: const _FakeLocationService(DeviceLocation(36.6289, 44.5311)),
-      );
-      expect(find.text('Nearest to me'), findsOneWidget);
-    });
-
-    testWidgets('the traveller stepper hides departures without room', (
-      tester,
-    ) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-
-      // Alibag has 3 places left, Korek 2, Sherana 12. Four travellers leaves
-      // only Sherana.
-      for (var i = 0; i < 3; i++) {
-        await tester.tap(find.byKey(exploreToursTravellerPlusKey));
-        await tester.pumpAndSettle();
-      }
-      // Nothing has changed yet — party size is a search input.
-      expect(find.text('Korek Mountain Day Trip'), findsOneWidget);
-
-      await tester.tap(find.text('Apply'));
-      await tester.pumpAndSettle();
-      expect(find.text('Gali Sherana'), findsOneWidget);
-      expect(find.text('Korek Mountain Day Trip'), findsNothing);
-      // And the price box now carries the party total: $32 × 4.
-      expect(find.text(r'Total $128'), findsOneWidget);
-    });
-
-    testWidgets('the stepper cannot go below one traveller', (tester) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-      await tester.tap(find.byKey(exploreToursTravellerMinusKey));
-      await tester.pumpAndSettle();
-      expect(find.text('1'), findsOneWidget);
+      expect(find.text('Per Person'), findsNWidgets(3));
     });
 
     testWidgets('prices convert, are marked approximate, and are disclosed', (
@@ -887,7 +1127,6 @@ void main() {
         final l10n = AppLocalizations(locale);
         expect(find.text(l10n.trendingTours), findsOneWidget);
         expect(find.text(l10n.toursApply), findsOneWidget);
-        expect(find.text(l10n.toursSortLabel), findsOneWidget);
         expect(
           Directionality.of(tester.element(find.byType(PrimaryButton))),
           TextDirection.rtl,
@@ -899,32 +1138,6 @@ void main() {
       await _pumpScreen(tester, service: _FakeToursService(), dark: true);
       expect(find.text('Trending Tours'), findsOneWidget);
       expect(find.text('Gali Sherana'), findsOneWidget);
-    });
-
-    testWidgets('every chip and stepper button meets the 48dp target', (
-      tester,
-    ) async {
-      await _pumpScreen(tester, service: _FakeToursService());
-
-      for (final key in [
-        exploreToursTravellerPlusKey,
-        exploreToursTravellerMinusKey,
-      ]) {
-        final size = tester.getSize(find.byKey(key));
-        expect(size.width, greaterThanOrEqualTo(48));
-        expect(size.height, greaterThanOrEqualTo(48));
-      }
-
-      // Chips are 38dp of visual height inside a 48dp margin box.
-      final chip = tester.getSize(
-        find
-            .ancestor(
-              of: find.text('Camping'),
-              matching: find.byType(Container),
-            )
-            .first,
-      );
-      expect(chip.height, greaterThanOrEqualTo(38));
     });
   });
 }
@@ -938,10 +1151,12 @@ Future<void> _pumpScreen(
   CurrencyRatesService? rates,
   Locale locale = const Locale('en'),
   bool dark = false,
+  double width = 900,
+  double textScale = 1.0,
 }) async {
   // Tall enough that the whole page is laid out; several assertions read
   // positions, which requires the widget to be on screen.
-  tester.view.physicalSize = const Size(900, 3400);
+  tester.view.physicalSize = Size(width, 3400);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
@@ -953,6 +1168,12 @@ Future<void> _pumpScreen(
       theme: AppTheme.lightForLocale(locale),
       darkTheme: AppTheme.darkForLocale(locale),
       themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: ExploreToursScreen(
         toursService: service,
         locationService: location,

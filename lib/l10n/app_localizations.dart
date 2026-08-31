@@ -210,13 +210,305 @@ class AppLocalizations {
       'exploreNatureHint': 'Trails, lakes & breathtaking parks.',
       'whereToStay': 'Where to Stay',
       'whereToStayHint': 'Hotels, cabins & unique stays',
+      'hotelLocation': 'Location',
+      'hotelLocationHint': 'Where do you want to stay?',
+      'hotelRecentSearches': 'Recent Searches',
+      'hotelDate': 'Date',
+      'hotelCheckIn': 'Check-In',
+      'hotelCheckOut': 'Check-Out',
+      'hotelGuests': 'Guests',
+      'hotelAdult': 'Adult',
+      'hotelChild': 'Child',
+      'hotelRoom': 'Room',
+      'hotelBed': 'Bed',
+      'hotelOptions': 'Options',
+      'hotelNoOptions': 'No options selected',
+      'hotelOneOption': '1 option selected',
+      'hotelManyOptions': '{count} options selected',
+      'hotelPool': 'Pool',
+      'hotelBar': 'Bar',
+      'hotelRestaurant': 'Restaurant',
+      'hotelGym': 'Gym',
+      'hotelParking': 'Parking',
+      'hotelFreeWifi': 'Free WiFi',
+      'hotelBeach': 'Beach',
+      'hotelMoreOptions': 'More Options',
+      'hotelSearch': 'Search',
+      'hotelTrending': 'Trending Accommodations',
+      'hotelPerNight': 'Per Night',
+      'hotelDistanceFromCenter': '{distance} km from city center',
+      'hotelAdultsBeds': '{adults} adults, {beds} beds',
+      'hotelGuestSummary':
+          '{adults} adults, {children} children, {rooms} rooms, {beds} beds',
+      'hotelAdultCountOne': '{count} adult',
+      'hotelAdultCountMany': '{count} adults',
+      'hotelChildCountOne': '{count} child',
+      'hotelChildCountMany': '{count} children',
+      'hotelRoomCountOne': '{count} room',
+      'hotelRoomCountMany': '{count} rooms',
+      'hotelBedCountOne': '{count} bed',
+      'hotelBedCountMany': '{count} beds',
+      'hotelDestinationRequired': 'Please choose a location',
+      'hotelInvalidDates': 'Check-out must be after check-in',
+      'hotelPreviewData': 'Preview stays – live availability is not connected',
+      'hotelCarouselPosition': 'Featured hotel {current} of {total}',
+      'hotelStarClassification': '{count}-star hotel',
+      'hotelReviewScore': 'Review score {score} out of 10',
+      'hotelIncrease': 'Increase {name}',
+      'hotelDecrease': 'Decrease {name}',
+      // --- Hotel Details page ---
+      'hotelDetails': 'Hotel Details',
+      'hotelDetailNotFound': 'This hotel is no longer available.',
+      'hotelDetailLoadFailed': 'We could not load this hotel.',
+      'hotelGalleryPosition': '{current} / {total}',
+      'hotelGalleryImage': 'Hotel photo {current} of {total}',
+      'hotelChange': 'Change',
+      'hotelUpdateStay': 'Update your stay',
+      'hotelUpdateStayApply': 'Apply changes',
+      'hotelStayUpdated': 'Your stay has been updated',
+      'hotelFacilities': 'Facilities',
+      'hotelAllFacilities': 'All facilities',
+      'hotelNoFacilities': 'No facilities listed yet',
+      'hotelSeeAll': 'See all',
+      'hotelReviews': 'Reviews',
+      'hotelReviewCountOne': '{count} review',
+      'hotelReviewCountMany': '{count} reviews',
+      'hotelCleanliness': 'Cleanliness',
+      'hotelComfort': 'Comfort',
+      'hotelService': 'Service',
+      'hotelStaff': 'Staff',
+      'hotelValue': 'Value',
+      'hotelMap': 'Location',
+      'hotelMapUnavailable': 'Map is unavailable',
+      'hotelNearby': 'Nearby',
+      'hotelNearbyEmpty': 'No nearby places listed yet',
+      'hotelNearbyAll': 'Nearby places',
+      'hotelNearbyDistance': '{distance} km',
+      'hotelNearbyDistanceWithTime': '{minutes} min ({distance} km)',
+      'hotelRatingsAndComments': 'Ratings & Comments',
+      'hotelSelectRoom': 'Select Room',
+      'hotelChooseRoom': 'Choose Your Room',
+      'hotelMockNotice': 'Preview data — availability and payments are not live.',
+      'hotelNoRooms': 'No rooms are available for these dates.',
+      'hotelChangeDates': 'Change dates',
+      'hotelBackToHotel': 'Back to hotel',
+      'hotelSeeRoomDetails': 'See room details',
+      'hotelMaximumGuests': 'Maximum {count} guests',
+      'hotelReserve': 'Reserve',
+      'hotelPriceForNights': 'Price for {count} night(s)',
+      'hotelRechecking': 'Rechecking price and availability…',
+      'hotelCompleteBooking': 'Complete Your Booking',
+      'hotelGuestDetails': 'Guest details',
+      'hotelSpecialRequestsHint': 'Optional requests are subject to hotel availability',
+      'hotelStripePreview': 'Stripe — preview only',
+      'hotelFibPreview': 'FIB — preview only',
+      'hotelMockPaymentNotice': 'No payment will be sent. This checkout creates a local preview reservation only.',
+      'hotelRoomSubtotal': 'Room subtotal',
+      'hotelBookingConsent': 'I agree to the displayed rate and cancellation conditions.',
+      'hotelConfirmMockBooking': 'Confirm preview booking',
+      'hotelMockBookingComplete': 'Preview Booking Complete',
+      'hotelMockBookingCompleteBody': 'No room was held with a hotel and no payment was charged.',
+      'hotelViewReservations': 'View Your Reservations',
+      'hotelGuestRequired': 'Please complete the required guest details.',
+      'hotelConsentRequired': 'Please accept the booking conditions.',
+      'hotelRateUnavailable': 'This rate is no longer available. Choose another option.',
+      'hotelPropertyPolicies': 'Property policies',
+      'hotelPolicyCheckInFrom': 'Check-in from',
+      'hotelPolicyCheckOutUntil': 'Check-out until',
+      'hotelPolicyChildren': 'Children',
+      'hotelPolicyCribs': 'Cribs',
+      'hotelPolicyExtraBeds': 'Extra beds',
+      'hotelPolicyAgeRestriction': 'Age restriction',
+      'hotelPolicyMinimumAge': 'The minimum check-in age is {age}',
+      'hotelPolicyPets': 'Pets',
+      'hotelPolicySmoking': 'Smoking',
+      'hotelPolicyPayment': 'Accepted payment methods',
+      'hotelPolicySpecialRequests': 'Special requests',
+      'hotelPolicySpecialRequestsYes':
+          'Special requests can be added to your booking.',
+      'hotelPolicySpecialRequestsNo': 'Special requests cannot be accepted.',
+      'hotelPolicyAccessibility': 'Accessibility',
+      'hotelFacilityGeneral': 'General',
+      'hotelFacilityInternet': 'Internet',
+      'hotelFacilityParking': 'Parking',
+      'hotelFacilityFoodAndDrink': 'Food & Drink',
+      'hotelFacilityWellness': 'Wellness',
+      'hotelFacilityPool': 'Pool',
+      'hotelFacilityTransportation': 'Transportation',
+      'hotelFacilityRoom': 'Room facilities',
+      'hotelFacilityFamily': 'Family',
+      'hotelFacilityAccessibility': 'Accessibility',
+      'hotelFacilityBusiness': 'Business',
+      'hotelFacilitySafety': 'Safety',
+      'hotelBedSingle': 'Single bed',
+      'hotelBedTwin': 'Twin bed',
+      'hotelBedDouble': 'Double bed',
+      'hotelBedQueen': 'Queen bed',
+      'hotelBedKing': 'King bed',
+      'hotelBedSofa': 'Sofa bed',
+      'hotelBedBunk': 'Bunk bed',
+      'hotelBedCount': '{count} × {bed}',
+      'hotelBreakfastIncluded': 'Breakfast included',
+      'hotelBreakfastExtra': 'Breakfast available for an extra charge',
+      'hotelBreakfastUnavailable': 'Breakfast not available',
+      'hotelTaxesAndFees': 'Taxes and fees',
+      'hotelTaxesIncluded': 'Taxes and fees included',
+      'hotelTaxesExcluded': 'Taxes and fees are not included',
+      'hotelFreeCancellation': 'Free cancellation',
+      'hotelPartiallyRefundable': 'Partially refundable',
+      'hotelNonRefundable': 'Non-refundable',
+      'hotelPayNow': 'Pay now',
+      'hotelPayLater': 'Pay later',
+      'hotelPayAtProperty': 'Pay at property',
+      'hotelPrepaymentRequired': 'Prepayment required',
+      'hotelPartialPrepayment': 'Partial prepayment required',
+      'hotelNoPrepayment': 'No prepayment needed',
+      'hotelRoomsLeftOne': 'Only {count} room left',
+      'hotelRoomsLeftMany': 'Only {count} rooms left',
       'bestPrice': 'Best Price',
       'carRental': 'Car Rental',
       'carRentalHint': 'Find the perfect car for your adventure',
       'findACar': 'Find a Car',
+      'carPickupDropOffLocation': 'Pick-up – Drop-off Location',
+      'carPickup': 'Pick-up',
+      'carDropOff': 'Drop-off',
+      'carPickupLocation': 'Pick-up location',
+      'carDropOffLocation': 'Drop-off location',
+      'carDifferentDropOff': 'Drop off in a different location',
+      'carSelectDate': 'Select date',
+      'carSelectTime': 'Select time',
+      'carSearch': 'Search',
+      'carSearching': 'Searching…',
+      'carTrending': 'Trending Cars',
+      'carAvailable': 'Available Cars',
+      'carNoAvailable': 'No cars available for these dates',
+      'carSearchLocations': 'Search rental location',
+      'carLocationSearchHint': 'City, airport, code, or branch',
+      'carLocationStartTyping': 'Enter at least 2 characters',
+      'carNoLocations': 'No rental locations found',
+      'carLocationsFailed': 'Unable to load rental locations',
+      'carPickupLocationRequired': 'Please choose a pick-up location',
+      'carDropOffLocationRequired': 'Please choose a drop-off location',
+      'carPickupDateRequired': 'Please choose a pick-up date',
+      'carPickupTimeRequired': 'Please choose a pick-up time',
+      'carDropOffDateRequired': 'Please choose a drop-off date',
+      'carDropOffTimeRequired': 'Please choose a drop-off time',
+      'carPickupFuture': 'Pick-up must be in the future',
+      'carDropOffAfterPickup': 'Drop-off must be after pick-up',
+      'carSearchFailed': "Couldn't load available cars",
+      'carPersons': '{count} persons',
+      'carBags': '{count} bags',
+      'carAirConditioning': 'AC',
+      'carHybrid': 'Hybrid',
+      'carElectric': 'Electric',
+      'carPetrol': 'Petrol',
+      'carDiesel': 'Diesel',
+      'carPayAtPickup': 'Pay at pickup',
+      'carPayNow': 'Pay now',
+      'carModelYear': 'Model {year}',
+      'carPricePerDay': '{price}/day',
+      'carPreviewData': 'Preview cars – live availability is not connected',
+      'carCarouselPosition': 'Featured car {current} of {total}',
+      'carResultsOne': '1 Result',
+      'carResultsMany': '{count} Results',
+      'carResultsEmptyTitle': 'No cars found',
+      'carResultsEmptyBody':
+          'No cars found for your selected dates and location.',
+      'carModifySearch': 'Modify Search',
+      'carResultsLoading': 'Loading available cars',
+      'carResultsListLabel': 'Car rental search results',
+      'carDetails': 'Car details',
+      'carPickupDropOffDetails': 'Pick-Up / Drop Off Details',
+      'carLocation': 'Location',
+      'carAdditionalOptions': 'Additional Options',
+      'carApply': 'Apply',
+      'carAutomatic': 'Automatic',
+      'carManual': 'Manual',
+      'carPhotoPosition': 'Photo {current} of {total}',
+      'carGalleryLabel': '{name} photos',
+      'carDecreaseQuantity': 'Fewer {name}',
+      'carIncreaseQuantity': 'More {name}',
+      'carExtraTimesQuantity': '{price} × {count}',
+      'carPriceSummary': 'Price Summary',
+      'carBaseRental': 'Base rental',
+      'carExtrasTotal': 'Extras',
+      'carEstimatedTotal': 'Estimated total',
+      'carRentalDayOne': '1 rental day',
+      'carRentalDaysMany': '{count} rental days',
+      'carEstimateNote':
+          'Estimate only — taxes and supplier fees are not included.',
+      'carRentalConditions': 'Rental Conditions',
+      'carFuelPolicy': 'Fuel policy',
+      'carFuelFullToFull': 'Full to full',
+      'carFuelFullToEmpty': 'Full to empty',
+      'carFuelSameToSame': 'Same to same',
+      'carMileage': 'Mileage',
+      'carMileageUnlimited': 'Unlimited',
+      'carMileagePerDay': '{count} km per day',
+      'carMileageExtra': '{price} per extra km',
+      'carDeposit': 'Security deposit',
+      'carDamageExcess': 'Damage excess',
+      'carFreeCancellation': 'Free cancellation until',
+      'carMinimumAge': 'Minimum driver age',
+      'carMinimumAgeValue': '{age} years',
+      'carRequiredDocuments': 'Required documents',
+      'carOrSimilar': 'This model or a similar vehicle',
       'flightTicketing': 'Flight Ticketing',
       'flightTicketingHint': 'Cheap flights, easy booking, secure payments',
       'findFlight': 'Find Flight',
+      'flightOneWay': 'One-way',
+      'flightRoundTrip': 'Round trip',
+      'flightFrom': 'From',
+      'flightTo': 'To',
+      'flightSearchAirport': 'Search airport',
+      'flightAirportSearchHint': 'City, airport, IATA code, or country',
+      'flightAirportStartTyping': 'Enter at least 2 characters',
+      'flightNoAirportsFound': 'No airports found',
+      'flightAirportLoadFailed': 'Unable to load airports',
+      'flightDepartureDate': 'Departure',
+      'flightReturnDate': 'Return',
+      'flightPassengers': 'Passengers',
+      'flightAdults': 'Adults (12+)',
+      'flightChildren': 'Children (2–11)',
+      'flightInfants': 'Infants (under 2)',
+      'flightCabinClass': 'Cabin class',
+      'flightCabinEconomy': 'Economy',
+      'flightCabinPremiumEconomy': 'Premium Economy',
+      'flightCabinBusiness': 'Business',
+      'flightCabinFirst': 'First Class',
+      'flightDirectOnly': 'Direct flights only',
+      'flightSearch': 'Search flights',
+      'flightSearching': 'Searching…',
+      'done': 'Done',
+      'flightOriginRequired': 'Please enter where you are flying from',
+      'flightDestinationRequired': 'Please enter where you are flying to',
+      'flightDifferentAirports': 'Origin and destination must be different',
+      'flightDepartureRequired': 'Please choose a departure date',
+      'flightReturnRequired': 'Please choose a return date',
+      'flightSearchReady': 'Your flight search is ready for the results page',
+      'flightPassengerSummary':
+          '{adults} adult · {children} child · {infants} infant',
+      'flightResultsOne': '1 flight found',
+      'flightResultsMany': '{count} flights found',
+      'flightSortBest': 'Best',
+      'flightSortCheapest': 'Cheapest',
+      'flightSortFastest': 'Fastest',
+      'flightSelect': 'Select',
+      'flightDirect': 'Direct',
+      'flightOneStop': '1 stop',
+      'flightManyStops': '{count} stops',
+      'flightOutbound': 'Outbound',
+      'flightReturn': 'Return',
+      'flightTotalPrice': 'Total price',
+      'flightPerTraveler': 'Per traveler',
+      'flightResultsLoadFailed': "Couldn't load flights",
+      'flightResultsEmptyTitle': 'No flights found',
+      'flightResultsEmptyBody':
+          'Try another date or change your search filters.',
+      'flightRetry': 'Retry',
+      'flightPreviousDate': 'Previous date',
+      'flightNextDate': 'Next date',
+      'flightOfferSelected': 'Flight selected for the next booking step',
       'exploreToursTitle': 'Explore Tours',
       'exploreToursHint': 'Local experiences, hidden gems & expert guides',
       'findTours': 'Find Tours',
@@ -641,6 +933,10 @@ class AppLocalizations {
       'tourDayTravel': '{count} Day travel',
       'tourDaysTravel': '{count} Days travel',
       'tourPerPerson': 'per person',
+      // Title-cased twin of the line above, for the price badge on a tour card:
+      // the reference stacks it as "Per / Person" beside the figure, while
+      // `tourPerPerson` still reads inside a sentence on the detail screen.
+      'tourPerPersonBadge': 'Per Person',
       'tourFeatureCamping': 'Camping',
       'tourFeatureHiking': 'Hiking',
       'tourFeatureGuide': 'Guide',
@@ -649,6 +945,10 @@ class AppLocalizations {
       'tourFeatureCampfire': 'Campfire',
       'tourFeatureTransport': 'Transport',
       'tourFeaturePhotography': 'Photography',
+      'tourFeatureActivity': 'Activity',
+      'tourFeatureWifi': 'Wifi',
+      'tourFeatureElectricity': 'Electricity',
+      'tourFeatureTent': 'Tent',
       'tourReviewCount': '{count} reviews',
       'tourReviewCountOne': '1 review',
       'tourNoReviews': 'No reviews yet',
@@ -698,6 +998,63 @@ class AppLocalizations {
       'tourNoReviewsYet': 'No reviews yet. Be the first to share your tour.',
       'tourReviewSignInBody':
           'Tour reviews are tied to your account, so travellers can trust who joined.',
+      'bookingStepTravelerInfo': 'Traveler Info',
+      'bookingStepPayment': 'Payment',
+      'bookingStepConfirmation': 'Confirmation',
+      'travelerInformation': 'Traveler Information',
+      'travelerInformationHint': 'Please enter the details of all travelers',
+      'contactPerson': 'Contact Person',
+      'travelersLabel': 'Travelers',
+      'travelerNumbered': 'Traveler',
+      'dateOfBirthHint': 'Date of birth',
+      'leadTraveler': 'Lead traveler',
+      'leadTravelerHint': 'The booking is issued to this traveler',
+      'informationSecure': 'Your information is secure and encrypted',
+      'continueToPayment': 'Continue to Payment',
+      'selectDialCode': 'Select country code',
+      'travelerInfoIncomplete':
+          'Please complete every traveler\u2019s name and date of birth.',
+      'contactIncomplete':
+          'Please enter a valid name, email address and phone number.',
+      'travelerTooYoung': 'Every traveler on this tour must be {age} or older.',
+      'travelerFutureBirthDate': 'A date of birth cannot be in the future.',
+      'noPlacesLeft': 'This departure is sold out.',
+      'onlyPlacesLeft': 'Only {count} places left on this departure.',
+      'reserveSignInTitle': 'Sign in to reserve',
+      'reserveSignInBody':
+          'A booking is tied to your account, so you can find it later and we know who to contact.',
+      'paymentDetails': 'Payment Details',
+      'paymentDetailsHint': 'Complete your payment to confirm the booking',
+      'bookingSummary': 'Booking Summary',
+      'paymentMethodLabel': 'Payment Method',
+      'mastercardVisa': 'Mastercard / Visa',
+      'totalLabel': 'Total',
+      'selectPaymentMethod': 'Choose how you want to pay',
+      'cardEntryNotLive':
+          'Card payments are not connected yet. Your card details were not sent or saved.',
+      'paymentIncompleteCard':
+          'Please enter the card number, expiry date and CVV.',
+      'paymentNoMethod': 'Please choose a payment method.',
+      'useSavedCard': 'Use this card',
+      // --- Checkout step 3 (Review & Confirm) ---
+      'reviewConfirmTitle': 'Review & Confirm',
+      'reviewConfirmHint':
+          'Please review your booking details before confirmation.',
+      'travelersInformation': 'Travelers Information',
+      'priceBreakdown': 'Price Breakdown',
+      'travelerFee': 'Traveler Fee',
+      // "2 × $55" — the arithmetic behind a line, shown so nobody has to
+      // trust the total blindly. Digits stay Western in all three languages.
+      'priceEachTimes': '{count} × {price}',
+      'reviewAgreeTerms': 'I agree to the {terms} and {policy}.',
+      'reviewTermsLink': 'Terms of Service',
+      'reviewPolicyLink': 'Policy of App',
+      'reviewMustAgree':
+          'Please agree to the Terms of Service and Policy of App to continue.',
+      'confirmAndPay': 'Confirm & Pay {price}',
+      'confirmPayNotLive':
+          'Payments are not connected yet, so nothing was charged and no '
+          'booking was created.',
     },
     'ku': <String, String>{
       'chooseYourLanguage': 'زمانەکەت هەڵبژێرە',
@@ -757,7 +1114,7 @@ class AppLocalizations {
       'sessionExpired':
           'دانیشتنەکەت بەسەرچوو. تکایە لە سەرەتاوە دەست پێ بکەوە.',
       // --- Register screen ---
-      'register': 'خۆتۆمارکردن',
+      'register': 'تۆمارکردن',
       'fullName': 'ناوی تەواو',
       'age': 'تەمەن',
       'gender': 'ڕەگەز',
@@ -830,8 +1187,8 @@ class AppLocalizations {
           'بە سەرکەوتوویی هەژمارەکەت دروستکرا. بەخێربێیت!',
       'explore': 'گەڕان',
       // --- Onboarding (3-slide intro) ---
-      'onboardingTitleLine1': 'بدۆزەرەوە',
-      'onboardingTitleLine2': 'کوردستان',
+      'onboardingTitleLine1': 'کوردستان',
+      'onboardingTitleLine2': 'بدۆزەرەوە',
       'onboardingBody1':
           'بگەڕێ بەناو دۆڵە جوانەکان و ڕووبارەکان و ڕێڕەوە شاخاوییەکاندا کە '
           'کەم گەشتیار پێیان دەگات.\nهەمووی لە یەک ئەپدا.',
@@ -852,18 +1209,308 @@ class AppLocalizations {
       'goodEvening': 'ئێوارەت باش',
       'dearUser': 'بەکارهێنەری خۆشەویست',
       'whereWouldYouLikeToGo': 'دەتەوێت بۆ کوێ بچیت؟',
-      'planYourJourney': 'گەشتەکەت پلان بکە',
+      'planYourJourney': 'پلان بۆ گەشتەکەت دابنێ',
       'exploreNature': 'گەڕان بە سروشتدا',
       'exploreNatureHint': 'ڕێڕەوەکان، دەریاچەکان و پارکە سەرنجڕاکێشەکان.',
       'whereToStay': 'شوێنی مانەوە',
       'whereToStayHint': 'هوتێل، کوخ و شوێنی مانەوەی تایبەت',
+      'hotelLocation': 'شوێن',
+      'hotelLocationHint': 'دەتەوێت لە کوێ بمێنیتەوە؟',
+      'hotelRecentSearches': 'گەڕانەکانی پێشوو',
+      'hotelDate': 'بەروار',
+      'hotelCheckIn': 'چوونە ژوورەوە',
+      'hotelCheckOut': 'چوونە دەرەوە',
+      'hotelGuests': 'میوانان',
+      'hotelAdult': 'گەورە',
+      'hotelChild': 'منداڵ',
+      'hotelRoom': 'ژوور',
+      'hotelBed': 'جێگا',
+      'hotelOptions': 'هەڵبژاردەکان',
+      'hotelNoOptions': 'هیچ هەڵبژاردەیەک دیاری نەکراوە',
+      'hotelOneOption': '١ هەڵبژاردە دیاری کراوە',
+      'hotelManyOptions': '{count} هەڵبژاردە دیاری کراوە',
+      'hotelPool': 'مەلەوانگە',
+      'hotelBar': 'بار',
+      'hotelRestaurant': 'چێشتخانە',
+      'hotelGym': 'هۆڵی وەرزش',
+      'hotelParking': 'وەستانگە',
+      'hotelFreeWifi': 'وایفای بەخۆڕایی',
+      'hotelBeach': 'کەناراو',
+      'hotelMoreOptions': 'هەڵبژاردەی زیاتر',
+      'hotelSearch': 'گەڕان',
+      'hotelTrending': 'شوێنە بەناوبانگەکانی مانەوە',
+      'hotelPerNight': 'بۆ هەر شەوێک',
+      'hotelDistanceFromCenter': '{distance} کم لە ناوەندی شارەوە',
+      'hotelAdultsBeds': '{adults} گەورە، {beds} جێگا',
+      'hotelGuestSummary':
+          '{adults} گەورە، {children} منداڵ، {rooms} ژوور، {beds} جێگا',
+      'hotelAdultCountOne': '{count} گەورە',
+      'hotelAdultCountMany': '{count} گەورە',
+      'hotelChildCountOne': '{count} منداڵ',
+      'hotelChildCountMany': '{count} منداڵ',
+      'hotelRoomCountOne': '{count} ژوور',
+      'hotelRoomCountMany': '{count} ژوور',
+      'hotelBedCountOne': '{count} جێگا',
+      'hotelBedCountMany': '{count} جێگا',
+      'hotelDestinationRequired': 'تکایە شوێنێک هەڵبژێرە',
+      'hotelInvalidDates': 'چوونە دەرەوە دەبێت دوای چوونە ژوورەوە بێت',
+      'hotelPreviewData': 'شوێنی تاقیکردنەوە – بەردەستی ڕاستەوخۆ پەیوەست نییە',
+      'hotelCarouselPosition': 'هوتێلی دیاریکراوی {current} لە {total}',
+      'hotelStarClassification': 'هوتێلی {count} ئەستێرە',
+      'hotelReviewScore': 'نمرەی هەڵسەنگاندن {score} لە ١٠',
+      'hotelIncrease': 'زیادکردنی {name}',
+      'hotelDecrease': 'کەمکردنی {name}',
+      // --- Hotel Details page ---
+      'hotelDetails': 'زانیاری هوتێل',
+      'hotelDetailNotFound': 'ئەم هوتێلە چیتر بەردەست نییە.',
+      'hotelDetailLoadFailed': 'نەمانتوانی ئەم هوتێلە باربکەین.',
+      'hotelGalleryPosition': '{current} / {total}',
+      'hotelGalleryImage': 'وێنەی هوتێل {current} لە {total}',
+      'hotelChange': 'گۆڕین',
+      'hotelUpdateStay': 'نوێکردنەوەی مانەوەکەت',
+      'hotelUpdateStayApply': 'جێبەجێکردنی گۆڕانکاری',
+      'hotelStayUpdated': 'مانەوەکەت نوێ کرایەوە',
+      'hotelFacilities': 'ئاسانکاریەکان',
+      'hotelAllFacilities': 'هەموو ئاسانکاریەکان',
+      'hotelNoFacilities': 'هێشتا هیچ ئاسانکارییەک تۆمار نەکراوە',
+      'hotelSeeAll': 'بینینی هەموو',
+      'hotelReviews': 'بۆچوونەکان',
+      'hotelReviewCountOne': '{count} بۆچوون',
+      'hotelReviewCountMany': '{count} بۆچوون',
+      'hotelCleanliness': 'پاکوخاوێنی',
+      'hotelComfort': 'ئاسوودەیی',
+      'hotelService': 'خزمەتگوزاری',
+      'hotelStaff': 'ستاف',
+      'hotelValue': 'نرخ بەرامبەر بەها',
+      'hotelMap': 'شوێن',
+      'hotelMapUnavailable': 'نەخشە بەردەست نییە',
+      'hotelNearby': 'نزیک لێرەوە',
+      'hotelNearbyEmpty': 'هێشتا هیچ شوێنێکی نزیک تۆمار نەکراوە',
+      'hotelNearbyAll': 'شوێنە نزیکەکان',
+      'hotelNearbyDistance': '{distance} کم',
+      'hotelNearbyDistanceWithTime': '{minutes} خولەک ({distance} کم)',
+      'hotelRatingsAndComments': 'هەڵسەنگاندن و لێدوانەکان',
+      'hotelSelectRoom': 'هەڵبژاردنی ژوور',
+      'hotelChooseRoom': 'ژوورەکەت هەڵبژێرە',
+      'hotelMockNotice': 'داتای پێشبینین — بەردەستبوون و پارەدان ڕاستەوخۆ نین.',
+      'hotelNoRooms': 'هیچ ژوورێک بۆ ئەم بەروارانە بەردەست نییە.',
+      'hotelChangeDates': 'گۆڕینی بەروارەکان',
+      'hotelBackToHotel': 'گەڕانەوە بۆ هوتێل',
+      'hotelSeeRoomDetails': 'وردەکاری ژوور ببینە',
+      'hotelMaximumGuests': 'زۆرترین {count} میوان',
+      'hotelReserve': 'حجزکردن',
+      'hotelPriceForNights': 'نرخ بۆ {count} شەو',
+      'hotelRechecking': 'پشکنینەوەی نرخ و بەردەستبوون…',
+      'hotelCompleteBooking': 'حجزەکەت تەواو بکە',
+      'hotelGuestDetails': 'وردەکاری میوان',
+      'hotelSpecialRequestsHint': 'داواکارییە ئارەزوومەندانەکان بە بەردەستبوونی هوتێل بەستراونەتەوە',
+      'hotelStripePreview': 'Stripe — تەنها پێشبینین',
+      'hotelFibPreview': 'FIB — تەنها پێشبینین',
+      'hotelMockPaymentNotice': 'هیچ پارەدانێک نانێردرێت. ئەم پشکنینە تەنها حجزێکی پێشبینینی ناوخۆیی دروست دەکات.',
+      'hotelRoomSubtotal': 'کۆی ژوور',
+      'hotelBookingConsent': 'ڕازیم بە نرخ و مەرجەکانی هەڵوەشاندنەوەی پیشاندراو.',
+      'hotelConfirmMockBooking': 'پشتڕاستکردنەوەی حجزی پێشبینین',
+      'hotelMockBookingComplete': 'حجزی پێشبینین تەواو بوو',
+      'hotelMockBookingCompleteBody': 'هیچ ژوورێک لە هوتێل نەگیرا و هیچ پارەیەک وەرنەگیرا.',
+      'hotelViewReservations': 'حجزەکانت ببینە',
+      'hotelGuestRequired': 'تکایە وردەکارییە پێویستەکانی میوان تەواو بکە.',
+      'hotelConsentRequired': 'تکایە مەرجەکانی حجز قبوڵ بکە.',
+      'hotelRateUnavailable': 'ئەم نرخە چیتر بەردەست نییە. هەڵبژاردەیەکی تر هەڵبژێرە.',
+      'hotelPropertyPolicies': 'ڕێساکانی هوتێل',
+      'hotelPolicyCheckInFrom': 'چوونە ژوورەوە لە',
+      'hotelPolicyCheckOutUntil': 'چوونە دەرەوە تا',
+      'hotelPolicyChildren': 'منداڵان',
+      'hotelPolicyCribs': 'لانکە',
+      'hotelPolicyExtraBeds': 'جێگای زیادە',
+      'hotelPolicyAgeRestriction': 'سنووری تەمەن',
+      'hotelPolicyMinimumAge': 'کەمترین تەمەن بۆ چوونەژوورەوە {age} ساڵە',
+      'hotelPolicyPets': 'ئاژەڵی ماڵی',
+      'hotelPolicySmoking': 'جگەرەکێشان',
+      'hotelPolicyPayment': 'شێوازە پەسەندکراوەکانی پارەدان',
+      'hotelPolicySpecialRequests': 'داواکاری تایبەت',
+      'hotelPolicySpecialRequestsYes':
+          'دەتوانرێت داواکاری تایبەت بۆ حجزەکەت زیاد بکرێت.',
+      'hotelPolicySpecialRequestsNo': 'داواکاری تایبەت وەرناگیرێت.',
+      'hotelPolicyAccessibility': 'دەستڕاگەیشتن',
+      'hotelFacilityGeneral': 'گشتی',
+      'hotelFacilityInternet': 'ئینتەرنێت',
+      'hotelFacilityParking': 'وەستانگە',
+      'hotelFacilityFoodAndDrink': 'خواردن و خواردنەوە',
+      'hotelFacilityWellness': 'تەندروستی',
+      'hotelFacilityPool': 'مەلەوانگە',
+      'hotelFacilityTransportation': 'گواستنەوە',
+      'hotelFacilityRoom': 'ئاسانکاری ژوور',
+      'hotelFacilityFamily': 'خێزانی',
+      'hotelFacilityAccessibility': 'دەستڕاگەیشتن',
+      'hotelFacilityBusiness': 'بازرگانی',
+      'hotelFacilitySafety': 'سەلامەتی',
+      'hotelBedSingle': 'جێگای تاک',
+      'hotelBedTwin': 'دوو جێگای تاک',
+      'hotelBedDouble': 'جێگای دووکەسی',
+      'hotelBedQueen': 'جێگای کوین',
+      'hotelBedKing': 'جێگای کینگ',
+      'hotelBedSofa': 'قەنەفەی جێگا',
+      'hotelBedBunk': 'جێگای چینچین',
+      'hotelBedCount': '{count} × {bed}',
+      'hotelBreakfastIncluded': 'نانی بەیانی لەگەڵدایە',
+      'hotelBreakfastExtra': 'نانی بەیانی بە تێچووی زیادە بەردەستە',
+      'hotelBreakfastUnavailable': 'نانی بەیانی بەردەست نییە',
+      'hotelTaxesAndFees': 'باج و کرێکان',
+      'hotelTaxesIncluded': 'باج و کرێکان لەگەڵدان',
+      'hotelTaxesExcluded': 'باج و کرێکان لەگەڵدا نین',
+      'hotelFreeCancellation': 'هەڵوەشاندنەوەی بەخۆڕایی',
+      'hotelPartiallyRefundable': 'بەشێکی دەگەڕێتەوە',
+      'hotelNonRefundable': 'ناگەڕێتەوە',
+      'hotelPayNow': 'ئێستا پارە بدە',
+      'hotelPayLater': 'دواتر پارە بدە',
+      'hotelPayAtProperty': 'لە هوتێل پارە بدە',
+      'hotelPrepaymentRequired': 'پارەدانی پێشەکی پێویستە',
+      'hotelPartialPrepayment': 'بەشێکی پارەی پێشەکی پێویستە',
+      'hotelNoPrepayment': 'پارەدانی پێشەکی پێویست نییە',
+      'hotelRoomsLeftOne': 'تەنها {count} ژوور ماوە',
+      'hotelRoomsLeftMany': 'تەنها {count} ژوور ماوە',
       'bestPrice': 'باشترین نرخ',
-      'carRental': 'بەکرێدانی ئۆتۆمبێل',
+      'carRental': 'بەکرێ وەرگرتنی ئۆتۆمبێل',
       'carRentalHint': 'ئۆتۆمبێلی گونجاو بۆ سەرکێشییەکەت بدۆزەرەوە',
       'findACar': 'ئۆتۆمبێل بدۆزەرەوە',
+      'carPickupDropOffLocation': 'شوێنی وەرگرتن – گەڕاندنەوە',
+      'carPickup': 'وەرگرتن',
+      'carDropOff': 'گەڕاندنەوە',
+      'carPickupLocation': 'شوێنی وەرگرتن',
+      'carDropOffLocation': 'شوێنی گەڕاندنەوە',
+      'carDifferentDropOff': 'گەڕاندنەوە لە شوێنێکی جیاواز',
+      'carSelectDate': 'بەروار هەڵبژێرە',
+      'carSelectTime': 'کات هەڵبژێرە',
+      'carSearch': 'گەڕان',
+      'carSearching': 'گەڕان…',
+      'carTrending': 'ئۆتۆمبێلە بەناوبانگەکان',
+      'carAvailable': 'ئۆتۆمبێلە بەردەستەکان',
+      'carNoAvailable': 'هیچ ئۆتۆمبێلێک بۆ ئەم بەروارانە بەردەست نییە',
+      'carSearchLocations': 'گەڕان بەدوای شوێنی بەکرێگرتندا',
+      'carLocationSearchHint': 'شار، فڕۆکەخانە، کۆد یان لق',
+      'carLocationStartTyping': 'لانیکەم ٢ پیت بنووسە',
+      'carNoLocations': 'هیچ شوێنێکی بەکرێگرتن نەدۆزرایەوە',
+      'carLocationsFailed': 'نەتوانرا شوێنەکان باربکرێن',
+      'carPickupLocationRequired': 'تکایە شوێنی وەرگرتن هەڵبژێرە',
+      'carDropOffLocationRequired': 'تکایە شوێنی گەڕاندنەوە هەڵبژێرە',
+      'carPickupDateRequired': 'تکایە بەرواری وەرگرتن هەڵبژێرە',
+      'carPickupTimeRequired': 'تکایە کاتی وەرگرتن هەڵبژێرە',
+      'carDropOffDateRequired': 'تکایە بەرواری گەڕاندنەوە هەڵبژێرە',
+      'carDropOffTimeRequired': 'تکایە کاتی گەڕاندنەوە هەڵبژێرە',
+      'carPickupFuture': 'کاتی وەرگرتن دەبێت لە داهاتوودا بێت',
+      'carDropOffAfterPickup': 'گەڕاندنەوە دەبێت دوای وەرگرتن بێت',
+      'carSearchFailed': 'نەتوانرا ئۆتۆمبێلە بەردەستەکان باربکرێن',
+      'carPersons': '{count} کەس',
+      'carBags': '{count} جانتا',
+      'carAirConditioning': 'ساردکەرەوە',
+      'carHybrid': 'هایبرید',
+      'carElectric': 'کارەبایی',
+      'carPetrol': 'بەنزین',
+      'carDiesel': 'دیزل',
+      'carPayAtPickup': 'پارەدان لە کاتی وەرگرتن',
+      'carPayNow': 'ئێستا پارە بدە',
+      'carModelYear': 'مۆدێلی {year}',
+      'carPricePerDay': '{price}/ڕۆژ',
+      'carPreviewData': 'ئۆتۆمبێلی پیشاندان – بەردەستی ڕاستەقینە پەیوەست نییە',
+      'carCarouselPosition': 'ئۆتۆمبێلی هەڵبژێردراوی {current} لە {total}',
+      'carResultsOne': '١ ئەنجام',
+      'carResultsMany': '{count} ئەنجام',
+      'carResultsEmptyTitle': 'هیچ ئۆتۆمبێلێک نەدۆزرایەوە',
+      'carResultsEmptyBody':
+          'بۆ بەروار و شوێنی هەڵبژێردراوت هیچ ئۆتۆمبێلێک نەدۆزرایەوە.',
+      'carModifySearch': 'گۆڕینی گەڕان',
+      'carResultsLoading': 'باربوونی ئۆتۆمبێلە بەردەستەکان',
+      'carResultsListLabel': 'ئەنجامەکانی گەڕانی بەکرێدانی ئۆتۆمبێل',
+      'carDetails': 'زانیاری ئۆتۆمبێل',
+      'carPickupDropOffDetails': 'زانیاری وەرگرتن / گەڕاندنەوە',
+      'carLocation': 'شوێن',
+      'carAdditionalOptions': 'هەڵبژاردنی زیادە',
+      'carApply': 'جێبەجێکردن',
+      'carAutomatic': 'ئۆتۆماتیک',
+      'carManual': 'دەستی',
+      'carPhotoPosition': 'وێنەی {current} لە {total}',
+      'carGalleryLabel': 'وێنەکانی {name}',
+      'carDecreaseQuantity': 'کەمکردنی {name}',
+      'carIncreaseQuantity': 'زیادکردنی {name}',
+      'carExtraTimesQuantity': '{price} × {count}',
+      'carPriceSummary': 'کورتەی نرخ',
+      'carBaseRental': 'کرێی بنەڕەتی',
+      'carExtrasTotal': 'زیادەکان',
+      'carEstimatedTotal': 'کۆی خەمڵێنراو',
+      'carRentalDayOne': '١ ڕۆژی کرێ',
+      'carRentalDaysMany': '{count} ڕۆژی کرێ',
+      'carEstimateNote': 'تەنها خەمڵاندنە — باج و کرێی دابینکەر لەخۆ ناگرێت.',
+      'carRentalConditions': 'مەرجەکانی کرێ',
+      'carFuelPolicy': 'سیاسەتی سووتەمەنی',
+      'carFuelFullToFull': 'پڕ بۆ پڕ',
+      'carFuelFullToEmpty': 'پڕ بۆ بەتاڵ',
+      'carFuelSameToSame': 'وەک خۆی بۆ وەک خۆی',
+      'carMileage': 'مەودای ڕۆیشتن',
+      'carMileageUnlimited': 'بێ سنوور',
+      'carMileagePerDay': '{count} کم لە ڕۆژێکدا',
+      'carMileageExtra': '{price} بۆ هەر کیلۆمەترێکی زیادە',
+      'carDeposit': 'بارمتەی دڵنیایی',
+      'carDamageExcess': 'بەشی زیانی لەسەر خۆت',
+      'carFreeCancellation': 'هەڵوەشاندنەوەی بێبەرامبەر تا',
+      'carMinimumAge': 'کەمترین تەمەنی شۆفێر',
+      'carMinimumAgeValue': '{age} ساڵ',
+      'carRequiredDocuments': 'بەڵگەنامە پێویستەکان',
+      'carOrSimilar': 'ئەم مۆدێلە یان ئۆتۆمبێلێکی هاوشێوە',
       'flightTicketing': 'بلیتی فڕۆکە',
       'flightTicketingHint': 'فڕینی هەرزان، حیجزی ئاسان، پارەدانی پارێزراو',
       'findFlight': 'فڕین بدۆزەرەوە',
+      'flightOneWay': 'یەک ئاراستە',
+      'flightRoundTrip': 'چوون و گەڕانەوە',
+      'flightFrom': 'لە کوێوە',
+      'flightTo': 'بۆ کوێ',
+      'flightSearchAirport': 'گەڕان بەدوای فڕۆکەخانەدا',
+      'flightAirportSearchHint': 'شار، فڕۆکەخانە، کۆدی IATA یان وڵات',
+      'flightAirportStartTyping': 'لانیکەم ٢ پیت بنووسە',
+      'flightNoAirportsFound': 'هیچ فڕۆکەخانەیەک نەدۆزرایەوە',
+      'flightAirportLoadFailed': 'نەتوانرا فڕۆکەخانەکان باربکرێن',
+      'flightDepartureDate': 'بەرواری ڕۆیشتن',
+      'flightReturnDate': 'بەرواری گەڕانەوە',
+      'flightPassengers': 'گەشتیاران',
+      'flightAdults': 'گەورەکان (١٢+)',
+      'flightChildren': 'منداڵان (٢–١١)',
+      'flightInfants': 'ساواکان (خوار ٢ ساڵ)',
+      'flightCabinClass': 'پۆلی کابین',
+      'flightCabinEconomy': 'ئابووری',
+      'flightCabinPremiumEconomy': 'ئابووری تایبەت',
+      'flightCabinBusiness': 'بازرگانی',
+      'flightCabinFirst': 'پۆلی یەکەم',
+      'flightDirectOnly': 'تەنها فڕینی ڕاستەوخۆ',
+      'flightSearch': 'گەڕان بەدوای فڕیندا',
+      'flightSearching': 'گەڕان…',
+      'done': 'تەواو',
+      'flightOriginRequired': 'تکایە شوێنی دەستپێکی فڕین بنووسە',
+      'flightDestinationRequired': 'تکایە شوێنی مەبەستی فڕین بنووسە',
+      'flightDifferentAirports': 'شوێنی دەستپێک و مەبەست دەبێت جیاواز بن',
+      'flightDepartureRequired': 'تکایە بەرواری ڕۆیشتن هەڵبژێرە',
+      'flightReturnRequired': 'تکایە بەرواری گەڕانەوە هەڵبژێرە',
+      'flightSearchReady': 'گەڕانەکەت ئامادەیە بۆ پەڕەی ئەنجامەکان',
+      'flightPassengerSummary':
+          '{adults} گەورە · {children} منداڵ · {infants} ساوا',
+      'flightResultsOne': '١ فڕین دۆزرایەوە',
+      'flightResultsMany': '{count} فڕین دۆزرایەوە',
+      'flightSortBest': 'باشترین',
+      'flightSortCheapest': 'هەرزانترین',
+      'flightSortFastest': 'خێراترین',
+      'flightSelect': 'هەڵبژاردن',
+      'flightDirect': 'ڕاستەوخۆ',
+      'flightOneStop': '١ وەستان',
+      'flightManyStops': '{count} وەستان',
+      'flightOutbound': 'ڕۆیشتن',
+      'flightReturn': 'گەڕانەوە',
+      'flightTotalPrice': 'نرخی گشتی',
+      'flightPerTraveler': 'بۆ هەر گەشتیارێک',
+      'flightResultsLoadFailed': 'نەتوانرا فڕینەکان باربکرێن',
+      'flightResultsEmptyTitle': 'هیچ فڕینێک نەدۆزرایەوە',
+      'flightResultsEmptyBody': 'بەروارێکی تر یان فلتەرەکان بگۆڕە.',
+      'flightRetry': 'دووبارە هەوڵبدەوە',
+      'flightPreviousDate': 'بەرواری پێشوو',
+      'flightNextDate': 'بەرواری دواتر',
+      'flightOfferSelected': 'فڕینەکە بۆ هەنگاوی داهاتووی حیجز هەڵبژێردرا',
       'exploreToursTitle': 'گەڕان بە گەشتەکاندا',
       'exploreToursHint': 'ئەزموونی ناوخۆیی، شوێنە شاراوەکان و ڕێبەری شارەزا',
       'findTours': 'گەشت بدۆزەرەوە',
@@ -889,7 +1536,7 @@ class AppLocalizations {
       // --- Home screen side drawer ---
       'close': 'داخستن',
       'services': 'خزمەتگوزارییەکان',
-      'myBookings': 'حیجزەکانم',
+      'myBookings': 'داواکاریەکانم',
       'billingPayments': 'پارەدان',
       'billingPaymentTitle': 'پسوڵە و پارەدانەکان',
       'currentPaymentMethod': 'شێوازی پارەدانی ئێستا',
@@ -1275,6 +1922,7 @@ class AppLocalizations {
       'tourDayTravel': 'گەشتی {count} ڕۆژ',
       'tourDaysTravel': 'گەشتی {count} ڕۆژ',
       'tourPerPerson': 'بۆ هەر کەسێک',
+      'tourPerPersonBadge': 'بۆ هەر کەسێک',
       'tourFeatureCamping': 'خێوەتگە',
       'tourFeatureHiking': 'پیاسەی چیا',
       'tourFeatureGuide': 'ڕێبەر',
@@ -1283,6 +1931,10 @@ class AppLocalizations {
       'tourFeatureCampfire': 'ئاگری خێوەتگە',
       'tourFeatureTransport': 'گواستنەوە',
       'tourFeaturePhotography': 'وێنەگرتن',
+      'tourFeatureActivity': 'چالاکی',
+      'tourFeatureWifi': 'وایفای',
+      'tourFeatureElectricity': 'کارەبا',
+      'tourFeatureTent': 'خێمە',
       'tourReviewCount': '{count} پێداچوونەوە',
       // Digits stay Western in all three languages, matching every other
       // number in the app (see `bookingDate`).
@@ -1334,6 +1986,62 @@ class AppLocalizations {
           'هێشتا بۆچوون نییە. یەکەم کەس بە کە ئەزموونی گەشتەکەت باس دەکات.',
       'tourReviewSignInBody':
           'بۆچوونەکانی گەشت بە هەژمارەکەتەوە بەستراونەتەوە بۆ ئەوەی گەشتیاران متمانەیان پێ بکەن.',
+      'bookingStepTravelerInfo': 'زانیاری گەشتیار',
+      'bookingStepPayment': 'پارەدان',
+      'bookingStepConfirmation': 'پشتڕاستکردنەوە',
+      'travelerInformation': 'زانیاری گەشتیار',
+      'travelerInformationHint': 'تکایە زانیاری هەموو گەشتیارەکان بنووسە',
+      'contactPerson': 'کەسی پەیوەندی',
+      'travelersLabel': 'گەشتیاران',
+      'travelerNumbered': 'گەشتیار',
+      'dateOfBirthHint': 'بەرواری لەدایکبوون',
+      'leadTraveler': 'گەشتیاری سەرەکی',
+      'leadTravelerHint': 'تۆمارەکە بە ناوی ئەم گەشتیارە دەردەچێت',
+      'informationSecure': 'زانیارییەکانت پارێزراو و کۆدکراون',
+      'continueToPayment': 'بەردەوامبە بۆ پارەدان',
+      'selectDialCode': 'کۆدی وڵات هەڵبژێرە',
+      'travelerInfoIncomplete':
+          'تکایە ناو و بەرواری لەدایکبوونی هەموو گەشتیارەکان تەواو بکە.',
+      'contactIncomplete': 'تکایە ناو، ئیمەیڵ و ژمارەی مۆبایلی دروست بنووسە.',
+      'travelerTooYoung':
+          'هەموو گەشتیارێکی ئەم گەشتە دەبێت تەمەنی {age} یان زیاتر بێت.',
+      'travelerFutureBirthDate':
+          'بەرواری لەدایکبوون ناتوانێت لە داهاتوودا بێت.',
+      'noPlacesLeft': 'ئەم گەشتە هیچ شوێنێکی بەتاڵی نەماوە.',
+      'onlyPlacesLeft': 'تەنها {count} شوێن لەم گەشتەدا ماوە.',
+      'reserveSignInTitle': 'بۆ تۆمارکردن بچۆ ژوورەوە',
+      'reserveSignInBody':
+          'تۆمارکردن بە هەژمارەکەتەوە بەستراوەتەوە، بۆ ئەوەی دواتر بیدۆزیتەوە و بزانین پەیوەندی بە کێوە بکەین.',
+      'paymentDetails': 'وردەکاری پارەدان',
+      'paymentDetailsHint': 'پارەدانەکە تەواو بکە بۆ پشتڕاستکردنەوەی تۆمارەکە',
+      'bookingSummary': 'کورتەی تۆمارکردن',
+      'paymentMethodLabel': 'شێوازی پارەدان',
+      'mastercardVisa': 'ماستەرکارد / ڤیزا',
+      'totalLabel': 'کۆی گشتی',
+      'selectPaymentMethod': 'شێوازی پارەدانەکەت هەڵبژێرە',
+      'cardEntryNotLive':
+          'پارەدان بە کارت هێشتا پەیوەست نەکراوە. زانیاری کارتەکەت نەنێردرا و پاشەکەوت نەکرا.',
+      'paymentIncompleteCard':
+          'تکایە ژمارەی کارت، بەرواری بەسەرچوون و CVV بنووسە.',
+      'paymentNoMethod': 'تکایە شێوازی پارەدان هەڵبژێرە.',
+      // --- Checkout step 3 (Review & Confirm) ---
+      'reviewConfirmTitle': 'پێداچوونەوە و پشتڕاستکردنەوە',
+      'reviewConfirmHint':
+          'تکایە پێش پشتڕاستکردنەوە وردەکارییەکانی تۆمارکردنەکەت بپشکنە.',
+      'travelersInformation': 'زانیاری گەشتیارەکان',
+      'priceBreakdown': 'وردەکاری نرخ',
+      'travelerFee': 'کرێی گەشتیار',
+      'priceEachTimes': '{count} × {price}',
+      'reviewAgreeTerms': 'ڕازیم بە {terms} و {policy}.',
+      'reviewTermsLink': 'مەرجەکانی خزمەتگوزاری',
+      'reviewPolicyLink': 'ڕێساکانی ئەپ',
+      'reviewMustAgree':
+          'تکایە ڕازیبە بە مەرجەکانی خزمەتگوزاری و ڕێساکانی ئەپ بۆ بەردەوامبوون.',
+      'confirmAndPay': 'پشتڕاستکردنەوە و پارەدانی {price}',
+      'confirmPayNotLive':
+          'پارەدان هێشتا بەستراوە نییە، بۆیە هیچ پارەیەک وەرنەگیرا و هیچ '
+          'تۆمارکردنێک دروست نەکرا.',
+      'useSavedCard': 'ئەم کارتە بەکاربهێنە',
     },
     'ar': <String, String>{
       'chooseYourLanguage': 'اختر لغتك',
@@ -1480,13 +2188,302 @@ class AppLocalizations {
       'exploreNatureHint': 'مسارات وبحيرات وحدائق خلّابة.',
       'whereToStay': 'أين تقيم',
       'whereToStayHint': 'فنادق وأكواخ وأماكن إقامة مميّزة',
+      'hotelLocation': 'الموقع',
+      'hotelLocationHint': 'أين تريد الإقامة؟',
+      'hotelRecentSearches': 'عمليات البحث الأخيرة',
+      'hotelDate': 'التاريخ',
+      'hotelCheckIn': 'تسجيل الوصول',
+      'hotelCheckOut': 'تسجيل المغادرة',
+      'hotelGuests': 'الضيوف',
+      'hotelAdult': 'بالغ',
+      'hotelChild': 'طفل',
+      'hotelRoom': 'غرفة',
+      'hotelBed': 'سرير',
+      'hotelOptions': 'الخيارات',
+      'hotelNoOptions': 'لم يتم تحديد خيارات',
+      'hotelOneOption': 'تم تحديد خيار واحد',
+      'hotelManyOptions': 'تم تحديد {count} خيارات',
+      'hotelPool': 'مسبح',
+      'hotelBar': 'بار',
+      'hotelRestaurant': 'مطعم',
+      'hotelGym': 'نادي رياضي',
+      'hotelParking': 'موقف سيارات',
+      'hotelFreeWifi': 'واي فاي مجاني',
+      'hotelBeach': 'شاطئ',
+      'hotelMoreOptions': 'المزيد من الخيارات',
+      'hotelSearch': 'بحث',
+      'hotelTrending': 'أماكن الإقامة الرائجة',
+      'hotelPerNight': 'لليلة',
+      'hotelDistanceFromCenter': '{distance} كم من وسط المدينة',
+      'hotelAdultsBeds': '{adults} بالغين، {beds} أسرّة',
+      'hotelGuestSummary':
+          '{adults} بالغين، {children} أطفال، {rooms} غرف، {beds} أسرّة',
+      'hotelAdultCountOne': '{count} بالغ',
+      'hotelAdultCountMany': '{count} بالغين',
+      'hotelChildCountOne': '{count} طفل',
+      'hotelChildCountMany': '{count} أطفال',
+      'hotelRoomCountOne': '{count} غرفة',
+      'hotelRoomCountMany': '{count} غرف',
+      'hotelBedCountOne': '{count} سرير',
+      'hotelBedCountMany': '{count} أسرّة',
+      'hotelDestinationRequired': 'يرجى اختيار موقع',
+      'hotelInvalidDates': 'يجب أن تكون المغادرة بعد الوصول',
+      'hotelPreviewData': 'إقامات تجريبية – التوفر المباشر غير متصل',
+      'hotelCarouselPosition': 'الفندق المميز {current} من {total}',
+      'hotelStarClassification': 'فندق {count} نجوم',
+      'hotelReviewScore': 'درجة التقييم {score} من 10',
+      'hotelIncrease': 'زيادة {name}',
+      'hotelDecrease': 'تقليل {name}',
+      // --- Hotel Details page ---
+      'hotelDetails': 'تفاصيل الفندق',
+      'hotelDetailNotFound': 'لم يعد هذا الفندق متاحاً.',
+      'hotelDetailLoadFailed': 'تعذر تحميل هذا الفندق.',
+      'hotelGalleryPosition': '{current} / {total}',
+      'hotelGalleryImage': 'صورة الفندق {current} من {total}',
+      'hotelChange': 'تغيير',
+      'hotelUpdateStay': 'تحديث إقامتك',
+      'hotelUpdateStayApply': 'تطبيق التغييرات',
+      'hotelStayUpdated': 'تم تحديث إقامتك',
+      'hotelFacilities': 'المرافق',
+      'hotelAllFacilities': 'كل المرافق',
+      'hotelNoFacilities': 'لا توجد مرافق مدرجة بعد',
+      'hotelSeeAll': 'عرض الكل',
+      'hotelReviews': 'المراجعات',
+      'hotelReviewCountOne': 'مراجعة واحدة',
+      'hotelReviewCountMany': '{count} مراجعة',
+      'hotelCleanliness': 'النظافة',
+      'hotelComfort': 'الراحة',
+      'hotelService': 'الخدمة',
+      'hotelStaff': 'الطاقم',
+      'hotelValue': 'القيمة مقابل السعر',
+      'hotelMap': 'الموقع',
+      'hotelMapUnavailable': 'الخريطة غير متاحة',
+      'hotelNearby': 'أماكن قريبة',
+      'hotelNearbyEmpty': 'لا توجد أماكن قريبة مدرجة بعد',
+      'hotelNearbyAll': 'الأماكن القريبة',
+      'hotelNearbyDistance': '{distance} كم',
+      'hotelNearbyDistanceWithTime': '{minutes} دقيقة ({distance} كم)',
+      'hotelRatingsAndComments': 'التقييمات والتعليقات',
+      'hotelSelectRoom': 'اختيار الغرفة',
+      'hotelChooseRoom': 'اختر غرفتك',
+      'hotelMockNotice': 'بيانات معاينة — التوفر والدفع غير متصلين فعلياً.',
+      'hotelNoRooms': 'لا توجد غرف متاحة لهذه التواريخ.',
+      'hotelChangeDates': 'تغيير التواريخ',
+      'hotelBackToHotel': 'العودة إلى الفندق',
+      'hotelSeeRoomDetails': 'عرض تفاصيل الغرفة',
+      'hotelMaximumGuests': 'الحد الأقصى {count} ضيوف',
+      'hotelReserve': 'احجز',
+      'hotelPriceForNights': 'السعر لمدة {count} ليلة',
+      'hotelRechecking': 'جارٍ إعادة التحقق من السعر والتوفر…',
+      'hotelCompleteBooking': 'أكمل حجزك',
+      'hotelGuestDetails': 'بيانات الضيف',
+      'hotelSpecialRequestsHint': 'الطلبات الاختيارية تخضع لتوفر الفندق',
+      'hotelStripePreview': 'Stripe — معاينة فقط',
+      'hotelFibPreview': 'FIB — معاينة فقط',
+      'hotelMockPaymentNotice': 'لن يتم إرسال أي دفعة. ينشئ هذا الدفع حجز معاينة محلياً فقط.',
+      'hotelRoomSubtotal': 'المجموع الفرعي للغرفة',
+      'hotelBookingConsent': 'أوافق على السعر وشروط الإلغاء المعروضة.',
+      'hotelConfirmMockBooking': 'تأكيد حجز المعاينة',
+      'hotelMockBookingComplete': 'اكتمل حجز المعاينة',
+      'hotelMockBookingCompleteBody': 'لم يتم حجز غرفة لدى الفندق ولم يتم تحصيل أي مبلغ.',
+      'hotelViewReservations': 'عرض حجوزاتك',
+      'hotelGuestRequired': 'يرجى إكمال بيانات الضيف المطلوبة.',
+      'hotelConsentRequired': 'يرجى الموافقة على شروط الحجز.',
+      'hotelRateUnavailable': 'لم يعد هذا السعر متاحاً. اختر خياراً آخر.',
+      'hotelPropertyPolicies': 'سياسات الفندق',
+      'hotelPolicyCheckInFrom': 'تسجيل الوصول من',
+      'hotelPolicyCheckOutUntil': 'تسجيل المغادرة حتى',
+      'hotelPolicyChildren': 'الأطفال',
+      'hotelPolicyCribs': 'أسرة الأطفال',
+      'hotelPolicyExtraBeds': 'أسرة إضافية',
+      'hotelPolicyAgeRestriction': 'قيود العمر',
+      'hotelPolicyMinimumAge': 'الحد الأدنى لسن تسجيل الوصول هو {age}',
+      'hotelPolicyPets': 'الحيوانات الأليفة',
+      'hotelPolicySmoking': 'التدخين',
+      'hotelPolicyPayment': 'طرق الدفع المقبولة',
+      'hotelPolicySpecialRequests': 'الطلبات الخاصة',
+      'hotelPolicySpecialRequestsYes': 'يمكن إضافة طلبات خاصة إلى حجزك.',
+      'hotelPolicySpecialRequestsNo': 'لا يمكن قبول الطلبات الخاصة.',
+      'hotelPolicyAccessibility': 'إمكانية الوصول',
+      'hotelFacilityGeneral': 'عام',
+      'hotelFacilityInternet': 'إنترنت',
+      'hotelFacilityParking': 'مواقف السيارات',
+      'hotelFacilityFoodAndDrink': 'الطعام والشراب',
+      'hotelFacilityWellness': 'الصحة والاستجمام',
+      'hotelFacilityPool': 'المسبح',
+      'hotelFacilityTransportation': 'المواصلات',
+      'hotelFacilityRoom': 'مرافق الغرفة',
+      'hotelFacilityFamily': 'العائلة',
+      'hotelFacilityAccessibility': 'إمكانية الوصول',
+      'hotelFacilityBusiness': 'الأعمال',
+      'hotelFacilitySafety': 'السلامة',
+      'hotelBedSingle': 'سرير فردي',
+      'hotelBedTwin': 'سريران فرديان',
+      'hotelBedDouble': 'سرير مزدوج',
+      'hotelBedQueen': 'سرير كوين',
+      'hotelBedKing': 'سرير كينغ',
+      'hotelBedSofa': 'أريكة سرير',
+      'hotelBedBunk': 'سرير بطابقين',
+      'hotelBedCount': '{count} × {bed}',
+      'hotelBreakfastIncluded': 'الفطور مشمول',
+      'hotelBreakfastExtra': 'الفطور متاح مقابل رسوم إضافية',
+      'hotelBreakfastUnavailable': 'الفطور غير متاح',
+      'hotelTaxesAndFees': 'الضرائب والرسوم',
+      'hotelTaxesIncluded': 'الضرائب والرسوم مشمولة',
+      'hotelTaxesExcluded': 'الضرائب والرسوم غير مشمولة',
+      'hotelFreeCancellation': 'إلغاء مجاني',
+      'hotelPartiallyRefundable': 'قابل للاسترداد جزئياً',
+      'hotelNonRefundable': 'غير قابل للاسترداد',
+      'hotelPayNow': 'ادفع الآن',
+      'hotelPayLater': 'ادفع لاحقاً',
+      'hotelPayAtProperty': 'ادفع في الفندق',
+      'hotelPrepaymentRequired': 'الدفع المسبق مطلوب',
+      'hotelPartialPrepayment': 'مطلوب دفع مسبق جزئي',
+      'hotelNoPrepayment': 'لا حاجة للدفع المسبق',
+      'hotelRoomsLeftOne': 'بقيت غرفة واحدة فقط',
+      'hotelRoomsLeftMany': 'بقيت {count} غرف فقط',
       'bestPrice': 'أفضل سعر',
       'carRental': 'تأجير السيارات',
       'carRentalHint': 'اعثر على السيارة المثالية لمغامرتك',
       'findACar': 'ابحث عن سيارة',
+      'carPickupDropOffLocation': 'موقع الاستلام – التسليم',
+      'carPickup': 'الاستلام',
+      'carDropOff': 'التسليم',
+      'carPickupLocation': 'موقع الاستلام',
+      'carDropOffLocation': 'موقع التسليم',
+      'carDifferentDropOff': 'التسليم في موقع مختلف',
+      'carSelectDate': 'اختر التاريخ',
+      'carSelectTime': 'اختر الوقت',
+      'carSearch': 'بحث',
+      'carSearching': 'جارٍ البحث…',
+      'carTrending': 'السيارات الرائجة',
+      'carAvailable': 'السيارات المتاحة',
+      'carNoAvailable': 'لا توجد سيارات متاحة لهذه التواريخ',
+      'carSearchLocations': 'البحث عن موقع تأجير',
+      'carLocationSearchHint': 'مدينة أو مطار أو رمز أو فرع',
+      'carLocationStartTyping': 'أدخل حرفين على الأقل',
+      'carNoLocations': 'لم يتم العثور على مواقع تأجير',
+      'carLocationsFailed': 'تعذّر تحميل مواقع التأجير',
+      'carPickupLocationRequired': 'يرجى اختيار موقع الاستلام',
+      'carDropOffLocationRequired': 'يرجى اختيار موقع التسليم',
+      'carPickupDateRequired': 'يرجى اختيار تاريخ الاستلام',
+      'carPickupTimeRequired': 'يرجى اختيار وقت الاستلام',
+      'carDropOffDateRequired': 'يرجى اختيار تاريخ التسليم',
+      'carDropOffTimeRequired': 'يرجى اختيار وقت التسليم',
+      'carPickupFuture': 'يجب أن يكون الاستلام في المستقبل',
+      'carDropOffAfterPickup': 'يجب أن يكون التسليم بعد الاستلام',
+      'carSearchFailed': 'تعذّر تحميل السيارات المتاحة',
+      'carPersons': '{count} أشخاص',
+      'carBags': '{count} حقائب',
+      'carAirConditioning': 'تكييف',
+      'carHybrid': 'هجين',
+      'carElectric': 'كهربائية',
+      'carPetrol': 'بنزين',
+      'carDiesel': 'ديزل',
+      'carPayAtPickup': 'الدفع عند الاستلام',
+      'carPayNow': 'ادفع الآن',
+      'carModelYear': 'موديل {year}',
+      'carPricePerDay': '{price}/يوم',
+      'carPreviewData': 'سيارات تجريبية – التوفر المباشر غير متصل',
+      'carCarouselPosition': 'السيارة المميزة {current} من {total}',
+      'carResultsOne': 'نتيجة واحدة',
+      'carResultsMany': '{count} نتائج',
+      'carResultsEmptyTitle': 'لم يتم العثور على سيارات',
+      'carResultsEmptyBody':
+          'لم يتم العثور على سيارات للتواريخ والموقع المحددين.',
+      'carModifySearch': 'تعديل البحث',
+      'carResultsLoading': 'جارٍ تحميل السيارات المتاحة',
+      'carResultsListLabel': 'نتائج البحث عن تأجير السيارات',
+      'carDetails': 'تفاصيل السيارة',
+      'carPickupDropOffDetails': 'تفاصيل الاستلام / التسليم',
+      'carLocation': 'الموقع',
+      'carAdditionalOptions': 'خيارات إضافية',
+      'carApply': 'تطبيق',
+      'carAutomatic': 'أوتوماتيك',
+      'carManual': 'يدوي',
+      'carPhotoPosition': 'الصورة {current} من {total}',
+      'carGalleryLabel': 'صور {name}',
+      'carDecreaseQuantity': 'إنقاص {name}',
+      'carIncreaseQuantity': 'زيادة {name}',
+      'carExtraTimesQuantity': '{price} × {count}',
+      'carPriceSummary': 'ملخص السعر',
+      'carBaseRental': 'الإيجار الأساسي',
+      'carExtrasTotal': 'الإضافات',
+      'carEstimatedTotal': 'الإجمالي التقديري',
+      'carRentalDayOne': 'يوم إيجار واحد',
+      'carRentalDaysMany': '{count} أيام إيجار',
+      'carEstimateNote': 'تقدير فقط — الضرائب ورسوم المورّد غير مشمولة.',
+      'carRentalConditions': 'شروط الإيجار',
+      'carFuelPolicy': 'سياسة الوقود',
+      'carFuelFullToFull': 'ممتلئ إلى ممتلئ',
+      'carFuelFullToEmpty': 'ممتلئ إلى فارغ',
+      'carFuelSameToSame': 'كما هو إلى كما هو',
+      'carMileage': 'المسافة المقطوعة',
+      'carMileageUnlimited': 'غير محدودة',
+      'carMileagePerDay': '{count} كم في اليوم',
+      'carMileageExtra': '{price} لكل كم إضافي',
+      'carDeposit': 'مبلغ التأمين',
+      'carDamageExcess': 'مبلغ التحمّل',
+      'carFreeCancellation': 'إلغاء مجاني حتى',
+      'carMinimumAge': 'الحد الأدنى لعمر السائق',
+      'carMinimumAgeValue': '{age} سنة',
+      'carRequiredDocuments': 'المستندات المطلوبة',
+      'carOrSimilar': 'هذا الطراز أو مركبة مماثلة',
       'flightTicketing': 'حجز الطيران',
       'flightTicketingHint': 'رحلات رخيصة، حجز سهل، دفع آمن',
       'findFlight': 'ابحث عن رحلة',
+      'flightOneWay': 'ذهاب فقط',
+      'flightRoundTrip': 'ذهاب وعودة',
+      'flightFrom': 'من',
+      'flightTo': 'إلى',
+      'flightSearchAirport': 'البحث عن مطار',
+      'flightAirportSearchHint': 'المدينة أو المطار أو رمز IATA أو الدولة',
+      'flightAirportStartTyping': 'أدخل حرفين على الأقل',
+      'flightNoAirportsFound': 'لم يتم العثور على مطارات',
+      'flightAirportLoadFailed': 'تعذّر تحميل المطارات',
+      'flightDepartureDate': 'المغادرة',
+      'flightReturnDate': 'العودة',
+      'flightPassengers': 'المسافرون',
+      'flightAdults': 'البالغون (12+)',
+      'flightChildren': 'الأطفال (2–11)',
+      'flightInfants': 'الرُضّع (أقل من سنتين)',
+      'flightCabinClass': 'درجة السفر',
+      'flightCabinEconomy': 'الدرجة الاقتصادية',
+      'flightCabinPremiumEconomy': 'الاقتصادية المميزة',
+      'flightCabinBusiness': 'درجة رجال الأعمال',
+      'flightCabinFirst': 'الدرجة الأولى',
+      'flightDirectOnly': 'رحلات مباشرة فقط',
+      'flightSearch': 'البحث عن رحلات',
+      'flightSearching': 'جارٍ البحث…',
+      'done': 'تم',
+      'flightOriginRequired': 'يرجى إدخال مكان المغادرة',
+      'flightDestinationRequired': 'يرجى إدخال الوجهة',
+      'flightDifferentAirports': 'يجب أن تختلف المغادرة عن الوجهة',
+      'flightDepartureRequired': 'يرجى اختيار تاريخ المغادرة',
+      'flightReturnRequired': 'يرجى اختيار تاريخ العودة',
+      'flightSearchReady': 'بحثك جاهز لصفحة النتائج',
+      'flightPassengerSummary':
+          '{adults} بالغ · {children} طفل · {infants} رضيع',
+      'flightResultsOne': 'تم العثور على رحلة واحدة',
+      'flightResultsMany': 'تم العثور على {count} رحلات',
+      'flightSortBest': 'الأفضل',
+      'flightSortCheapest': 'الأرخص',
+      'flightSortFastest': 'الأسرع',
+      'flightSelect': 'اختيار',
+      'flightDirect': 'مباشرة',
+      'flightOneStop': 'توقف واحد',
+      'flightManyStops': '{count} توقفات',
+      'flightOutbound': 'الذهاب',
+      'flightReturn': 'العودة',
+      'flightTotalPrice': 'السعر الإجمالي',
+      'flightPerTraveler': 'لكل مسافر',
+      'flightResultsLoadFailed': 'تعذّر تحميل الرحلات',
+      'flightResultsEmptyTitle': 'لم يتم العثور على رحلات',
+      'flightResultsEmptyBody': 'جرّب تاريخًا آخر أو غيّر عوامل البحث.',
+      'flightRetry': 'إعادة المحاولة',
+      'flightPreviousDate': 'التاريخ السابق',
+      'flightNextDate': 'التاريخ التالي',
+      'flightOfferSelected': 'تم اختيار الرحلة لخطوة الحجز التالية',
       'exploreToursTitle': 'استكشف الجولات',
       'exploreToursHint': 'تجارب محلية وأماكن مخفية ومرشدون خبراء',
       'findTours': 'ابحث عن جولة',
@@ -1880,6 +2877,7 @@ class AppLocalizations {
       'tourDayTravel': 'رحلة {count} يوم',
       'tourDaysTravel': 'رحلة {count} أيام',
       'tourPerPerson': 'للشخص الواحد',
+      'tourPerPersonBadge': 'للشخص الواحد',
       'tourFeatureCamping': 'تخييم',
       'tourFeatureHiking': 'المشي الجبلي',
       'tourFeatureGuide': 'مرشد',
@@ -1888,6 +2886,10 @@ class AppLocalizations {
       'tourFeatureCampfire': 'نار المخيم',
       'tourFeatureTransport': 'نقل',
       'tourFeaturePhotography': 'تصوير',
+      'tourFeatureActivity': 'أنشطة',
+      'tourFeatureWifi': 'واي فاي',
+      'tourFeatureElectricity': 'كهرباء',
+      'tourFeatureTent': 'خيمة',
       'tourReviewCount': '{count} تقييمات',
       'tourReviewCountOne': 'تقييم واحد',
       'tourNoReviews': 'لا توجد تقييمات بعد',
@@ -1936,6 +2938,57 @@ class AppLocalizations {
       'tourNoReviewsYet': 'لا توجد مراجعات بعد. كن أول من يشارك تجربة الجولة.',
       'tourReviewSignInBody':
           'ترتبط مراجعات الجولات بحسابك حتى يثق المسافرون بمن شارك فيها.',
+      'bookingStepTravelerInfo': 'بيانات المسافر',
+      'bookingStepPayment': 'الدفع',
+      'bookingStepConfirmation': 'التأكيد',
+      'travelerInformation': 'بيانات المسافر',
+      'travelerInformationHint': 'يرجى إدخال بيانات جميع المسافرين',
+      'contactPerson': 'شخص الاتصال',
+      'travelersLabel': 'المسافرون',
+      'travelerNumbered': 'مسافر',
+      'dateOfBirthHint': 'تاريخ الميلاد',
+      'leadTraveler': 'المسافر الرئيسي',
+      'leadTravelerHint': 'يصدر الحجز باسم هذا المسافر',
+      'informationSecure': 'بياناتك آمنة ومشفرة',
+      'continueToPayment': 'المتابعة إلى الدفع',
+      'selectDialCode': 'اختر رمز الدولة',
+      'travelerInfoIncomplete': 'يرجى إكمال اسم وتاريخ ميلاد كل مسافر.',
+      'contactIncomplete': 'يرجى إدخال اسم وبريد إلكتروني ورقم هاتف صحيح.',
+      'travelerTooYoung':
+          'يجب أن يكون عمر كل مسافر في هذه الجولة {age} عامًا أو أكثر.',
+      'travelerFutureBirthDate': 'لا يمكن أن يكون تاريخ الميلاد في المستقبل.',
+      'noPlacesLeft': 'اكتمل حجز هذه الرحلة.',
+      'onlyPlacesLeft': 'بقيت {count} أماكن فقط في هذه الرحلة.',
+      'reserveSignInTitle': 'سجّل الدخول للحجز',
+      'reserveSignInBody': 'يرتبط الحجز بحسابك حتى تجده لاحقًا ونعرف بمن نتصل.',
+      'paymentDetails': 'تفاصيل الدفع',
+      'paymentDetailsHint': 'أكمل الدفع لتأكيد الحجز',
+      'bookingSummary': 'ملخص الحجز',
+      'paymentMethodLabel': 'طريقة الدفع',
+      'mastercardVisa': 'ماستركارد / فيزا',
+      'totalLabel': 'الإجمالي',
+      'selectPaymentMethod': 'اختر طريقة الدفع',
+      'cardEntryNotLive':
+          'الدفع بالبطاقة غير مفعّل بعد. لم يتم إرسال بيانات بطاقتك أو حفظها.',
+      'paymentIncompleteCard':
+          'يرجى إدخال رقم البطاقة وتاريخ الانتهاء ورمز CVV.',
+      'paymentNoMethod': 'يرجى اختيار طريقة الدفع.',
+      'useSavedCard': 'استخدم هذه البطاقة',
+      // --- Checkout step 3 (Review & Confirm) ---
+      'reviewConfirmTitle': 'المراجعة والتأكيد',
+      'reviewConfirmHint': 'يرجى مراجعة تفاصيل حجزك قبل التأكيد.',
+      'travelersInformation': 'معلومات المسافرين',
+      'priceBreakdown': 'تفاصيل السعر',
+      'travelerFee': 'رسوم المسافر',
+      'priceEachTimes': '{count} × {price}',
+      'reviewAgreeTerms': 'أوافق على {terms} و{policy}.',
+      'reviewTermsLink': 'شروط الخدمة',
+      'reviewPolicyLink': 'سياسة التطبيق',
+      'reviewMustAgree':
+          'يرجى الموافقة على شروط الخدمة وسياسة التطبيق للمتابعة.',
+      'confirmAndPay': 'التأكيد والدفع {price}',
+      'confirmPayNotLive':
+          'الدفع غير مفعّل بعد، لذلك لم يتم خصم أي مبلغ ولم يتم إنشاء أي حجز.',
     },
   };
 
@@ -2109,13 +3162,371 @@ class AppLocalizations {
   String get exploreNatureHint => _t('exploreNatureHint');
   String get whereToStay => _t('whereToStay');
   String get whereToStayHint => _t('whereToStayHint');
+  String get hotelLocation => _t('hotelLocation');
+  String get hotelLocationHint => _t('hotelLocationHint');
+  String get hotelRecentSearches => _t('hotelRecentSearches');
+  String get hotelDate => _t('hotelDate');
+  String get hotelCheckIn => _t('hotelCheckIn');
+  String get hotelCheckOut => _t('hotelCheckOut');
+  String get hotelGuests => _t('hotelGuests');
+  String get hotelAdult => _t('hotelAdult');
+  String get hotelChild => _t('hotelChild');
+  String get hotelRoom => _t('hotelRoom');
+  String get hotelBed => _t('hotelBed');
+  String get hotelOptions => _t('hotelOptions');
+  String hotelOptionsSelected(int count) => count == 0
+      ? _t('hotelNoOptions')
+      : count == 1
+      ? _t('hotelOneOption')
+      : _t('hotelManyOptions').replaceAll('{count}', '$count');
+  String get hotelPool => _t('hotelPool');
+  String get hotelBar => _t('hotelBar');
+  String get hotelRestaurant => _t('hotelRestaurant');
+  String get hotelGym => _t('hotelGym');
+  String get hotelParking => _t('hotelParking');
+  String get hotelFreeWifi => _t('hotelFreeWifi');
+  String get hotelBeach => _t('hotelBeach');
+  String get hotelMoreOptions => _t('hotelMoreOptions');
+  String get hotelSearch => _t('hotelSearch');
+  String get hotelTrending => _t('hotelTrending');
+  String get hotelPerNight => _t('hotelPerNight');
+  String hotelDistanceFromCenter(double distance) => _t(
+    'hotelDistanceFromCenter',
+  ).replaceAll('{distance}', distance.toStringAsFixed(1));
+  String hotelGuestSummary(int adults, int children, int rooms, int beds) {
+    String count(String singular, String plural, int value) =>
+        _t(value == 1 ? singular : plural).replaceAll('{count}', '$value');
+    final adultText = count(
+      'hotelAdultCountOne',
+      'hotelAdultCountMany',
+      adults,
+    );
+    final bedText = count('hotelBedCountOne', 'hotelBedCountMany', beds);
+    if (children == 0 && rooms == 1) {
+      return '$adultText, $bedText';
+    }
+    final childText = count(
+      'hotelChildCountOne',
+      'hotelChildCountMany',
+      children,
+    );
+    final roomText = count('hotelRoomCountOne', 'hotelRoomCountMany', rooms);
+    return '$adultText, $childText, $roomText, $bedText';
+  }
+
+  String get hotelDestinationRequired => _t('hotelDestinationRequired');
+  String get hotelInvalidDates => _t('hotelInvalidDates');
+  String get hotelPreviewData => _t('hotelPreviewData');
+  String hotelCarouselPosition(int current, int total) => _t(
+    'hotelCarouselPosition',
+  ).replaceAll('{current}', '$current').replaceAll('{total}', '$total');
+  String hotelStarClassification(int count) =>
+      _t('hotelStarClassification').replaceAll('{count}', '$count');
+  String hotelReviewScore(double score) =>
+      _t('hotelReviewScore').replaceAll('{score}', score.toStringAsFixed(1));
+  String hotelIncrease(String name) =>
+      _t('hotelIncrease').replaceAll('{name}', name);
+  String hotelDecrease(String name) =>
+      _t('hotelDecrease').replaceAll('{name}', name);
+
+  // --- Hotel Details page ---
+  String get hotelDetails => _t('hotelDetails');
+  String get hotelDetailNotFound => _t('hotelDetailNotFound');
+  String get hotelDetailLoadFailed => _t('hotelDetailLoadFailed');
+  String hotelGalleryPosition(int current, int total) => _t(
+    'hotelGalleryPosition',
+  ).replaceAll('{current}', '$current').replaceAll('{total}', '$total');
+  String hotelGalleryImage(int current, int total) => _t(
+    'hotelGalleryImage',
+  ).replaceAll('{current}', '$current').replaceAll('{total}', '$total');
+  String get hotelChange => _t('hotelChange');
+  String get hotelUpdateStay => _t('hotelUpdateStay');
+  String get hotelUpdateStayApply => _t('hotelUpdateStayApply');
+  String get hotelStayUpdated => _t('hotelStayUpdated');
+  String get hotelFacilities => _t('hotelFacilities');
+  String get hotelAllFacilities => _t('hotelAllFacilities');
+  String get hotelNoFacilities => _t('hotelNoFacilities');
+  String get hotelSeeAll => _t('hotelSeeAll');
+  String get hotelReviews => _t('hotelReviews');
+  String hotelReviewCount(int count) => _t(
+    count == 1 ? 'hotelReviewCountOne' : 'hotelReviewCountMany',
+  ).replaceAll('{count}', '$count');
+  String get hotelCleanliness => _t('hotelCleanliness');
+  String get hotelComfort => _t('hotelComfort');
+  String get hotelService => _t('hotelService');
+  String get hotelStaff => _t('hotelStaff');
+  String get hotelValue => _t('hotelValue');
+  String get hotelMap => _t('hotelMap');
+  String get hotelMapUnavailable => _t('hotelMapUnavailable');
+  String get hotelNearby => _t('hotelNearby');
+  String get hotelNearbyEmpty => _t('hotelNearbyEmpty');
+  String get hotelNearbyAll => _t('hotelNearbyAll');
+
+  /// The trailing text on a Nearby row. Falls back to the distance alone when
+  /// the source has no travel time, rather than estimating one.
+  String hotelNearbyDistance(double kilometres, int? minutes) {
+    final distance = kilometres.toStringAsFixed(kilometres < 10 ? 1 : 0);
+    if (minutes == null) {
+      return _t('hotelNearbyDistance').replaceAll('{distance}', distance);
+    }
+    return _t(
+      'hotelNearbyDistanceWithTime',
+    ).replaceAll('{minutes}', '$minutes').replaceAll('{distance}', distance);
+  }
+
+  String get hotelRatingsAndComments => _t('hotelRatingsAndComments');
+  String get hotelSelectRoom => _t('hotelSelectRoom');
+  String get hotelChooseRoom => _t('hotelChooseRoom');
+  String get hotelMockNotice => _t('hotelMockNotice');
+  String get hotelNoRooms => _t('hotelNoRooms');
+  String get hotelChangeDates => _t('hotelChangeDates');
+  String get hotelBackToHotel => _t('hotelBackToHotel');
+  String get hotelSeeRoomDetails => _t('hotelSeeRoomDetails');
+  String hotelMaximumGuests(int count) =>
+      _t('hotelMaximumGuests').replaceAll('{count}', '$count');
+  String get hotelReserve => _t('hotelReserve');
+  String hotelPriceForNights(int count) =>
+      _t('hotelPriceForNights').replaceAll('{count}', '$count');
+  String get hotelRechecking => _t('hotelRechecking');
+  String get hotelCompleteBooking => _t('hotelCompleteBooking');
+  String get hotelGuestDetails => _t('hotelGuestDetails');
+  String get hotelSpecialRequestsHint => _t('hotelSpecialRequestsHint');
+  String get hotelStripePreview => _t('hotelStripePreview');
+  String get hotelFibPreview => _t('hotelFibPreview');
+  String get hotelMockPaymentNotice => _t('hotelMockPaymentNotice');
+  String get hotelRoomSubtotal => _t('hotelRoomSubtotal');
+  String get hotelBookingConsent => _t('hotelBookingConsent');
+  String get hotelConfirmMockBooking => _t('hotelConfirmMockBooking');
+  String get hotelMockBookingComplete => _t('hotelMockBookingComplete');
+  String get hotelMockBookingCompleteBody => _t('hotelMockBookingCompleteBody');
+  String get hotelViewReservations => _t('hotelViewReservations');
+  String get hotelGuestRequired => _t('hotelGuestRequired');
+  String get hotelConsentRequired => _t('hotelConsentRequired');
+  String get hotelRateUnavailable => _t('hotelRateUnavailable');
+  String get hotelPropertyPolicies => _t('hotelPropertyPolicies');
+  String get hotelPolicyCheckInFrom => _t('hotelPolicyCheckInFrom');
+  String get hotelPolicyCheckOutUntil => _t('hotelPolicyCheckOutUntil');
+  String get hotelPolicyChildren => _t('hotelPolicyChildren');
+  String get hotelPolicyCribs => _t('hotelPolicyCribs');
+  String get hotelPolicyExtraBeds => _t('hotelPolicyExtraBeds');
+  String get hotelPolicyAgeRestriction => _t('hotelPolicyAgeRestriction');
+  String hotelPolicyMinimumAge(int age) =>
+      _t('hotelPolicyMinimumAge').replaceAll('{age}', '$age');
+  String get hotelPolicyPets => _t('hotelPolicyPets');
+  String get hotelPolicySmoking => _t('hotelPolicySmoking');
+  String get hotelPolicyPayment => _t('hotelPolicyPayment');
+  String get hotelPolicySpecialRequests => _t('hotelPolicySpecialRequests');
+  String hotelPolicySpecialRequestsAllowed(bool allowed) => _t(
+    allowed ? 'hotelPolicySpecialRequestsYes' : 'hotelPolicySpecialRequestsNo',
+  );
+  String get hotelPolicyAccessibility => _t('hotelPolicyAccessibility');
+  String get hotelFacilityGeneral => _t('hotelFacilityGeneral');
+  String get hotelFacilityInternet => _t('hotelFacilityInternet');
+  String get hotelFacilityParking => _t('hotelFacilityParking');
+  String get hotelFacilityFoodAndDrink => _t('hotelFacilityFoodAndDrink');
+  String get hotelFacilityWellness => _t('hotelFacilityWellness');
+  String get hotelFacilityPool => _t('hotelFacilityPool');
+  String get hotelFacilityTransportation => _t('hotelFacilityTransportation');
+  String get hotelFacilityRoom => _t('hotelFacilityRoom');
+  String get hotelFacilityFamily => _t('hotelFacilityFamily');
+  String get hotelFacilityAccessibility => _t('hotelFacilityAccessibility');
+  String get hotelFacilityBusiness => _t('hotelFacilityBusiness');
+  String get hotelFacilitySafety => _t('hotelFacilitySafety');
+  String get hotelBedSingle => _t('hotelBedSingle');
+  String get hotelBedTwin => _t('hotelBedTwin');
+  String get hotelBedDouble => _t('hotelBedDouble');
+  String get hotelBedQueen => _t('hotelBedQueen');
+  String get hotelBedKing => _t('hotelBedKing');
+  String get hotelBedSofa => _t('hotelBedSofa');
+  String get hotelBedBunk => _t('hotelBedBunk');
+  String hotelBedCount(int count, String bed) => _t(
+    'hotelBedCount',
+  ).replaceAll('{count}', '$count').replaceAll('{bed}', bed);
+  String get hotelBreakfastIncluded => _t('hotelBreakfastIncluded');
+  String get hotelBreakfastExtra => _t('hotelBreakfastExtra');
+  String get hotelBreakfastUnavailable => _t('hotelBreakfastUnavailable');
+  String get hotelTaxesAndFees => _t('hotelTaxesAndFees');
+  String get hotelTaxesIncluded => _t('hotelTaxesIncluded');
+  String get hotelTaxesExcluded => _t('hotelTaxesExcluded');
+  String get hotelFreeCancellation => _t('hotelFreeCancellation');
+  String get hotelPartiallyRefundable => _t('hotelPartiallyRefundable');
+  String get hotelNonRefundable => _t('hotelNonRefundable');
+  String get hotelPayNow => _t('hotelPayNow');
+  String get hotelPayLater => _t('hotelPayLater');
+  String get hotelPayAtProperty => _t('hotelPayAtProperty');
+  String get hotelPrepaymentRequired => _t('hotelPrepaymentRequired');
+  String get hotelPartialPrepayment => _t('hotelPartialPrepayment');
+  String get hotelNoPrepayment => _t('hotelNoPrepayment');
+  String hotelRoomsLeft(int count) => _t(
+    count == 1 ? 'hotelRoomsLeftOne' : 'hotelRoomsLeftMany',
+  ).replaceAll('{count}', '$count');
   String get bestPrice => _t('bestPrice');
   String get carRental => _t('carRental');
   String get carRentalHint => _t('carRentalHint');
   String get findACar => _t('findACar');
+  String get carPickupDropOffLocation => _t('carPickupDropOffLocation');
+  String get carPickup => _t('carPickup');
+  String get carDropOff => _t('carDropOff');
+  String get carPickupLocation => _t('carPickupLocation');
+  String get carDropOffLocation => _t('carDropOffLocation');
+  String get carDifferentDropOff => _t('carDifferentDropOff');
+  String get carSelectDate => _t('carSelectDate');
+  String get carSelectTime => _t('carSelectTime');
+  String get carSearch => _t('carSearch');
+  String get carSearching => _t('carSearching');
+  String get carTrending => _t('carTrending');
+  String get carAvailable => _t('carAvailable');
+  String get carNoAvailable => _t('carNoAvailable');
+  String get carSearchLocations => _t('carSearchLocations');
+  String get carLocationSearchHint => _t('carLocationSearchHint');
+  String get carLocationStartTyping => _t('carLocationStartTyping');
+  String get carNoLocations => _t('carNoLocations');
+  String get carLocationsFailed => _t('carLocationsFailed');
+  String get carPickupLocationRequired => _t('carPickupLocationRequired');
+  String get carDropOffLocationRequired => _t('carDropOffLocationRequired');
+  String get carPickupDateRequired => _t('carPickupDateRequired');
+  String get carPickupTimeRequired => _t('carPickupTimeRequired');
+  String get carDropOffDateRequired => _t('carDropOffDateRequired');
+  String get carDropOffTimeRequired => _t('carDropOffTimeRequired');
+  String get carPickupFuture => _t('carPickupFuture');
+  String get carDropOffAfterPickup => _t('carDropOffAfterPickup');
+  String get carSearchFailed => _t('carSearchFailed');
+  String carPersons(int count) =>
+      _t('carPersons').replaceAll('{count}', '$count');
+  String carBags(int count) => _t('carBags').replaceAll('{count}', '$count');
+  String get carAirConditioning => _t('carAirConditioning');
+  String get carHybrid => _t('carHybrid');
+  String get carElectric => _t('carElectric');
+  String get carPetrol => _t('carPetrol');
+  String get carDiesel => _t('carDiesel');
+  String get carPayAtPickup => _t('carPayAtPickup');
+  String get carPayNow => _t('carPayNow');
+  String carModelYear(int year) =>
+      _t('carModelYear').replaceAll('{year}', '$year');
+  String carPricePerDay(String price) =>
+      _t('carPricePerDay').replaceAll('{price}', price);
+  String get carPreviewData => _t('carPreviewData');
+  String carResults(int count) => count == 1
+      ? _t('carResultsOne')
+      : _t('carResultsMany').replaceAll('{count}', '$count');
+  String get carResultsEmptyTitle => _t('carResultsEmptyTitle');
+  String get carResultsEmptyBody => _t('carResultsEmptyBody');
+  String get carModifySearch => _t('carModifySearch');
+  String get carResultsLoading => _t('carResultsLoading');
+  String get carResultsListLabel => _t('carResultsListLabel');
+  String carCarouselPosition(int current, int total) => _t(
+    'carCarouselPosition',
+  ).replaceAll('{current}', '$current').replaceAll('{total}', '$total');
+  String get carDetails => _t('carDetails');
+  String get carPickupDropOffDetails => _t('carPickupDropOffDetails');
+  String get carLocation => _t('carLocation');
+  String get carAdditionalOptions => _t('carAdditionalOptions');
+  String get carApply => _t('carApply');
+  String get carAutomatic => _t('carAutomatic');
+  String get carManual => _t('carManual');
+  String carPhotoPosition(int current, int total) => _t(
+    'carPhotoPosition',
+  ).replaceAll('{current}', '$current').replaceAll('{total}', '$total');
+  String carGalleryLabel(String name) =>
+      _t('carGalleryLabel').replaceAll('{name}', name);
+  String carDecreaseQuantity(String name) =>
+      _t('carDecreaseQuantity').replaceAll('{name}', name);
+  String carIncreaseQuantity(String name) =>
+      _t('carIncreaseQuantity').replaceAll('{name}', name);
+  String carExtraTimesQuantity(String price, int count) => _t(
+    'carExtraTimesQuantity',
+  ).replaceAll('{price}', price).replaceAll('{count}', '$count');
+  String get carPriceSummary => _t('carPriceSummary');
+  String get carBaseRental => _t('carBaseRental');
+  String get carExtrasTotal => _t('carExtrasTotal');
+  String get carEstimatedTotal => _t('carEstimatedTotal');
+  String carRentalDays(int count) => count == 1
+      ? _t('carRentalDayOne')
+      : _t('carRentalDaysMany').replaceAll('{count}', '$count');
+  String get carEstimateNote => _t('carEstimateNote');
+  String get carRentalConditions => _t('carRentalConditions');
+  String get carFuelPolicy => _t('carFuelPolicy');
+  String get carFuelFullToFull => _t('carFuelFullToFull');
+  String get carFuelFullToEmpty => _t('carFuelFullToEmpty');
+  String get carFuelSameToSame => _t('carFuelSameToSame');
+  String get carMileage => _t('carMileage');
+  String get carMileageUnlimited => _t('carMileageUnlimited');
+  String carMileagePerDay(int count) =>
+      _t('carMileagePerDay').replaceAll('{count}', '$count');
+  String carMileageExtra(String price) =>
+      _t('carMileageExtra').replaceAll('{price}', price);
+  String get carDeposit => _t('carDeposit');
+  String get carDamageExcess => _t('carDamageExcess');
+  String get carFreeCancellation => _t('carFreeCancellation');
+  String get carMinimumAge => _t('carMinimumAge');
+  String carMinimumAgeValue(int age) =>
+      _t('carMinimumAgeValue').replaceAll('{age}', '$age');
+  String get carRequiredDocuments => _t('carRequiredDocuments');
+  String get carOrSimilar => _t('carOrSimilar');
   String get flightTicketing => _t('flightTicketing');
   String get flightTicketingHint => _t('flightTicketingHint');
   String get findFlight => _t('findFlight');
+  String get flightOneWay => _t('flightOneWay');
+  String get flightRoundTrip => _t('flightRoundTrip');
+  String get flightFrom => _t('flightFrom');
+  String get flightTo => _t('flightTo');
+  String get flightSearchAirport => _t('flightSearchAirport');
+  String get flightAirportSearchHint => _t('flightAirportSearchHint');
+  String get flightAirportStartTyping => _t('flightAirportStartTyping');
+  String get flightNoAirportsFound => _t('flightNoAirportsFound');
+  String get flightAirportLoadFailed => _t('flightAirportLoadFailed');
+  String get flightDepartureDate => _t('flightDepartureDate');
+  String get flightReturnDate => _t('flightReturnDate');
+  String get flightPassengers => _t('flightPassengers');
+  String get flightAdults => _t('flightAdults');
+  String get flightChildren => _t('flightChildren');
+  String get flightInfants => _t('flightInfants');
+  String get flightCabinClass => _t('flightCabinClass');
+  String flightSearchCabinClassLabel(CabinClass cabin) => switch (cabin) {
+    CabinClass.economy => _t('flightCabinEconomy'),
+    CabinClass.premiumEconomy => _t('flightCabinPremiumEconomy'),
+    CabinClass.business => _t('flightCabinBusiness'),
+    CabinClass.first => _t('flightCabinFirst'),
+  };
+  String get flightDirectOnly => _t('flightDirectOnly');
+  String get flightSearch => _t('flightSearch');
+  String get flightSearching => _t('flightSearching');
+  String get done => _t('done');
+  String get flightOriginRequired => _t('flightOriginRequired');
+  String get flightDestinationRequired => _t('flightDestinationRequired');
+  String get flightDifferentAirports => _t('flightDifferentAirports');
+  String get flightDepartureRequired => _t('flightDepartureRequired');
+  String get flightReturnRequired => _t('flightReturnRequired');
+  String get flightSearchReady => _t('flightSearchReady');
+  String flightPassengerSummary(int adults, int children, int infants) =>
+      _t('flightPassengerSummary')
+          .replaceAll('{adults}', '$adults')
+          .replaceAll('{children}', '$children')
+          .replaceAll('{infants}', '$infants');
+  String flightResultsFound(int count) => count == 1
+      ? _t('flightResultsOne')
+      : _t('flightResultsMany').replaceAll('{count}', '$count');
+  String get flightSortBest => _t('flightSortBest');
+  String get flightSortCheapest => _t('flightSortCheapest');
+  String get flightSortFastest => _t('flightSortFastest');
+  String get flightSelect => _t('flightSelect');
+  String get flightDirect => _t('flightDirect');
+  String flightStops(int count) => switch (count) {
+    0 => _t('flightDirect'),
+    1 => _t('flightOneStop'),
+    _ => _t('flightManyStops').replaceAll('{count}', '$count'),
+  };
+  String get flightOutbound => _t('flightOutbound');
+  String get flightReturn => _t('flightReturn');
+  String get flightTotalPrice => _t('flightTotalPrice');
+  String get flightPerTraveler => _t('flightPerTraveler');
+  String get flightResultsLoadFailed => _t('flightResultsLoadFailed');
+  String get flightResultsEmptyTitle => _t('flightResultsEmptyTitle');
+  String get flightResultsEmptyBody => _t('flightResultsEmptyBody');
+  String get flightRetry => _t('flightRetry');
+  String get flightPreviousDate => _t('flightPreviousDate');
+  String get flightNextDate => _t('flightNextDate');
+  String get flightOfferSelected => _t('flightOfferSelected');
   String get exploreToursTitle => _t('exploreToursTitle');
   String get exploreToursHint => _t('exploreToursHint');
   String get findTours => _t('findTours');
@@ -2620,6 +4031,8 @@ class AppLocalizations {
   String get toursEmpty => _t('toursEmpty');
   String get toursHighlightedEmpty => _t('toursHighlightedEmpty');
   String get tourPerPerson => _t('tourPerPerson');
+
+  String get tourPerPersonBadge => _t('tourPerPersonBadge');
   String get tourNoReviews => _t('tourNoReviews');
   String get tourTravellers => _t('tourTravellers');
   String get tourGuideLanguages => _t('tourGuideLanguages');
@@ -2644,6 +4057,97 @@ class AppLocalizations {
   String get tourWriteReviewPrompt => _t('tourWriteReviewPrompt');
   String get tourNoReviewsYet => _t('tourNoReviewsYet');
   String get tourReviewSignInBody => _t('tourReviewSignInBody');
+
+  // --- Booking: Traveler Info (checkout step 1) ---
+  String get bookingStepTravelerInfo => _t('bookingStepTravelerInfo');
+  String get bookingStepPayment => _t('bookingStepPayment');
+  String get bookingStepConfirmation => _t('bookingStepConfirmation');
+  String get travelerInformation => _t('travelerInformation');
+  String get travelerInformationHint => _t('travelerInformationHint');
+  String get contactPerson => _t('contactPerson');
+  String get travelersLabel => _t('travelersLabel');
+  String get dateOfBirthHint => _t('dateOfBirthHint');
+  String get leadTraveler => _t('leadTraveler');
+  String get leadTravelerHint => _t('leadTravelerHint');
+  String get informationSecure => _t('informationSecure');
+  String get continueToPayment => _t('continueToPayment');
+  String get selectDialCode => _t('selectDialCode');
+  String get travelerInfoIncomplete => _t('travelerInfoIncomplete');
+  String get contactIncomplete => _t('contactIncomplete');
+  String get travelerFutureBirthDate => _t('travelerFutureBirthDate');
+  String get noPlacesLeft => _t('noPlacesLeft');
+  String get reserveSignInTitle => _t('reserveSignInTitle');
+  String get reserveSignInBody => _t('reserveSignInBody');
+
+  // --- Booking: Payment (checkout step 2) ---
+  String get paymentDetails => _t('paymentDetails');
+  String get paymentDetailsHint => _t('paymentDetailsHint');
+  String get bookingSummary => _t('bookingSummary');
+  String get paymentMethodLabel => _t('paymentMethodLabel');
+  String get mastercardVisa => _t('mastercardVisa');
+  String get totalLabel => _t('totalLabel');
+  String get selectPaymentMethod => _t('selectPaymentMethod');
+  String get cardEntryNotLive => _t('cardEntryNotLive');
+  String get paymentIncompleteCard => _t('paymentIncompleteCard');
+  String get paymentNoMethod => _t('paymentNoMethod');
+  String get useSavedCard => _t('useSavedCard');
+
+  // --- Checkout step 3 (Review & Confirm) ---
+
+  String get reviewConfirmTitle => _t('reviewConfirmTitle');
+  String get reviewConfirmHint => _t('reviewConfirmHint');
+  String get travelersInformation => _t('travelersInformation');
+  String get priceBreakdown => _t('priceBreakdown');
+  String get travelerFee => _t('travelerFee');
+  String get reviewTermsLink => _t('reviewTermsLink');
+  String get reviewPolicyLink => _t('reviewPolicyLink');
+  String get reviewMustAgree => _t('reviewMustAgree');
+  String get confirmPayNotLive => _t('confirmPayNotLive');
+
+  /// "2 × $55" — the arithmetic behind one price-breakdown line.
+  ///
+  /// [price] arrives already formatted by `formatMoney`, so the currency
+  /// symbol and the grouping are the same ones the totals use.
+  String priceEachTimes(int count, String price) => _t(
+    'priceEachTimes',
+  ).replaceAll('{count}', '$count').replaceAll('{price}', price);
+
+  /// "Confirm & Pay $65". [price] is pre-formatted, for the same reason.
+  String confirmAndPay(String price) =>
+      _t('confirmAndPay').replaceAll('{price}', price);
+
+  /// The consent sentence, split around its two link labels so each can be
+  /// drawn as a tappable span.
+  ///
+  /// Returns the literal runs *between* the placeholders, in reading order:
+  /// `[before, between, after]`. Splitting here rather than in the screen
+  /// keeps the word order a translator's decision — Arabic puts "و" between
+  /// the two links with no space, and Kurdish reorders the sentence entirely.
+  List<String> reviewAgreeTermsParts() {
+    final template = _t('reviewAgreeTerms');
+    final terms = template.indexOf('{terms}');
+    final policy = template.indexOf('{policy}');
+    // A translation that lost a placeholder must not throw on a screen the
+    // user is looking at — it degrades to the sentence plus the two labels.
+    if (terms < 0 || policy < 0 || policy < terms) {
+      return [template, ' ', ' '];
+    }
+    return [
+      template.substring(0, terms),
+      template.substring(terms + '{terms}'.length, policy),
+      template.substring(policy + '{policy}'.length),
+    ];
+  }
+
+  /// "Traveler 1", "Traveler 2" — the numeral stays LTR in every language,
+  /// like the other measurement sequences in `DESIGN_SYSTEM.md` 21.
+  String travelerNumbered(int index) => '${_t('travelerNumbered')} $index';
+
+  String travelerTooYoung(int age) =>
+      _t('travelerTooYoung').replaceFirst('{age}', '$age');
+
+  String onlyPlacesLeft(int count) =>
+      _t('onlyPlacesLeft').replaceFirst('{count}', '$count');
 
   /// "128 reviews". A one-review tour gets its own string rather than
   /// "1 reviews" — and Kurdish and Arabic do not pluralize with an "s".
@@ -2708,6 +4212,10 @@ class AppLocalizations {
     TourFeature.campfire => _t('tourFeatureCampfire'),
     TourFeature.transport => _t('tourFeatureTransport'),
     TourFeature.photography => _t('tourFeaturePhotography'),
+    TourFeature.activity => _t('tourFeatureActivity'),
+    TourFeature.wifi => _t('tourFeatureWifi'),
+    TourFeature.electricity => _t('tourFeatureElectricity'),
+    TourFeature.tent => _t('tourFeatureTent'),
   };
 
   /// The month as drawn in a tour's date range — abbreviated in English,

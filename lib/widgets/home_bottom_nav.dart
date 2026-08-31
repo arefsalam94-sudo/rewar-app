@@ -30,18 +30,53 @@ class HomeBottomNav extends StatelessWidget {
 
   /// Overall bar height. Fixed so it looks identical on every device, per
   /// the "Sizes that must stay identical" table in `DESIGN_SYSTEM.md`.
-  static const double barHeight = 54;
+  static const double barHeight = 74;
 
   /// Overall width of the floating bar on screens wide enough to show it.
   static const double barWidth = 311;
 
   /// Diameter of the filled circle behind the selected icon.
-  static const double selectedCircleSize = 36;
+  static const double selectedCircleSize = 48;
 
-  static const double _iconSize = 20;
+  static const double _iconSize = 22;
+
+  /// The bar in its floating position, ready to drop into a [Stack].
+  ///
+  /// Shared rather than repeated per screen so the pill lands on exactly the
+  /// same pixels wherever the bar is kept visible — moving between Home and a
+  /// bar destination must not shift it.
+  ///
+  /// Returns a [PositionedDirectional] directly (not wrapped in a widget of
+  /// its own) because [Stack] only honours positioning on its immediate
+  /// children.
+  static Widget floating({
+    required BuildContext context,
+    required HomeNavTab current,
+    required ValueChanged<HomeNavTab> onSelect,
+    bool? dark,
+  }) {
+    return PositionedDirectional(
+      start: 0,
+      end: 0,
+      bottom: MediaQuery.paddingOf(context).bottom + 12,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: barWidth),
+          child: SizedBox(
+            width: double.infinity,
+            child: HomeBottomNav(
+              current: current,
+              onSelect: onSelect,
+              dark: dark,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   /// "A little bit bigger than the others" — the selected icon only.
-  static const double _selectedIconSize = 22;
+  static const double _selectedIconSize = 24;
 
   @override
   Widget build(BuildContext context) {
@@ -72,9 +107,12 @@ class HomeBottomNav extends StatelessWidget {
                 ),
                 _NavItem(
                   tab: HomeNavTab.trips,
-                  icon: Icons.calendar_today_outlined,
-                  selectedIcon: Icons.calendar_today_rounded,
-                  label: l10n.navTrips,
+                  // Deliberately identical to the drawer's My Bookings row —
+                  // same icon, same label, same destination, so the two entry
+                  // points don't read as two different places.
+                  icon: Icons.calendar_month_outlined,
+                  selectedIcon: Icons.calendar_month_rounded,
+                  label: l10n.myBookings,
                   current: current,
                   onSelect: onSelect,
                   dark: isDark,

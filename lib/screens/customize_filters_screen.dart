@@ -76,8 +76,6 @@ class _CustomizeFiltersScreenState extends State<CustomizeFiltersScreen> {
                   constraints: const BoxConstraints(maxWidth: 720),
                   child: GlassPanel(
                     // L1 of the canonical three-deep glass stack.
-                    lightBlurSigma: 20,
-                    darkBlurSigma: 20,
                     borderRadius: _panelRadius(context),
                     padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
                     child: Column(
@@ -153,11 +151,9 @@ const bool exploreNatureBackgroundBlurEnabled = false;
 /// The outer modal card. Follows the same per-mode card rule as everywhere
 /// else — `DESIGN light.md` "Standard Cards: 16px", `DESIGN dark.md`
 /// `rounded-xl` (24px) — one step up, because this is a full-page surface.
-double _panelRadius(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark ? 28 : 24;
+double _panelRadius(BuildContext context) => 28;
 
-double _groupRadius(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.dark ? 24 : 16;
+double _groupRadius(BuildContext context) => 28;
 
 Color _hairline(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
@@ -275,8 +271,7 @@ class _CounterRow extends StatelessWidget {
         Flexible(
           child: GlassPanel(
             borderRadius: 999,
-            lightBlurSigma: 26,
-            darkBlurSigma: 26,
+            depth: GlassDepth.top,
             padding: const EdgeInsetsDirectional.fromSTEB(6, 6, 14, 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -385,8 +380,7 @@ class _FilterGroupCard extends StatelessWidget {
     return GlassPanel(
       borderRadius: _groupRadius(context),
       // L2: the fill stays identical to L1; only blur/depth steps up.
-      lightBlurSigma: 26,
-      darkBlurSigma: 26,
+      depth: GlassDepth.middle,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,20 +446,7 @@ class _FilterChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-    final selectedContent = isDark
-        ? AppColors.darkOnPrimary
-        : AppColors.pageGradientTop;
-    final restingFill = isDark
-        ? AppColors.darkOnPrimary
-        : AppColors.pageGradientTop;
-    final restingContent = isDark
-        ? AppColors.luminousMint
-        : AppColors.actionNavy;
-
-    final fill = selected ? selectedFill : restingFill;
-    final content = selected ? selectedContent : restingContent;
+    final content = AppColors.selectionAccent(context);
 
     return Semantics(
       button: true,
@@ -474,44 +455,47 @@ class _FilterChoiceChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: Container(
-          height: visualHeight,
-          margin: const EdgeInsets.symmetric(vertical: (48 - visualHeight) / 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? selectedContent : restingContent,
-              width: 1,
-            ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: (48 - visualHeight) / 2,
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: content),
-              const SizedBox(width: 5),
-              // Allowed to shrink rather than overflow: "Lodging nearby" and
-              // its Kurdish/Arabic translations are long.
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      color: content,
+          child: GlassPanel(
+            borderRadius: 999,
+            depth: GlassDepth.top,
+            selected: selected,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: SizedBox(
+              height: visualHeight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 15, color: content),
+                  const SizedBox(width: 5),
+                  // Allowed to shrink rather than overflow: "Lodging nearby" and
+                  // its Kurdish/Arabic translations are long.
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          color: content,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (selected) ...[
+                    const SizedBox(width: 5),
+                    Icon(Icons.check_circle_rounded, size: 14, color: content),
+                  ],
+                ],
               ),
-              if (selected) ...[
-                const SizedBox(width: 5),
-                Icon(Icons.check_circle_rounded, size: 14, color: content),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -548,14 +532,14 @@ class _ShowPlacesButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(isDark ? 16 : 12),
+          borderRadius: BorderRadius.circular(14),
           child: Container(
             height: 56,
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 28),
             decoration: BoxDecoration(
               color: fill,
-              borderRadius: BorderRadius.circular(isDark ? 16 : 12),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

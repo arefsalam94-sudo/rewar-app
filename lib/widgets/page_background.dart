@@ -16,7 +16,6 @@ class PageBackground extends StatelessWidget {
     required this.child,
     this.dark,
     this.imageAsset = 'assets/images/Login.webp',
-    this.imageUrl,
     this.blurSigma,
     this.gradientOpacity,
   });
@@ -26,10 +25,6 @@ class PageBackground extends StatelessWidget {
   /// Which photo sits under the gradient wash. Defaults to the shared auth
   /// background; Account Setup passes its own.
   final String imageAsset;
-
-  /// Optional live cover photo. Detail pages use the selected catalog item's
-  /// Storage URL; [imageAsset] remains the deterministic offline fallback.
-  final String? imageUrl;
 
   /// Background photo blur sigma (σ). Defaults to the design standard 2.
   /// Per DESIGN_SYSTEM.md 4.3: same value in both light and dark modes.
@@ -57,30 +52,15 @@ class PageBackground extends StatelessWidget {
           1.0,
         );
 
-    final liveUrl = imageUrl?.trim();
-    final photoWidget = liveUrl?.isNotEmpty == true
-        ? Image.network(
-            liveUrl!,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Image.asset(
-              imageAsset,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => ColoredBox(
-                color: isDark
-                    ? AppColors.darkForestFloor
-                    : AppColors.pageGradientBottom,
-              ),
-            ),
-          )
-        : Image.asset(
-            imageAsset,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => ColoredBox(
-              color: isDark
-                  ? AppColors.darkForestFloor
-                  : AppColors.pageGradientBottom,
-            ),
-          );
+    final photoWidget = Image.asset(
+      imageAsset,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => ColoredBox(
+        color: isDark
+            ? AppColors.darkForestFloor
+            : AppColors.pageGradientBottom,
+      ),
+    );
     final photo = _MaybeBlurred(sigma: photoBlurSigma, child: photoWidget);
 
     final gradient = DecoratedBox(

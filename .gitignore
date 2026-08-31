@@ -68,3 +68,7 @@ serviceAccountKey.json
 *firebase-adminsdk*.json
 # The whole folder, so anything dropped in it is covered whatever it is called.
 secrets/
+
+android/build/
+lib/tmp_dbg.dart
+lib/tmp_width_check.dart

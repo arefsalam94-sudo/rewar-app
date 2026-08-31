@@ -1490,3 +1490,626 @@ none was invented in this page-only pass.
   Cloud Function/seed script could not be syntax-checked or deployed.
 - No live Firebase project is configured here; seed execution, rule denial
   tests, function deployment and device visual approval remain release blockers.
+
+## 2026-08-17 — Firebase is live: `rewar-app-1c10e`
+
+The backend exists. Every "needs a Firebase project" caveat in the entries
+above is now resolved except the two recorded at the bottom of this one.
+
+### Done
+
+- **`flutterfire configure`** against `rewar-app-1c10e`. Generated
+  `lib/firebase_options.dart`, `android/app/google-services.json`, and both
+  Android and iOS apps are registered
+  (`1:5280763166:android:...` / `1:5280763166:ios:...`).
+- **`ios/Runner/GoogleService-Info.plist`** was **not** written by
+  `flutterfire configure` on Windows. Pulled down separately with
+  `firebase apps:sdkconfig ios <appId>`. Worth knowing: the plist is silently
+  skipped on a non-macOS host, and nothing warns you.
+- **`FirebaseBootstrap` now passes explicit options**
+  (`DefaultFirebaseOptions.currentPlatform`) instead of the bare
+  `initializeApp()`. The bare form reads the native platform config files, so
+  it behaves differently per platform and fails at *runtime* on whichever one
+  is misconfigured. Explicit options fail at *compile* time if the generated
+  file is missing, which is the failure you want.
+- **Firestore rules + indexes deployed.** Rules compiled clean.
+- **Five collections seeded and read back**: `legal_documents` (7),
+  `featured` (4), `nature_spots` (3 + 7 reviews), `tours` (3 + 5 reviews),
+  `currency_rates` (1).
+- **Both Explore Tours queries verified against live Firestore** once the
+  composite indexes finished building (~3 minutes): the catalog query returns
+  the three tours in departure order, the carousel query returns the two
+  highlighted ones.
+
+### The rules denial test finally ran — and it passes
+
+`SECURITY.md` 1c has been an open release blocker on every screen since the
+Home screen. It ran today against the **deployed** rules, as an
+**unauthenticated** client over the Firestore REST API (the Admin SDK bypasses
+rules, so it was deliberately not used).
+
+**11 of 11 denials pass**, including the ones that matter most for this phase:
+
+- writing a tour (price tampering) — denied
+- overwriting a real tour's `pricePerPerson` — denied
+- writing `currency_rates` (rate tampering) — denied
+- forging `reviewScore` on a tour — denied
+- posting a tour review as a guest — denied
+- reading `users`, `bookings`, `password_reset_codes`, `email_verify_codes` — all denied
+- reading an undeclared collection (catch-all) — denied
+
+**6 of 6 public reads pass**: `tours`, `nature_spots`, `featured`,
+`currency_rates/latest` by id, `legal_documents` by id — all readable by a
+signed-out guest, which is what the catalog is for.
+
+#### One result needed a second look, and the rule was right
+
+`list` on `tours/{id}/reviews` came back **denied**, which looked like a bug in
+a public-read collection. It is not.
+
+The deployed rule is `allow get, list: if resource.data.status == 'published'`
+— **stricter than the `if true` originally written here**, and better. On a
+list/query Firestore only permits queries it can *prove* cannot match a
+forbidden document, so an unfiltered scrape is rejected while the app's own
+query is allowed. Verified both ways:
+
+- the query the app issues (`where status == 'published'`) → **allowed, 3 docs**
+- an unfiltered scrape of the same subcollection → **denied (403)**
+
+So the `status == 'published'` filter in `ToursService.fetchTopReviews` /
+`fetchReviewPage` is not decoration — it is what makes the query legal. Anyone
+adding a review query must include it.
+
+The first version of the probe reported false failures because PowerShell's
+`Invoke-WebRequest` collapses a missing response to status `0`, and because a
+keyless REST call is rejected before rules are evaluated at all. Rewritten with
+Node's `fetch` and the app's API key. **Worth remembering: a denial test that
+cannot tell "denied by rules" from "never reached the server" proves nothing.**
+
+### A real gitignore hole, found by having a key to place
+
+`.gitignore` had `*-service-account.json`, but Firebase names its downloads
+`<project>-firebase-adminsdk-<hash>.json`, which that pattern **does not
+match**. The key would have been committed on the next `git add .`. Added
+`*firebase-adminsdk*.json` and `secrets/`, and verified with `git check-ignore`
+before moving the file into place.
+
+### Still blocked
+
+- **Cloud Functions are NOT deployed — the project is on the Spark plan.**
+  `firebase deploy --only functions` fails: Artifact Registry cannot be
+  enabled without Blaze. Consequence, and it is visible in the data right now:
+  **every seeded tour and nature spot has no `reviewScore` at all**, because
+  `syncTourReviewAggregates` / `syncNatureReviewAggregates` have never run.
+  The reviews are there; nothing has counted them. This is the documented
+  expected state, not a bug — but it means the rating work from earlier today
+  cannot be seen end to end until Blaze is enabled.
+- **Firebase Storage is not set up** (`Get Started` never clicked), so
+  `firebase deploy --only storage` fails and `storage.rules` is undeployed.
+  Nothing needs it yet — every `imageUrls` is empty — but the photos cannot be
+  uploaded until it exists.
+- **No screen has been seen rendering live data on a device.** The Windows
+  Developer Mode blocker is unchanged. Everything above was verified through
+  the Admin SDK and the REST API, which proves the *data and the rules*, not
+  the *UI*.
+- **The service-account key was pasted into chat twice.** The first
+  (`rewar-app-7c8ff`) is deleted and its project abandoned. The current one
+  (`746a6dbdee…`) is in `secrets/`, git-ignored, **and should still be rotated**
+  — an Admin SDK key bypasses every rule proven above.
+
+---
+
+## 2026-08-18 — Checkout step 1: Traveler Info (AWAITING APPROVAL)
+
+Built from the "payment 1" reference. Reached from the Tour Detail screen's
+"Reserve Insight" CTA, which was previously always disabled (`onReserve`
+defaulted to null) and is now live.
+
+### What was built
+
+- `lib/screens/booking_traveler_info_screen.dart` — the page: back button,
+  3-step indicator, the Traveler Information card (contact block → divider →
+  travellers stepper → one card per traveller → secure note), and a
+  **Continue to Payment** CTA held outside the scroll view so it does not move
+  while the form scrolls.
+- `lib/widgets/booking_step_indicator.dart` — the new shared step component.
+- `lib/models/traveler_details.dart` — `TravelerDetails`, `BookingContact`,
+  `TravelerParty`. All in memory; **nothing is written to Firestore.**
+- `PrimaryButton` gained an optional `trailingIcon` (the CTA's forward arrow,
+  which mirrors in RTL). Existing callers are unchanged.
+
+### Decisions taken, with the user's answers
+
+- **Sign-in is gated at Reserve, not at Payment.** `DATA_MODEL.md` requires an
+  auth uid on `bookings` ("there is no such thing as a guest booking"), so a
+  guest filling three steps would be refused by the rules at the charge. A
+  signed-out tap opens `SignInRequiredSheet` instead.
+- **Step 1 persists nothing.** No draft collection, no new rules, no cleanup
+  job — and no named minors' birth dates stored before a purchase exists.
+- **The travellers cap is the departure's remaining places** (`capacity -
+  bookedCount`). A sold-out departure disables the CTA.
+- **Age is enforced from `tours.minAge`** against each entered birth date.
+  Absent means no restriction.
+- **Fields match the reference exactly, plus a lead-traveller chip.** Special
+  requests, nationality/passport were offered and declined for now.
+
+### Documentation changed
+
+- `DESIGN_SYSTEM F.md` — **new section 14, "Step indicator"** (approved before
+  building; the design system had no stepper). Sections 14–23 renumbered to
+  15–24, and the two stale references in `explore_tours_screen.dart` updated.
+- `DESIGN_LIGHT F.md` / `DESIGN_DARK F.md` — new section 10 with matching
+  `step-*` tokens, one-for-one in both themes as section 3 requires.
+- `DATA_MODEL.md` — `tours.minAge`, and `bookingDetails.travelers[]` /
+  `bookingDetails.contact` for what the checkout function will eventually write.
+- `SEED_DATA.md` + `tool/seed_explore_tours.js` — `minAge: 18` on Gali Sherana.
+
+### Not done / still a placeholder
+
+- **`onContinue` is null in the app.** The CTA validates the whole form and
+  reports what is wrong, then stops — the Payment screen does not exist yet, so
+  it navigates nowhere rather than pretending to have booked something.
+- **`minAge: 18` is in the seed script but has not been pushed to Firestore.**
+  Re-run `node tool/seed_explore_tours.js` to verify the age gate against live
+  data.
+- **Not seen running on a device.** The Windows Developer Mode blocker recorded
+  earlier is unchanged; this page is verified by 25 widget/unit tests and the
+  analyzer, not by eye on a phone.
+- No security rules changed, because the screen reads and writes nothing new —
+  it reads the signed-in profile through the existing `UserProfileService`.
+
+---
+
+## 2026-08-19 — Checkout step 2: Payment (AWAITING APPROVAL)
+
+Built from the "payment 2" reference. Reached from step 1's Continue to
+Payment. Analyzer clean, 510 tests passing (21 new).
+
+### The security decision this screen turns on
+
+`SECURITY.md` 5.1/5.2 forbid custom card input fields and any code that reads,
+logs, stores or caches a raw PAN, CVV or expiry. The reference draws those
+fields. Asked, and the answer was **draw them inert** — the same contract
+`NewCardScreen` already established:
+
+- the three controllers live in widget `State` and are read by exactly one
+  thing: a "does this look filled in?" check that gates the button
+- nothing is written to Firestore, analytics, logs or preferences
+- there is no callback that hands the values anywhere
+- with no processor wired, Continue reports *"Card payments are not connected
+  yet. Your card details were not sent or saved."*
+
+**These fields must be replaced by the processor's Payment Sheet before a
+single real charge.** The class doc-comment on `BookingPaymentScreen` says so
+in the place a future editor will actually read it.
+
+### What was built
+
+- `lib/screens/booking_payment_screen.dart` — back button, step indicator
+  (step 1 completed), Payment Details card → Booking Summary → Payment Method,
+  and a **Continue to Payment** CTA outside the scroll view.
+- `lib/models/saved_payment_method.dart` — `SavedPaymentMethod`, `CardIssuer`,
+  `CardKind`, `PaymentRail`, and the shared fixtures. Lifted out of
+  `billing_payment_screen.dart`, which now uses them, so the two screens
+  cannot show different cards.
+- `Tour.totalFor(travelers:, transport:)` — one formula on the model. Tour
+  Detail's estimate now calls it too, so the two totals cannot drift.
+- `formatMoney` promoted from `@visibleForTesting` to public for the same
+  reason.
+
+### Decisions taken, with the user's answers
+
+- **Tour Detail feeds step 1.** `Reserve` now passes `_people` and `_transport`
+  through, so the count and the bus add-on the user picked survive into the
+  summary. Previously step 1 always opened at 1 traveller regardless.
+- **Two rails only: Mastercard/Visa and FIB.** Zain Cash was dropped from the
+  reference on request. **No schema change** — `bookings.paymentProvider`
+  already has `stripe` and `fib`. `nasswallet` stays in the schema, unoffered.
+- **The saved-card block hides entirely when there is no saved card**, rather
+  than drawing an empty frame.
+
+### Design-system changes — NEED SIGN-OFF
+
+Two corrections to what was approved for step 1:
+
+1. **Section 14 gained a "completed" state.** The original wording said a
+   completed step looks identical to an upcoming one. The step-2 reference
+   shows step 1 as a solid fill with a check glyph and an accent connector, so
+   the rule was wrong. Now three states, with the check glyph carrying the
+   distinction so it is not colour-only.
+2. **The step accent is `primary-container`, not `action`.** Step 1 was built
+   with the navy button colour; the references draw the ring and fill in the
+   palette green (`#187C64` light / `#2AF598` dark). Both theme files updated,
+   `AppColors.stepAccent` / `onStepAccent` added, and **step 1 now renders
+   green too** — a visible change to an already-built page.
+
+### Not done / still a placeholder
+
+- **`onPaid` is null in the app**, so the CTA validates and reports. Step 3
+  (Confirmation) does not exist and was not built ahead.
+- **The saved card is fixture data.** `DATA_MODEL.md` requires a callable Cloud
+  Function to list a provider customer's real methods; it does not exist, and
+  Functions are still undeployed (Spark plan).
+- **Brand marks are drawn from icons and text, not logo files.** Shipping Visa/
+  Mastercard/FIB artwork is a trademark question and none of those assets are
+  in the repo.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+- The Billing/New Card screen was **not** given the two-rail picker. That is a
+  separate approved page; flagged rather than changed under the one-page rule.
+
+---
+
+## Explore Tours — reference rebuild (2026-08-20)
+
+A re-layout pass against the supplied reference screenshot. **No data-flow,
+navigation, security or query changes** — the Firestore reads, the Apply
+semantics, the favourites writes, the FX conversion and the disclosure are all
+untouched. The background is unchanged (the bundled photo at σ2 under the
+theme gradient at 45%, straight from `DESIGN_SYSTEM.md` 4).
+
+### What changed on screen
+
+- **Carousel slide.** The rating moved from the leading edge to the
+  **trailing** edge and now sits **above the tour name**, with the score and
+  the five stars on one row and the operator tag beneath them. The place line
+  now reads `Rawanduz, Erbil | 2 days travel`, as the reference does. Slide
+  height 224 → 208, description 3 lines → 2, name 20 → 22.
+- **Search block.** The two inputs sit **side by side on one row**, with the
+  Apply button centred beneath the gap between them. Below 340dp, or above a
+  1.3× system font, they stack instead of clipping.
+- **Trending card.** Re-proportioned to the reference: thumbnail 104 → 100,
+  min height 184 → 168, page margin 16 → 20. Title and duration lead; the
+  **score and the five stars share one row** on the trailing side with the
+  operator tag under them. The distance line moved directly under the place
+  line. The price badge now draws the amount and "Per Person" **on one row**.
+  Feature icons: five instead of four, circle 36 → 32.
+
+### Schema change (approved shape, already in `DATA_MODEL.md`)
+
+`TourFeature` gained four ids — `activity`, `wifi`, `electricity`, `tent` —
+because the reference card tags departures with them and an unknown id is
+silently dropped. Purely additive; no seeded document needs migrating. Labels
+added in **all three languages**, and the detail screen's icon map too.
+
+### Design-system deviations — NEED SIGN-OFF
+
+1. **A compact rating badge.** Section 13 asks for "consistent padding and
+   height across screens". The reference draws the card's score+stars pair at
+   roughly half the carousel's size — five full-size stars cannot share a
+   ~190dp column with a tour name. Radius, fill, stroke and content colour are
+   the same tokens; only the type size and padding shrink.
+2. **A compact recessed input.** Section 8's 56dp height, 14px radius,
+   material and every state stroke are unchanged; the type size drops 16 → 14
+   so two fields fit on one row. Justified under 19/20 rather than treated as
+   a second input family.
+3. **The reference draws pill-shaped search fields** (radius ≈ 28) where
+   section 8.2 specifies radius 14. **Kept at 14** and flagged rather than
+   silently changed — say which is right.
+
+### Not done / still a placeholder
+
+- The refinement chips and the sort control still are not drawn, although
+  `toursIncludes` / `toursSortLabel` exist and `TourFilters` supports both.
+  Pre-existing, not introduced here.
+- There is no traveller stepper on the screen, so `TourFilters.travellers` is
+  always 1 and the price badge never shows a party total.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by the widget-test suite (56 tests on this screen, including a
+  360dp phone width and a 1.6× system font with no overflow).
+
+---
+
+## Checkout step 3 — Review & Confirm (2026-08-20)
+
+New screen: `lib/screens/booking_review_screen.dart`, opened from step 2's
+"Continue to Payment". Background, glass, radii, type scale and every colour
+come from `DESIGN_SYSTEM F.md` / `DESIGN_LIGHT F.md` / `DESIGN_DARK F.md` —
+the same tour photograph at σ2 under the theme gradient at 45%, no per-screen
+override.
+
+### What it draws, top to bottom
+
+1. **Step indicator** with steps 1 and 2 completed (check glyphs) and step 3
+   active — the shared `BookingStepIndicator` at `activeIndex: 2`.
+2. One base-glass card holding: **"Review & Confirm"** and its hint, a
+   hairline, **Booking Summary** (photo · facts · vertical rule · total), a
+   hairline, **Travelers Information** (numbered travellers | contact email and
+   phone), a hairline, **Price Breakdown** (Traveler Fee, Transportation Bus,
+   dotted leaders, then the Total Price), the consent checkbox, and the CTA.
+3. **"I agree to the Terms of Service and Policy of App."** Both labels are
+   tappable: Terms opens `legal_documents/terms_of_service` through
+   `PolicyDocumentScreen`, Policy opens the hub the hamburger menu opens.
+4. **"Confirm & Pay $65"** — disabled until the box is ticked, and also
+   disabled for a tour with no computable price.
+
+### Behaviour changes to an already-approved screen
+
+**Step 2's "Continue to Payment" now opens step 3** instead of firing `onPaid`.
+`onPaid` is forwarded to step 3, which is where a charge belongs — step 2 only
+collects the instrument. Its two CTA tests were updated to match. Card-form
+validation on step 2 is unchanged and still blocks before anything advances.
+
+### Still writes nothing
+
+`bookings` remains function-written after a provider confirms a charge
+(`SECURITY.md` 1, `DATA_MODEL.md`). Step 1's payload is still carried in
+memory through steps 2 and 3 and still dies with the flow. With no processor
+wired the CTA says plainly that nothing was charged and no booking was created.
+
+### Schema — nothing needed for this screen; four fields proposed
+
+Recorded in `DATA_MODEL.md` under "**PROPOSED for checkout step 3 — not
+approved**": `bookingDetails.transport`, `bookingDetails.priceBreakdown`,
+`bookingDetails.termsVersion` + `termsAcceptedAt`, and a
+`bookingDetails.cancellationPolicy` snapshot. **Not implemented** — they are
+for the checkout Cloud Function, and need sign-off first.
+
+### Design-system deviation — NEEDS SIGN-OFF
+
+The reference draws both consent links in the palette green
+(`primary-container`), but `text-link` is the navy `#0E2A44` in
+`DESIGN_LIGHT F.md` §6. Built with **`text-link` plus an underline and a
+heavier weight** — the Register screen's existing link treatment — because
+navy against `#1B1B1B` body text is not distinguishable on its own. Say
+whether `text-link` should become the green instead; that is a change to both
+theme files, not to this screen.
+
+### Reference vs. our arithmetic
+
+The reference prints "Traveler Fee · Two adults · $55" with a $55 per-person
+tour, i.e. it charges one fee for two people. Our model is per-person
+(`Tour.totalFor`), so the line reads **$110** for two adults at $55 each and
+the total follows. The layout matches the reference exactly; the numbers are
+the model's, so step 2 and step 3 cannot disagree about what is owed.
+
+### Not done / still a placeholder
+
+- **No availability re-check before paying.** Someone can sit on this screen
+  while the last seat sells. Booking.com re-validates at confirm; we do not.
+- **No cancellation-policy reassurance line** above the CTA, although
+  `tours.cancellationPolicy` is already on the tour and needs no schema change.
+- **No "taxes and fees included" statement** — still absent app-wide.
+- **No confirmation-email promise**, because no email is sent yet.
+- Step 4 (the post-payment confirmation/receipt screen) does **not** exist and
+  was not built ahead.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by 16 new widget tests, including a 360dp width at a 1.5× system
+  font, Kurdish and Arabic RTL, and dark mode.
+
+---
+
+## Explore Tours — carousel height, card trim, price nudge (2026-08-20)
+
+Three requested adjustments, plus one layout bug they exposed.
+
+- **Carousel grown by 100dp**, 208 → 308 at the default font size. It still
+  scales with the system font like every other measurement on the screen.
+- **The cancellation tier and the guide-language list were removed from every
+  Trending card.** Both are still stored on the tour and still drawn on the
+  Tour Detail screen — the card now keeps only the red availability warning
+  ("Only 3 spots left"), which the user asked to keep. A test now asserts the
+  card stays clear of them, so a future edit cannot quietly put them back.
+- **The price badge was nudged 6dp toward the trailing edge.** 6 rather than
+  10: the card's inner padding is 8dp and the glass panel clips, so a badge
+  crossing the rim would be cut by the rounded corner.
+
+### Bug found and fixed while doing it
+
+The price column had been wrapped in `Flexible` in the previous pass to stop a
+large-font overflow. A `Flexible` child takes a *share* of the row and is laid
+out at the **start** of that share — so the badge was sitting near the middle
+of the card rather than against its trailing edge. It was hard to see on a
+phone (the share is only ~96dp there) and obvious at tablet width. Replaced
+with a content-sized column under a 150dp ceiling, which keeps it at the
+trailing edge and still prevents the overflow.
+
+### Not done / still a placeholder
+
+- Unchanged from the earlier entry: no sort control, no refinement chips, no
+  traveller stepper, no result count.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by the widget suite (57 tests on this screen, including the 360dp
+  width at a 1.6× system font).
+
+---
+
+## Explore Tours — full-bleed card photo (2026-08-20)
+
+The Trending card's photo now fills the card's leading side edge-to-edge, as
+the marked-up reference asks.
+
+- The card's `GlassPanel` padding drops to zero; the 8dp inset it used to give
+  everything is now carried by the **text column alone**, so the photo can meet
+  the rim while the copy keeps its breathing room.
+- The photo's **leading** corners take the card's own 22dp radius so it nests
+  inside the curve with no sliver of glass showing; its **inner** edge keeps a
+  gentler 14dp radius against the text.
+- Width 100 → **116dp**. It already stretched to the card's full height.
+- The favourite heart moved 4dp in from the corner, which the photo now shares
+  with the card — at 0 it would have crowded the 22dp curve.
+
+Applies to every Trending card automatically: they are all one widget.
+
+### Not done / still a placeholder
+
+- Unchanged from the earlier entries: no sort control, no refinement chips, no
+  traveller stepper, no result count.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by the widget suite (58 tests on this screen). A new test measures
+  the photo against the card it bleeds into, so the inset cannot creep back.
+
+---
+
+## Car Rental Details (2026-08-24)
+
+The third screen in the Car Rental flow. Opens when a card on the Car Rental
+Results screen is tapped, receiving a single `CarRentalSelection` — the chosen
+vehicle plus the criteria the search was run with — so nothing is re-queried and
+no location, date or time is ever re-entered.
+
+- **Photo carousel** — `PageView` (no new dependency) over
+  `RentalVehicle.images`, with the Car Rental screen's dot style. Renders
+  whatever number of photos a vehicle carries: one photo shows no dots, and the
+  dot row is capped at 7 so a large gallery cannot overflow the card.
+- **Car details card** — name, model year, supplier badge, and five facilities
+  (persons, powertrain, AC, bags, transmission) in a `Wrap`, so they reflow
+  rather than overflow on a 320dp phone or at a 1.6× font scale.
+- **Pick-Up / Drop-Off card** — restates the search. Collapses to one Location
+  row when the branches match and shows both when they differ; it never assumes
+  they are the same. Dates and times use `MaterialLocalizations`, so they render
+  as the identical strings the search form showed.
+- **Additional Options card** — driven by `RentalVehicle.extras`. One row widget
+  covers both selection types: a checkbox add-on, and a stepper add-on whose `+`
+  and `−` disable at the supplier's own min/max (Baby Seat maxes at 3). A
+  quantity above one restates the arithmetic on the row.
+- **Price Summary** — base rate × rental days, plus extras. Labelled an
+  estimate, with a line saying taxes and supplier fees are not included, because
+  there is no source for them.
+- **Rental Conditions** — every field nullable; each row hides without data and
+  the card hides entirely when all are absent. Empty today by design.
+- **Apply** — the design system's `PrimaryButton` (§9.1), not the screenshot's
+  glass pill; per §1 the design files outrank the reference image on styling.
+  Shows the standard Coming Soon snackbar.
+
+### Schema
+
+`RentalVehicle` gained `transmission`, `extras` and `conditions`;
+`RentalCompany` gained an optional `logoAsset`. `DATA_MODEL.md`'s `cars` section
+documents all of it for when the collection is actually wired up.
+
+### Not done / still a placeholder
+
+- **No Firestore.** Like the two screens before it, this reads
+  `PreviewCarRentalService`. Nothing is seeded, and no security rules are needed
+  yet — recorded in `SEED_DATA.md`.
+- **One photograph exists.** The five gallery entries are the same asset
+  repeated so the carousel can be reviewed; real per-angle photos replace it.
+- **No supplier terms.** The Rental Conditions card renders nothing until a
+  provider supplies data — deliberately, not as an oversight.
+- **`logoAsset` is unused.** No logo files exist, so the company badge still
+  draws the generic car glyph.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by 16 widget/unit tests on this screen, covering both branch modes,
+  the stepper limits, the hidden conditions card, all three languages, RTL,
+  dark mode, and a 320dp screen at a 1.6× font scale.
+
+---
+
+## Hotel Details (2026-08-25)
+
+The second screen in the Where to Stay flow, built from the supplied `hotel`
+reference. **One route serves every hotel card in the app** — the highlighted
+carousel and the trending list both opened a "coming soon" snackbar before
+today; there is deliberately no separate detail page per entry point.
+
+The reference is a layout reference only. None of its blue palette was taken:
+every colour, blur, radius and spacing value comes from the three authoritative
+design files, and the page reuses the Where to Stay photograph
+(`assets/images/hotel background.webp`) through the shared `PageBackground`, so
+the flow reads as one continuous screen.
+
+### What it draws, top to bottom
+
+- **Back button** — the shared `GlassBackButton`, physically top-left in every
+  language (`DESIGN_SYSTEM.md` 11.3), outside the image.
+- **Gallery** — a `PageView` over `Hotel.images` with a `1 / 5` counter badge
+  and dot indicators. The count is **dynamic**: one photo shows neither, and
+  above eight photos the dots drop out so they cannot overflow while the
+  counter keeps stating the true position. Five entries is preview data, not a
+  layout constant.
+- **Summary card** — name, address with a pin, and, opposite them, the guest
+  score and the star classification as **two separate badges** (they are two
+  different measurements). Below a divider: the guest/room/bed summary, the two
+  date cards, and the centred `Change` pill.
+- **Facilities** — four in a two-column `Wrap`, with `See all` opening a sheet
+  that groups every facility by category. Facility icons resolve from a stable
+  `iconKey` string, because this data will come out of a database eventually and
+  a database cannot hold a Flutter icon. An unknown key falls back to a neutral
+  check rather than a wrong glyph.
+- **Reviews** — the overall 0–10 score with a per-category breakdown. The bars
+  fill from the leading edge, so they grow right-to-left in Arabic and Kurdish
+  with no branch in the code.
+- **Location** — a `GoogleMap` preview using the existing dependency and
+  `MapScreen`; **no new map SDK was added**. Without coordinates it says the map
+  is unavailable rather than showing a map of nowhere.
+- **Nearby** — name, leader dots, time and distance. The dots are decoration:
+  when a long localized name or a large font scale needs the width, the row
+  gives them up and stacks instead of clipping either value.
+- **Ratings & Comments** — two most recent reviews and the same
+  `Visited this place?` composer strip Explore Nature uses. `See all` and the
+  strip both open `HotelReviewsScreen`.
+- **Property policies** — collapsed by default, so it does not lengthen the page
+  for everyone who is not looking for it.
+- **Select Room** — `Scaffold.bottomNavigationBar`, so it is genuinely frozen
+  while content scrolls beneath it, with `bottomInset + 116` of scroll padding
+  so the last card is never hidden under it.
+
+### Decisions taken, with the user's answers
+
+1. **Data source** — preview service for now, and add the fields we have no
+   real data for so they exist when Firebase is wired up. Done: the whole
+   booking-critical layer is modelled in Dart and documented in
+   `DATA_MODEL.md`, with nothing seeded.
+2. **Select Room** — the standard "coming soon" snackbar. The Room Selection
+   screen is not built; building it would have been a second page.
+3. **Booking data** — models plus the Property policies section on this page.
+   Prices, taxes, breakfast, cancellation and prepayment are modelled but **not
+   displayed here**; they belong to room selection.
+4. **Reviews** — an adapter onto the shared Explore Nature reviews screen, the
+   arrangement Explore Tours already uses. No second comment system was built.
+
+Four smaller calls were made and stated rather than asked: the score scale
+stays **0–10** (the reference's 4.2/5 is not this app's scale, and mixing them
+un-normalized was explicitly out); the map is the existing provider; the gallery
+is built from bundled photographs; and the Change sheet exposes only what the
+app actually supports.
+
+### The reviews reuse, precisely
+
+`HotelReviewsScreen` wraps `NatureReviewsScreen` and injects
+`PreviewHotelReviewService`, which implements the `NatureSpotsService` surface
+against an in-memory hotel review store. Sorting, paging, helpful votes, the
+half-star composer, the sign-in gate and the "you already reviewed this" edit
+branch all come for free and cannot drift from Explore Nature. The aggregate
+shown at the top is derived **in the service**, never in a widget — the same
+rule the live screens follow, where a Cloud Function owns it.
+
+### Shared component extracted
+
+`_CounterRow` / `_CounterButton` were lifted out of `hotel_screen.dart` into
+`HotelCounterRow` / `HotelCounterButton` in `hotel_parts.dart`, so the Change
+sheet uses the identical stepper rather than a second one that would drift.
+`HotelCounterRow` gained an optional `maximum`; the Where to Stay screen passes
+none, so its behaviour is unchanged (its three tests still pass).
+
+### Schema
+
+**No Firestore change was required — nothing reads `hotels` yet.** The Dart
+model layer grew: `Hotel` gained `address`, `latitude`, `longitude`, `images`
+and `reviewCount`; `HotelSearchCriteria` gained `nights`; and a new
+`lib/models/hotel_detail.dart` holds `HotelDetail`, `HotelFacility`,
+`HotelReviewSummary`, `HotelNearbyPlace`, `HotelRoomType`, `HotelRoomOffer`
+and `HotelPolicies`. Every addition is optional with a default, so no existing
+call site changed. `DATA_MODEL.md`'s `hotels` section was rewritten to match,
+including the rule that provider ids stay separate from ours and that
+`taxesIncluded` is **stored, not inferred**.
+
+### Not done / still a placeholder
+
+- **No Firestore, no seeding, no rules.** Like the two Car Rental screens
+  before it, this reads preview data. Recorded in `SEED_DATA.md`.
+- **No hotel photographs exist.** The five gallery entries are existing bundled
+  photos so the carousel can be reviewed; real per-hotel photos replace them.
+- **Nothing is priced.** No price, tax or fee is displayed on this page. The
+  models exist; the Room Selection screen displays them.
+- **Reviews are in memory.** A review written in preview mode survives until the
+  app is closed and reaches no database. Whether only verified guests may review
+  a hotel is **an open question** — the app has no stay-verification concept, so
+  no permission rule was invented.
+- **No child ages and no bed-preference option** in the Change sheet. Neither is
+  supported by the model or by any provider, and both would have been fiction.
+- **Not seen on a device** — the Windows Developer Mode blocker is unchanged.
+  Verified by 36 widget/unit tests across the screen, the models, the review
+  service and the shared parts, covering all three languages, RTL, dark mode,
+  a 320dp screen at a 1.6x font scale, the empty/hidden sections, the failed
+  read, the occupancy ceiling and the criteria round-trip on back.

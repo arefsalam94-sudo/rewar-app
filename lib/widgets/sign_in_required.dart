@@ -124,7 +124,7 @@ class SignInRequiredSheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: GlassPanel(
-          borderRadius: 20,
+          borderRadius: 28,
           padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,

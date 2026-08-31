@@ -425,7 +425,7 @@ class _ImageSourceSheet extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: GlassPanel(
-          borderRadius: 20,
+          borderRadius: 28,
           dark: dark,
           child: Column(
             mainAxisSize: MainAxisSize.min,

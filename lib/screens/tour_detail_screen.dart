@@ -7,11 +7,14 @@ import '../models/tour.dart';
 import '../services/device_location_service.dart';
 import '../services/place_weather_service.dart';
 import '../services/tours_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/glass_panel.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/sign_in_required.dart';
+import 'booking_traveler_info_screen.dart';
 import 'map_screen.dart';
 import 'tour_assets.dart';
 import 'tour_reviews_screen.dart';
@@ -29,6 +32,7 @@ class TourDetailScreen extends StatefulWidget {
     this.locationService,
     this.weatherService,
     this.onReserve,
+    this.userProfileService,
     this.onReviewsTap,
   });
 
@@ -37,6 +41,7 @@ class TourDetailScreen extends StatefulWidget {
   final DeviceLocationService? locationService;
   final PlaceWeatherService? weatherService;
   final VoidCallback? onReserve;
+  final UserProfileService? userProfileService;
   final VoidCallback? onReviewsTap;
 
   @override
@@ -49,6 +54,8 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
       widget.locationService ?? const DeviceLocationService();
   late final PlaceWeatherService _weatherService =
       widget.weatherService ?? const PlaceWeatherService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
   late Future<List<NatureReview>> _reviewsFuture;
   Future<PlaceWeather>? _weatherFuture;
   DeviceLocation? _deviceLocation;
@@ -85,6 +92,9 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: Colors.transparent,
+      // The frozen CTA sits over the page photograph, not on an opaque bar, so
+      // the body background has to reach under the bottom bar.
+      extendBody: true,
       body: PageBackground(
         // This flow keeps the exact Explore Tours background photograph, as
         // requested; selected-tour photos belong to the gallery and cards.
@@ -112,35 +122,35 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
                       current: _photoIndex,
                       onChanged: (index) => setState(() => _photoIndex = index),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     _TourInformationCard(
                       tour: widget.tour,
                       distance: _distanceText(),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _FacilitiesCard(features: widget.tour.knownFeatures),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     SizedBox(
-                      height: 204,
+                      height: 184,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(child: _WeatherCard(future: _weatherFuture)),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: _MapCard(tour: widget.tour, onTap: _openMap),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _TourReviewsCard(
                       score: widget.tour.reviewScore,
                       count: widget.tour.ratingCount,
                       reviews: _reviewsFuture,
                       onTap: _openReviews,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     _CheckoutCard(
                       tour: widget.tour,
                       people: _people,
@@ -166,7 +176,46 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
         minimum: const EdgeInsets.fromLTRB(22, 8, 22, 12),
         child: PrimaryButton(
           label: AppLocalizations.of(context).tourReserveInsight,
-          onTap: widget.onReserve,
+          onTap: widget.tour.isSoldOut ? null : (widget.onReserve ?? _reserve),
+        ),
+      ),
+    );
+  }
+
+  /// Opens checkout step 1, after confirming there is an account to attach the
+  /// booking to.
+  ///
+  /// The gate is here rather than at the end of the flow because `bookings`
+  /// requires an auth uid (`DATA_MODEL.md`: "There is no such thing as a guest
+  /// booking"). Letting someone fill three steps and be refused by the rules at
+  /// the charge would not be a freer experience — it would be a wasted one.
+  Future<void> _reserve() async {
+    final l10n = AppLocalizations.of(context);
+    final profile = await _profileService.fetchProfile();
+    if (!mounted) return;
+
+    if (profile == null) {
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (_) => SignInRequiredSheet(
+          title: l10n.reserveSignInTitle,
+          body: l10n.reserveSignInBody,
+        ),
+      );
+      return;
+    }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => BookingTravelerInfoScreen(
+          tour: widget.tour,
+          // The count and the bus add-on the user already chose on this page
+          // carry into checkout, so the summary on step 2 shows the same
+          // total they were just looking at.
+          initialTravelers: _people,
+          transport: _transport,
+          userProfileService: widget.userProfileService,
         ),
       ),
     );
@@ -234,9 +283,9 @@ class _HeroGallery extends StatelessWidget {
   Widget build(BuildContext context) {
     final photos = tour.photos;
     return AspectRatio(
-      aspectRatio: 1.55,
+      aspectRatio: 1.7,
       child: GlassPanel(
-        borderRadius: 28,
+        borderRadius: 22,
         child: Stack(
           fit: StackFit.expand,
           children: [
@@ -636,7 +685,7 @@ class _TourReviewsCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(22),
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.all(18),
@@ -786,9 +835,8 @@ class _CheckoutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final base = tour.pricePerPerson;
-    final bus = transportation ? (tour.transportPricePerPerson ?? 0) : 0;
-    final total = base == null ? null : (base + bus) * people;
+    // One formula, on the model — the checkout summary shows the same number.
+    final total = tour.totalFor(travelers: people, transport: transportation);
     final maxPeople = tour.spotsLeft ?? 99;
     return GlassPanel(
       borderRadius: 28,
@@ -1031,6 +1079,10 @@ IconData _featureIcon(TourFeature feature) => switch (feature) {
   TourFeature.campfire => Icons.local_fire_department_outlined,
   TourFeature.transport => Icons.directions_bus_outlined,
   TourFeature.photography => Icons.photo_camera_outlined,
+  TourFeature.activity => Icons.directions_run_rounded,
+  TourFeature.wifi => Icons.wifi_rounded,
+  TourFeature.electricity => Icons.bolt_outlined,
+  TourFeature.tent => Icons.festival_outlined,
 };
 
 IconData _weatherIcon(int code) {

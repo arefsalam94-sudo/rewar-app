@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// App-wide theme, built from the `DESIGN light.md` design system.
-///
-/// Only the light scheme exists so far (the design was handed over light-only).
-/// Corbel is the app-wide font family per the confirmed decision.
+/// App-wide Light and Dark themes from the authoritative F design files.
 class AppTheme {
   AppTheme._();
 
@@ -98,7 +95,7 @@ class AppTheme {
   static ThemeData darkForLocale(Locale locale) =>
       _buildDark(fontFamilyForCode(locale.languageCode));
 
-  static ThemeData _buildDark(String fontFamily) => ThemeData(
+  static ThemeData _buildDark(String? fontFamily) => ThemeData(
     useMaterial3: true,
     fontFamily: fontFamily,
     colorScheme: darkColorScheme,
@@ -110,14 +107,14 @@ class AppTheme {
   ///
   /// Rudaw must be present in `assets/fonts/` and registered in
   /// `pubspec.yaml` to render; until then Kurdish falls back to a system font.
-  static String fontFamilyForCode(String code) {
+  static String? fontFamilyForCode(String code) {
     switch (code) {
       case 'ku':
-        return 'Rudaw';
+        return null;
       case 'ar':
         return 'Dubai';
       default:
-        return 'Corbel';
+        return 'Plus Jakarta Sans';
     }
   }
 
@@ -126,9 +123,9 @@ class AppTheme {
       _buildLight(fontFamilyForCode(locale.languageCode));
 
   /// Default light theme (Corbel) — used where no locale is available.
-  static ThemeData get light => _buildLight('Corbel');
+  static ThemeData get light => _buildLight('Plus Jakarta Sans');
 
-  static ThemeData _buildLight(String fontFamily) => ThemeData(
+  static ThemeData _buildLight(String? fontFamily) => ThemeData(
     useMaterial3: true,
     fontFamily: fontFamily,
     colorScheme: lightColorScheme,

@@ -10,7 +10,11 @@ import 'package:kurdistan_paradise_travel_guide/models/featured_item.dart';
 import 'package:kurdistan_paradise_travel_guide/models/reset_target.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/account_setup_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/billing_payment_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/car_rental_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/explore_nature_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/explore_tours_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/flight_ticketing_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/hotel_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/forget_password_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/help_support_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/home_screen.dart';
@@ -36,9 +40,9 @@ import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.da
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/theme_controller.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_recessed_glass_field.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/gradient_field.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/home_bottom_nav.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/home_drawer.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
@@ -489,14 +493,17 @@ void main() {
     await tester.pumpAndSettle();
 
     final container = find.ancestor(
-      of: find.byType(GradientField).first,
+      of: find.byType(AppRecessedGlassField).first,
       matching: find.byType(GlassPanel),
     );
     expect(container, findsOneWidget);
 
     // All seven fields share that one container.
     expect(
-      find.descendant(of: container, matching: find.byType(GradientField)),
+      find.descendant(
+        of: container,
+        matching: find.byType(AppRecessedGlassField),
+      ),
       findsNWidgets(7),
     );
     // The title and the Register button stay outside it.
@@ -511,8 +518,7 @@ void main() {
       ),
       findsNothing,
     );
-    // It uses the design file's brand-gradient card fill, not the sheen.
-    expect(tester.widget<GlassPanel>(container).fill, GlassFill.brandGradient);
+    expect(tester.widget<GlassPanel>(container).depth, GlassDepth.base);
   });
 
   testWidgets('Register requires a date of birth before submitting', (
@@ -577,7 +583,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('خۆتۆمارکردن'), findsWidgets);
+    expect(find.text('تۆمارکردن'), findsWidgets);
     expect(find.text('ناوی تەواو'), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.byType(RegisterScreen))),
@@ -928,7 +934,7 @@ void main() {
       expect(AppTheme.darkColorScheme.outline, const Color(0xFFFFFFFF));
       expect(AppTheme.darkColorScheme.outlineVariant, const Color(0xFFD5DDD7));
       // ...but as a border it must sit at the specified 20% opacity.
-      expect(AppColors.darkBorderOpacity, 0.20);
+      expect(AppColors.darkBorderOpacity, 0.14);
       // And every other text-capable token is pure white.
       expect(AppTheme.darkColorScheme.onSurface, const Color(0xFFFFFFFF));
       expect(
@@ -971,7 +977,7 @@ void main() {
       expect(color.a, closeTo(0.60, 0.01));
     });
 
-    testWidgets('the background photo is blurred in dark mode only', (
+    testWidgets('the background photo is blurred in both themes', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(_host(const RegisterScreen()));
@@ -980,7 +986,7 @@ void main() {
 
       appDarkMode.value = false;
       await tester.pumpAndSettle();
-      expect(find.byType(ImageFiltered), findsNothing);
+      expect(find.byType(ImageFiltered), findsWidgets);
     });
   });
 
@@ -1518,7 +1524,7 @@ void main() {
 
       expect(
         tester.widget<Text>(find.text('Fly to')).style!.fontFamily,
-        'Corbel',
+        'Plus Jakarta Sans',
       );
 
       final kurdistan = tester
@@ -1527,7 +1533,8 @@ void main() {
           .toList();
       for (final style in kurdistan) {
         expect(style.fontFamily, 'Unbounded');
-        expect(style.fontSize, 45);
+        // Slide two closes on the region's name at headline size.
+        expect(style.fontSize, 58);
         expect(
           style.fontVariations,
           contains(const FontVariation('wght', 500)),
@@ -1752,9 +1759,9 @@ void main() {
 
     // The first header line is Light; the second stays Unbounded Medium.
     for (final (locale, line1, family) in const [
-      ('en', 'Discover', 'Corbel'),
+      ('en', 'Discover', 'Plus Jakarta Sans'),
       ('ar', 'اكتشف', 'Dubai'),
-      ('ku', 'بدۆزەرەوە', 'Rudaw'),
+      ('ku', 'کوردستان', null),
     ]) {
       testWidgets('the first header line is Light in $locale', (tester) async {
         await tester.pumpWidget(
@@ -1767,7 +1774,7 @@ void main() {
         expect(
           style.fontWeight,
           FontWeight.w300,
-          reason: 'Corbel Light and Dubai Light are registered at weight 300',
+          reason: 'The heading uses the shared light display weight',
         );
       });
     }
@@ -2213,7 +2220,7 @@ void main() {
 
       // Every nav destination is present, Home selected.
       expect(find.byType(HomeBottomNav), findsOneWidget);
-      for (final label in const ['Home', 'Trips', 'Map', 'Saved']) {
+      for (final label in const ['Home', 'My Bookings', 'Map', 'Saved']) {
         expect(find.text(label), findsOneWidget);
       }
     });
@@ -2313,13 +2320,13 @@ void main() {
       addTearDown(tester.view.reset);
       await _pumpHome(tester);
 
-      // "Where to Stay" is still a Phase 4 placeholder; Explore Nature now
-      // navigates instead, and is covered by the test below.
+      // The whole journey card opens the Phase 4 hotel discovery screen.
       final cardTitle = find.text('Where\nto Stay');
       await tester.tap(cardTitle);
       await tester.pumpAndSettle();
 
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.byType(HotelScreen), findsOneWidget);
+      expect(find.text('Coming soon'), findsNothing);
     });
 
     testWidgets('the Explore Nature card opens the Explore Nature screen', (
@@ -2336,6 +2343,20 @@ void main() {
       // The one journey card with a screen behind it (ROADMAP.md Phase 3).
       expect(find.byType(ExploreNatureScreen), findsOneWidget);
       expect(find.text('Coming soon'), findsNothing);
+    });
+
+    testWidgets('the Car Rental card opens the Car Rental screen', (
+      tester,
+    ) async {
+      await _pumpHome(tester);
+      await tester.ensureVisible(find.text('Car Rental'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Car Rental'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CarRentalScreen), findsOneWidget);
+      expect(find.text('Pick-up – Drop-off Location'), findsOneWidget);
     });
 
     testWidgets('no count falls back to "Explore", never an invented number', (
@@ -2423,7 +2444,7 @@ void main() {
     ) async {
       await _pumpHome(tester, locale: const Locale('ku'));
 
-      expect(find.text('گەشتەکەت پلان بکە'), findsOneWidget);
+      expect(find.text('پلان بۆ گەشتەکەت دابنێ'), findsOneWidget);
       expect(find.text('گەڕان\nبە سروشتدا'), findsOneWidget);
       expect(
         Directionality.of(tester.element(find.byType(HomeBottomNav))),
@@ -2492,7 +2513,7 @@ void main() {
         expect(decoration.color, AppColors.luminousMint);
       });
 
-      testWidgets('light mode uses the navy action colour instead', (
+      testWidgets('light mode separates action and heading colors', (
         tester,
       ) async {
         await _pumpHome(tester);
@@ -2503,7 +2524,7 @@ void main() {
         final greeting = tester.widget<Text>(
           find.text('Good evening, Dear User'),
         );
-        expect(greeting.style!.color, AppColors.actionNavy);
+        expect(greeting.style!.color, AppTheme.lightColorScheme.onSurface);
       });
     });
 
@@ -2533,6 +2554,37 @@ void main() {
           tester.getSize(find.byType(HomeBottomNav)).height,
           greaterThanOrEqualTo(48),
         );
+      });
+
+      testWidgets('My Bookings opens the bookings page, bar still in place', (
+        tester,
+      ) async {
+        await _pumpHome(tester, isGuest: false);
+        final barRect = tester.getRect(find.byType(HomeBottomNav));
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(HomeBottomNav),
+            matching: find.byIcon(Icons.calendar_month_outlined),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MyBookingsScreen), findsOneWidget);
+        // Same widget, same pixels — the bar must not jump or vanish.
+        expect(find.byType(HomeBottomNav), findsOneWidget);
+        expect(tester.getRect(find.byType(HomeBottomNav)), barRect);
+
+        // Home takes you back rather than stacking a second dashboard.
+        await tester.tap(
+          find.descendant(
+            of: find.byType(HomeBottomNav),
+            matching: find.byIcon(Icons.home_outlined),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(MyBookingsScreen), findsNothing);
+        expect(find.byType(HomeScreen), findsOneWidget);
       });
 
       for (final (label, width, scale) in const [
@@ -2667,6 +2719,34 @@ void main() {
         expect(inDrawer('Explore Nature'), findsNothing);
       });
 
+      for (final (label, screen) in <(String, Type)>[
+        ('Explore Nature', ExploreNatureScreen),
+        ('Where to Stay', HotelScreen),
+        ('Car Rental', CarRentalScreen),
+        ('Flight Ticketing', FlightTicketingScreen),
+        ('Explore Tours', ExploreToursScreen),
+      ]) {
+        testWidgets('Services → $label opens $screen', (tester) async {
+          await _pumpHome(tester);
+          await openDrawer(tester);
+          await tester.tap(find.text('Services'));
+          await tester.pumpAndSettle();
+
+          await tester.tap(
+            find.descendant(
+              of: find.byType(HomeDrawer),
+              matching: find.text(label),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(screen), findsOneWidget);
+          // The drawer is a dialog route — it must not be left open behind
+          // the pushed screen.
+          expect(find.byType(HomeDrawer), findsNothing);
+        });
+      }
+
       testWidgets('rows without a screen yet are still styled no-ops', (
         tester,
       ) async {
@@ -2692,9 +2772,19 @@ void main() {
         await _pumpHome(tester, isGuest: false);
         await openDrawer(tester);
 
-        await tester.ensureVisible(find.text('My Bookings'));
+        await tester.ensureVisible(
+          find.descendant(
+            of: find.byType(HomeDrawer),
+            matching: find.text('My Bookings'),
+          ),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('My Bookings'));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(HomeDrawer),
+            matching: find.text('My Bookings'),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.byType(MyBookingsScreen), findsOneWidget);
@@ -2710,9 +2800,19 @@ void main() {
         await _pumpHome(tester, isGuest: true);
         await openDrawer(tester);
 
-        await tester.ensureVisible(find.text('My Bookings'));
+        await tester.ensureVisible(
+          find.descendant(
+            of: find.byType(HomeDrawer),
+            matching: find.text('My Bookings'),
+          ),
+        );
         await tester.pumpAndSettle();
-        await tester.tap(find.text('My Bookings'));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(HomeDrawer),
+            matching: find.text('My Bookings'),
+          ),
+        );
         await tester.pumpAndSettle();
 
         expect(find.text('Sign in to see your bookings'), findsOneWidget);

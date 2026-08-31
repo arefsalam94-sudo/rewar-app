@@ -193,7 +193,7 @@ class _CardShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassPanel(
-      borderRadius: 24,
+      borderRadius: 28,
       dark: dark,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       child: child,

@@ -55,6 +55,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationBusy = true;
   bool _logoutBusy = false;
   String _units = 'km';
+  _PreferenceSection? _expandedPreference;
 
   @override
   void initState() {
@@ -84,17 +85,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _chooseLanguage() async {
-    final selected = await _choiceSheet<String>(
-      title: AppLocalizations.of(context).settingsLanguage,
-      current: Localizations.localeOf(context).languageCode,
-      choices: {
-        'ku': AppLocalizations.of(context).languageKurdish,
-        'en': AppLocalizations.of(context).languageEnglish,
-        'ar': AppLocalizations.of(context).languageArabic,
-      },
-    );
-    if (selected == null) return;
+  void _togglePreference(_PreferenceSection preference) {
+    if (preference == _PreferenceSection.currency && widget.isGuest) {
+      _snack(AppLocalizations.of(context).signInRequired);
+      return;
+    }
+    setState(() {
+      _expandedPreference = _expandedPreference == preference
+          ? null
+          : preference;
+    });
+  }
+
+  Future<void> _selectLanguage(String selected) async {
     await _preferences.setLanguageCode(selected);
     if (!widget.isGuest) {
       try {
@@ -106,21 +109,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     appLocale.value = Locale(selected);
   }
 
-  Future<void> _chooseCurrency(AppCurrency current) async {
-    if (widget.isGuest) {
-      _snack(AppLocalizations.of(context).signInRequired);
-      return;
-    }
-    final selected = await _choiceSheet<AppCurrency>(
-      title: AppLocalizations.of(context).currency,
-      current: current,
-      choices: const {
-        AppCurrency.usd: 'USD',
-        AppCurrency.iqd: 'IQD',
-        AppCurrency.eur: 'EUR',
-      },
-    );
-    if (selected == null || selected == current) return;
+  Future<void> _selectCurrency(
+    AppCurrency selected,
+    AppCurrency current,
+  ) async {
+    if (selected == current) return;
     try {
       await _profileService.updateCurrency(selected);
       if (mounted) {
@@ -131,45 +124,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _chooseUnits() async {
-    final l10n = AppLocalizations.of(context);
-    final selected = await _choiceSheet<String>(
-      title: l10n.settingsUnits,
-      current: _units,
-      choices: {'km': l10n.kilometers, 'mi': l10n.miles},
-    );
-    if (selected == null) return;
+  Future<void> _selectUnits(String selected) async {
     await _preferences.setUnits(selected);
     if (mounted) setState(() => _units = selected);
   }
-
-  Future<T?> _choiceSheet<T>({
-    required String title,
-    required T current,
-    required Map<T, String> choices,
-  }) => showGeneralDialog<T>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: Colors.black.withValues(alpha: 0.12),
-    transitionDuration: const Duration(milliseconds: 180),
-    pageBuilder: (dialogContext, animation, secondaryAnimation) =>
-        _ChoicePopover<T>(title: title, current: current, choices: choices),
-    transitionBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1).animate(curved),
-          child: child,
-        ),
-      );
-    },
-  );
 
   Future<void> _restoreNotifications() async {
     final enabled = await _preferences.notificationsEnabled();
@@ -365,27 +323,90 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                           ),
                                     ),
                                   ),
-                                  _SettingsRow(
-                                    icon: Icons.language_rounded,
-                                    label: l10n.settingsLanguage,
-                                    value: _languageName(l10n),
-                                    onTap: _chooseLanguage,
+                                  _ExpandableSettingsRow(
+                                    row: _SettingsRow(
+                                      icon: Icons.language_rounded,
+                                      label: l10n.settingsLanguage,
+                                      value: _languageName(l10n),
+                                      expandable: true,
+                                      expanded:
+                                          _expandedPreference ==
+                                          _PreferenceSection.language,
+                                      onTap: () => _togglePreference(
+                                        _PreferenceSection.language,
+                                      ),
+                                    ),
+                                    expanded:
+                                        _expandedPreference ==
+                                        _PreferenceSection.language,
+                                    child: _InlineChoiceList<String>(
+                                      current: Localizations.localeOf(
+                                        context,
+                                      ).languageCode,
+                                      choices: {
+                                        'ku': l10n.languageKurdish,
+                                        'en': l10n.languageEnglish,
+                                        'ar': l10n.languageArabic,
+                                      },
+                                      onSelected: _selectLanguage,
+                                    ),
                                   ),
-                                  _SettingsRow(
-                                    icon: Icons.paid_outlined,
-                                    label: l10n.currency,
-                                    value: profile.currency.code,
-                                    forceValueLtr: true,
-                                    onTap: () =>
-                                        _chooseCurrency(profile.currency),
+                                  _ExpandableSettingsRow(
+                                    row: _SettingsRow(
+                                      icon: Icons.paid_outlined,
+                                      label: l10n.currency,
+                                      value: profile.currency.code,
+                                      forceValueLtr: true,
+                                      expandable: true,
+                                      expanded:
+                                          _expandedPreference ==
+                                          _PreferenceSection.currency,
+                                      onTap: () => _togglePreference(
+                                        _PreferenceSection.currency,
+                                      ),
+                                    ),
+                                    expanded:
+                                        _expandedPreference ==
+                                        _PreferenceSection.currency,
+                                    child: _InlineChoiceList<AppCurrency>(
+                                      current: profile.currency,
+                                      choices: const {
+                                        AppCurrency.usd: 'USD',
+                                        AppCurrency.iqd: 'IQD',
+                                        AppCurrency.eur: 'EUR',
+                                      },
+                                      onSelected: (selected) => _selectCurrency(
+                                        selected,
+                                        profile.currency,
+                                      ),
+                                    ),
                                   ),
-                                  _SettingsRow(
-                                    icon: Icons.straighten_rounded,
-                                    label: l10n.settingsUnits,
-                                    value: _units == 'mi'
-                                        ? l10n.milesShort
-                                        : l10n.kilometersShort,
-                                    onTap: _chooseUnits,
+                                  _ExpandableSettingsRow(
+                                    row: _SettingsRow(
+                                      icon: Icons.straighten_rounded,
+                                      label: l10n.settingsUnits,
+                                      value: _units == 'mi'
+                                          ? l10n.milesShort
+                                          : l10n.kilometersShort,
+                                      expandable: true,
+                                      expanded:
+                                          _expandedPreference ==
+                                          _PreferenceSection.units,
+                                      onTap: () => _togglePreference(
+                                        _PreferenceSection.units,
+                                      ),
+                                    ),
+                                    expanded:
+                                        _expandedPreference ==
+                                        _PreferenceSection.units,
+                                    child: _InlineChoiceList<String>(
+                                      current: _units,
+                                      choices: {
+                                        'km': l10n.kilometers,
+                                        'mi': l10n.miles,
+                                      },
+                                      onSelected: _selectUnits,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -434,83 +455,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-/// Compact liquid-glass selector shared by Language, Currency and Units.
-/// Its shape and selected state mirror the globe menu on the Home screen.
-class _ChoicePopover<T> extends StatelessWidget {
-  const _ChoicePopover({
-    required this.title,
+enum _PreferenceSection { language, currency, units }
+
+/// Inline selector shared by Language, Currency and Units.
+class _InlineChoiceList<T> extends StatelessWidget {
+  const _InlineChoiceList({
     required this.current,
     required this.choices,
+    required this.onSelected,
   });
 
-  final String title;
   final T current;
   final Map<T, String> choices;
+  final ValueChanged<T> onSelected;
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final pointerColor = isDark
-        ? AppColors.darkGlassTop.withValues(alpha: 0.86)
-        : Colors.white.withValues(alpha: 0.62);
-
-    return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Semantics(
-            namesRoute: true,
-            label: title,
-            child: Material(
-              color: Colors.transparent,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minWidth: 176, maxWidth: 240),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: GlassPanel(
-                        key: ValueKey<String>(
-                          'settings-choice-${title.toLowerCase()}',
-                        ),
-                        elevated: true,
-                        borderRadius: 22,
-                        lightFillOpacity: 0.48,
-                        darkFillOpacity: 0.52,
-                        padding: const EdgeInsets.all(6),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (final entry in choices.entries)
-                              _ChoiceOption(
-                                label: entry.value,
-                                selected: entry.key == current,
-                                onTap: () =>
-                                    Navigator.of(context).pop(entry.key),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    PositionedDirectional(
-                      top: 0,
-                      end: 22,
-                      child: CustomPaint(
-                        size: const Size(18, 11),
-                        painter: _ChoicePointerPainter(pointerColor),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsetsDirectional.fromSTEB(50, 0, 8, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final entry in choices.entries)
+          _ChoiceOption(
+            label: entry.value,
+            selected: entry.key == current,
+            onTap: () => onSelected(entry.key),
           ),
-        ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
 }
 
 class _ChoiceOption extends StatelessWidget {
@@ -526,62 +499,49 @@ class _ChoiceOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-    final selectedText = isDark ? AppColors.darkOnPrimary : Colors.white;
-
     return Semantics(
       button: true,
       selected: selected,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          constraints: const BoxConstraints(minHeight: 48),
-          alignment: AlignmentDirectional.centerStart,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
+            color: selected
+                ? AppColors.accent(context).withValues(alpha: 0.14)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
-            color: selected ? selectedFill : Colors.transparent,
           ),
-          child: Text(
-            label,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 16,
-              height: 20 / 16,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-              color: selected ? selectedText : AppColors.heading(context),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                    color: selected
+                        ? AppColors.selectionAccent(context)
+                        : AppColors.heading(context),
+                  ),
+                ),
+              ),
+              if (selected)
+                Icon(
+                  Icons.check_rounded,
+                  size: 20,
+                  color: AppColors.selectionAccent(context),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
-}
-
-class _ChoicePointerPainter extends CustomPainter {
-  const _ChoicePointerPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawPath(
-      Path()
-        ..moveTo(size.width / 2, 0)
-        ..lineTo(size.width, size.height)
-        ..lineTo(0, size.height)
-        ..close(),
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ChoicePointerPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 class _SettingsHeader extends StatelessWidget {
@@ -626,13 +586,12 @@ class _ProfileCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = AppColors.accent(context);
     return GlassPanel(
-      borderRadius: 22,
-      fill: GlassFill.sheen,
+      borderRadius: 28,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(28),
           child: Padding(
             padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 12, 14),
             child: Row(
@@ -739,8 +698,7 @@ class _SettingsGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GlassPanel(
-    borderRadius: 22,
-    fill: GlassFill.sheen,
+    borderRadius: 28,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     child: Column(
       children: [
@@ -761,6 +719,8 @@ class _SettingsRow extends StatelessWidget {
     this.onTap,
     this.trailing,
     this.forceValueLtr = false,
+    this.expandable = false,
+    this.expanded = false,
   });
 
   final IconData icon;
@@ -769,6 +729,8 @@ class _SettingsRow extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final bool forceValueLtr;
+  final bool expandable;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -826,7 +788,19 @@ class _SettingsRow extends StatelessWidget {
             trailing!,
           ] else if (onTap != null) ...[
             const SizedBox(width: 8),
-            _ForwardChevron(color: accent),
+            if (expandable)
+              AnimatedRotation(
+                turns: expanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 24,
+                  color: accent,
+                ),
+              )
+            else
+              _ForwardChevron(color: accent),
           ],
         ],
       ),
@@ -842,6 +816,37 @@ class _SettingsRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ExpandableSettingsRow extends StatelessWidget {
+  const _ExpandableSettingsRow({
+    required this.row,
+    required this.expanded,
+    required this.child,
+  });
+
+  final Widget row;
+  final bool expanded;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      row,
+      ClipRect(
+        child: AnimatedSize(
+          alignment: Alignment.topCenter,
+          duration: const Duration(milliseconds: 280),
+          reverseDuration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: expanded
+              ? Column(children: [const _FadingDivider(), child])
+              : const SizedBox(width: double.infinity),
+        ),
+      ),
+    ],
+  );
 }
 
 class _ForwardChevron extends StatelessWidget {
@@ -919,9 +924,7 @@ class _LogoutButton extends StatelessWidget {
         disabledBackgroundColor: background.withValues(alpha: 0.55),
         disabledForegroundColor: foreground.withValues(alpha: 0.85),
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(isDark ? 16 : 12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }

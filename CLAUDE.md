@@ -50,21 +50,23 @@ immediately — don't let them drift. (If keeping them in sync manually
 becomes a real burden later, that's the point to consider extracting a
 shared Dart package — not before.)
 
-## 4. Design — not finalized yet
+## 4. Design — authoritative files
 
-`DESIGN_SYSTEM.md` currently only has placeholder structure, no real
-values. Design is being created separately (outside Claude Code) and will
-be handed over once finished, covering **both light and dark mode** (see
-rule below) — don't invent colors/fonts/spacing before that happens.
+The complete, approved UI source of truth is the following three-file set:
 
-If asked to build a screen before `DESIGN_SYSTEM.md` is filled in, ask
-first rather than improvising a visual style — a placeholder screen built
-with made-up colors just creates rework later.
+1. `DESIGN_SYSTEM F.md` — shared structure, geometry, components, spacing,
+   glass behavior, responsive behavior, states, navigation UI, and RTL rules.
+2. `DESIGN_LIGHT F.md` — Light-theme values and colors.
+3. `DESIGN_DARK F.md` — Dark-theme values and colors.
+
+These are the only authoritative design specifications for existing and
+future screens. Do not merge older design rules into them, and do not modify
+them unless the user explicitly requests it.
 
 ### Rule: Light mode and dark mode are built together, not sequentially
 Every color must be a **semantic token** (e.g. `colorScheme.surface`,
 `colorScheme.onSurface`) with both a light and dark value defined in
-`DESIGN_SYSTEM.md` — never a raw hardcoded color in a widget. Support for
+the three authoritative design files — never a raw hardcoded color in a widget. Support for
 both modes should work automatically via Flutter's `theme:` / `darkTheme:`
 / `themeMode:` on `MaterialApp`, not through if/else branches sprinkled
 through screen code. If a token doesn't have both a light and dark value
@@ -79,20 +81,21 @@ together** before building starts:
    colors, text, buttons, shapes, all visible.
 2. **A full functional description** of what every button/element does —
    not just what it looks like, but what happens when it's tapped.
-3. **The global palette/fonts/shapes file** (`DESIGN_SYSTEM.md`, already
+3. **The global palette/fonts/shapes files** (`DESIGN_SYSTEM F.md`,
+   `DESIGN_LIGHT F.md`, and `DESIGN_DARK F.md`, already
    filled in) for anything not fully visible in the screenshot (exact hex
    codes, font family, spacing scale).
 
 Do not start writing code for a page until all three are present. If any
 one is missing or ambiguous (e.g. a button's action isn't described, or a
-color in the screenshot doesn't match anything in `DESIGN_SYSTEM.md`),
+color in the screenshot doesn't match the authoritative design files),
 ask before building — don't guess a plausible-looking behavior or color.
 
 Once built, a page must visually match its reference screenshot as
 closely as Flutter allows, using only tokens already defined in
-`DESIGN_SYSTEM.md` — never a new color/font/shape invented on the spot to
+the authoritative design files — never a new color/font/shape invented on the spot to
 match something slightly off in the screenshot. If the screenshot and
-`DESIGN_SYSTEM.md` conflict, flag the conflict and ask which one is right
+the authoritative design files conflict, flag the conflict and ask which one is right
 rather than silently picking one.
 
 ## 5. Non-negotiable working rules
@@ -108,17 +111,17 @@ Do not build ahead. Do not "helpfully" wire up screens I haven't asked for
 yet, even if it seems efficient.
 
 ### Rule: Design system is locked once it exists
-Once `DESIGN_SYSTEM.md` has real values (light + dark) and I've approved
+Once the three authoritative design files have real values (light + dark) and I've approved
 them, every screen must be built using only those values. Do not
 introduce a new color, font size, spacing value, or component style
-without first proposing a change to `DESIGN_SYSTEM.md` and getting my
+without first proposing a change to `DESIGN_SYSTEM F.md` and getting my
 approval.
 
 ### Rule: Read before you build
 At the start of every session, and before starting any new screen, read
 (in this order):
 1. `CLAUDE.md` (this file)
-2. `DESIGN_SYSTEM.md`
+2. `DESIGN_SYSTEM F.md`
 3. `DATA_MODEL.md`
 4. `SECURITY.md`
 5. `ROADMAP.md` — confirm which page we're on
@@ -173,7 +176,8 @@ addition, update the doc (in both repos), and only then write the code.
 - `PROGRESS.md` — append an entry every time a page is approved.
 - `DATA_MODEL.md` — update whenever a schema change is approved (and copy
   the change to the admin panel repo).
-- `DESIGN_SYSTEM.md` — update whenever a new approved pattern is added.
+- `DESIGN_SYSTEM F.md` — update only when the user explicitly requests a
+  design-system change.
 - `SEED_DATA.md` — update whenever a new example document is seeded.
 - `SECURITY.md` — update whenever a new rule pattern or checklist item is
   needed (and copy the change to the admin panel repo).

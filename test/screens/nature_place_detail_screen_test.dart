@@ -26,7 +26,13 @@ void main() {
       'ku': 'ڕەواندز، کوردستان',
       'ar': 'رواندوز، كردستان',
     },
-    imageAssets: ['assets/images/featured-rawanduz.png'],
+    imageAssets: [
+      'assets/images/featured-rawanduz.png',
+      'assets/images/featured-rawanduz.png',
+      'assets/images/featured-rawanduz.png',
+      'assets/images/featured-rawanduz.png',
+      'assets/images/featured-rawanduz.png',
+    ],
     reviewScore: 8.2,
     ratingCount: 214,
     nearbyStays: [
@@ -62,10 +68,8 @@ void main() {
 
     expect(find.byType(GlassBackButton), findsOneWidget);
     expect(find.text('8.2'), findsWidgets);
-    // The reference labels the card's first two lines, so the label and the
-    // value share one wrapping paragraph rather than sitting on two lines.
-    expect(find.text('Name: Bekhal Waterfall'), findsOneWidget);
-    expect(find.text('Bekhal Waterfall'), findsOneWidget); // map pill
+    expect(find.textContaining('Name:'), findsNothing);
+    expect(find.text('Bekhal Waterfall'), findsNWidgets(2));
     expect(find.text('Suggested stays nearby'), findsOneWidget);
     expect(find.text('Rawanduz Resort'), findsOneWidget);
     expect(find.text('Weather is unavailable right now'), findsOneWidget);
@@ -76,6 +80,33 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nature-detail-reviews-card')));
     expect(reviewTapped, isTrue);
+  });
+
+  testWidgets('draws five gallery dots for the five preview slides', (
+    tester,
+  ) async {
+    await _pump(tester, spot: spot);
+
+    for (var index = 0; index < 5; index++) {
+      expect(
+        find.byKey(ValueKey('nature-detail-gallery-dot-$index')),
+        findsOneWidget,
+      );
+    }
+    expect(
+      tester.getSize(find.byKey(const ValueKey('nature-detail-gallery-dot-0'))),
+      const Size.square(9),
+    );
+
+    await tester.drag(
+      find.byKey(const ValueKey('nature-detail-gallery')),
+      const Offset(-300, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSize(find.byKey(const ValueKey('nature-detail-gallery-dot-1'))),
+      const Size.square(9),
+    );
   });
 
   testWidgets('uses the selected place cover as the blurred page background', (
@@ -120,11 +151,11 @@ void main() {
     tester,
   ) async {
     await _pump(tester, spot: spot, locale: const Locale('ku'));
-    expect(find.text('تاڤگەی بێخاڵ'), findsOneWidget);
+    expect(find.text('تاڤگەی بێخاڵ'), findsNWidgets(2));
     expect(find.text('شوێنی مانەوەی پێشنیارکراو لە نزیکەوە'), findsOneWidget);
 
     await _pump(tester, spot: spot, locale: const Locale('ar'));
-    expect(find.text('شلال بيخال'), findsOneWidget);
+    expect(find.text('شلال بيخال'), findsNWidgets(2));
     expect(find.text('أماكن إقامة مقترحة قريبة'), findsOneWidget);
   });
 }

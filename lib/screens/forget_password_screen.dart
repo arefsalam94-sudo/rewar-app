@@ -199,14 +199,14 @@ class _ContactOption extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
     return GlassPanel(
-      borderRadius: 22,
+      borderRadius: 28,
       borderColor: selected ? AppColors.accent(context) : null,
       borderWidth: selected ? 2 : null,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(28),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Row(
