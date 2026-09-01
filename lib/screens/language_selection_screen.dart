@@ -251,7 +251,7 @@ class _LanguageButton extends StatelessWidget {
                     fontFamily: 'Plus Jakarta Sans',
                     fontWeight: FontWeight.w700,
                     fontSize: 22,
-                    color: colorScheme.onSurface,
+                    color: colorScheme.error,
                   ),
                 ),
                 const SizedBox(height: 4),
