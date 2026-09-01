@@ -351,11 +351,11 @@ void main() {
       );
 
       expect(find.text('دەربەندی ڕەواندز'), findsNWidgets(2));
-      expect(find.text('شوێن:'), findsNWidgets(3));
+      expect(find.text('ناونیشان:'), findsNWidgets(3));
 
       // The page is right-to-left…
       expect(
-        Directionality.of(tester.element(find.text('شوێن:').first)),
+        Directionality.of(tester.element(find.text('ناونیشان:').first)),
         TextDirection.rtl,
       );
       // …but a progress track is not a sentence.

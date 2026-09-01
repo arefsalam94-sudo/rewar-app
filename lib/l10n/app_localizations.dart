@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart' as intl;
 
 import '../models/booking.dart';
 import '../models/help_topic.dart';
@@ -288,7 +289,8 @@ class AppLocalizations {
       'hotelRatingsAndComments': 'Ratings & Comments',
       'hotelSelectRoom': 'Select Room',
       'hotelChooseRoom': 'Choose Your Room',
-      'hotelMockNotice': 'Preview data — availability and payments are not live.',
+      'hotelMockNotice':
+          'Preview data — availability and payments are not live.',
       'hotelNoRooms': 'No rooms are available for these dates.',
       'hotelChangeDates': 'Change dates',
       'hotelBackToHotel': 'Back to hotel',
@@ -299,19 +301,24 @@ class AppLocalizations {
       'hotelRechecking': 'Rechecking price and availability…',
       'hotelCompleteBooking': 'Complete Your Booking',
       'hotelGuestDetails': 'Guest details',
-      'hotelSpecialRequestsHint': 'Optional requests are subject to hotel availability',
+      'hotelSpecialRequestsHint':
+          'Optional requests are subject to hotel availability',
       'hotelStripePreview': 'Stripe — preview only',
       'hotelFibPreview': 'FIB — preview only',
-      'hotelMockPaymentNotice': 'No payment will be sent. This checkout creates a local preview reservation only.',
+      'hotelMockPaymentNotice':
+          'No payment will be sent. This checkout creates a local preview reservation only.',
       'hotelRoomSubtotal': 'Room subtotal',
-      'hotelBookingConsent': 'I agree to the displayed rate and cancellation conditions.',
+      'hotelBookingConsent':
+          'I agree to the displayed rate and cancellation conditions.',
       'hotelConfirmMockBooking': 'Confirm preview booking',
       'hotelMockBookingComplete': 'Preview Booking Complete',
-      'hotelMockBookingCompleteBody': 'No room was held with a hotel and no payment was charged.',
+      'hotelMockBookingCompleteBody':
+          'No room was held with a hotel and no payment was charged.',
       'hotelViewReservations': 'View Your Reservations',
       'hotelGuestRequired': 'Please complete the required guest details.',
       'hotelConsentRequired': 'Please accept the booking conditions.',
-      'hotelRateUnavailable': 'This rate is no longer available. Choose another option.',
+      'hotelRateUnavailable':
+          'This rate is no longer available. Choose another option.',
       'hotelPropertyPolicies': 'Property policies',
       'hotelPolicyCheckInFrom': 'Check-in from',
       'hotelPolicyCheckOutUntil': 'Check-out until',
@@ -1214,15 +1221,15 @@ class AppLocalizations {
       'exploreNatureHint': 'ڕێڕەوەکان، دەریاچەکان و پارکە سەرنجڕاکێشەکان.',
       'whereToStay': 'شوێنی مانەوە',
       'whereToStayHint': 'هوتێل، کوخ و شوێنی مانەوەی تایبەت',
-      'hotelLocation': 'شوێن',
+      'hotelLocation': 'ناونیشان',
       'hotelLocationHint': 'دەتەوێت لە کوێ بمێنیتەوە؟',
       'hotelRecentSearches': 'گەڕانەکانی پێشوو',
       'hotelDate': 'بەروار',
       'hotelCheckIn': 'چوونە ژوورەوە',
       'hotelCheckOut': 'چوونە دەرەوە',
-      'hotelGuests': 'میوانان',
-      'hotelAdult': 'گەورە',
-      'hotelChild': 'منداڵ',
+      'hotelGuests': 'مێوانەکان',
+      'hotelAdult': 'پێگەیشتوو',
+      'hotelChild': 'ساوا',
       'hotelRoom': 'ژوور',
       'hotelBed': 'جێگا',
       'hotelOptions': 'هەڵبژاردەکان',
@@ -1233,7 +1240,7 @@ class AppLocalizations {
       'hotelBar': 'بار',
       'hotelRestaurant': 'چێشتخانە',
       'hotelGym': 'هۆڵی وەرزش',
-      'hotelParking': 'وەستانگە',
+      'hotelParking': 'گەراج',
       'hotelFreeWifi': 'وایفای بەخۆڕایی',
       'hotelBeach': 'کەناراو',
       'hotelMoreOptions': 'هەڵبژاردەی زیاتر',
@@ -1241,13 +1248,13 @@ class AppLocalizations {
       'hotelTrending': 'شوێنە بەناوبانگەکانی مانەوە',
       'hotelPerNight': 'بۆ هەر شەوێک',
       'hotelDistanceFromCenter': '{distance} کم لە ناوەندی شارەوە',
-      'hotelAdultsBeds': '{adults} گەورە، {beds} جێگا',
+      'hotelAdultsBeds': '{adults} پێگەیشتوو، {beds} جێگا',
       'hotelGuestSummary':
-          '{adults} گەورە، {children} منداڵ، {rooms} ژوور، {beds} جێگا',
-      'hotelAdultCountOne': '{count} گەورە',
-      'hotelAdultCountMany': '{count} گەورە',
-      'hotelChildCountOne': '{count} منداڵ',
-      'hotelChildCountMany': '{count} منداڵ',
+          '{adults} پێگەیشتوو، {children} ساوا، {rooms} ژوور، {beds} جێگا',
+      'hotelAdultCountOne': '{count} پێگەیشتوو',
+      'hotelAdultCountMany': '{count} پێگەیشتوو',
+      'hotelChildCountOne': '{count} ساوا',
+      'hotelChildCountMany': '{count} ساوا',
       'hotelRoomCountOne': '{count} ژوور',
       'hotelRoomCountMany': '{count} ژوور',
       'hotelBedCountOne': '{count} جێگا',
@@ -1282,7 +1289,7 @@ class AppLocalizations {
       'hotelService': 'خزمەتگوزاری',
       'hotelStaff': 'ستاف',
       'hotelValue': 'نرخ بەرامبەر بەها',
-      'hotelMap': 'شوێن',
+      'hotelMap': 'ناونیشان',
       'hotelMapUnavailable': 'نەخشە بەردەست نییە',
       'hotelNearby': 'نزیک لێرەوە',
       'hotelNearbyEmpty': 'هێشتا هیچ شوێنێکی نزیک تۆمار نەکراوە',
@@ -1303,23 +1310,28 @@ class AppLocalizations {
       'hotelRechecking': 'پشکنینەوەی نرخ و بەردەستبوون…',
       'hotelCompleteBooking': 'حجزەکەت تەواو بکە',
       'hotelGuestDetails': 'وردەکاری میوان',
-      'hotelSpecialRequestsHint': 'داواکارییە ئارەزوومەندانەکان بە بەردەستبوونی هوتێل بەستراونەتەوە',
+      'hotelSpecialRequestsHint':
+          'داواکارییە ئارەزوومەندانەکان بە بەردەستبوونی هوتێل بەستراونەتەوە',
       'hotelStripePreview': 'Stripe — تەنها پێشبینین',
       'hotelFibPreview': 'FIB — تەنها پێشبینین',
-      'hotelMockPaymentNotice': 'هیچ پارەدانێک نانێردرێت. ئەم پشکنینە تەنها حجزێکی پێشبینینی ناوخۆیی دروست دەکات.',
+      'hotelMockPaymentNotice':
+          'هیچ پارەدانێک نانێردرێت. ئەم پشکنینە تەنها حجزێکی پێشبینینی ناوخۆیی دروست دەکات.',
       'hotelRoomSubtotal': 'کۆی ژوور',
-      'hotelBookingConsent': 'ڕازیم بە نرخ و مەرجەکانی هەڵوەشاندنەوەی پیشاندراو.',
+      'hotelBookingConsent':
+          'ڕازیم بە نرخ و مەرجەکانی هەڵوەشاندنەوەی پیشاندراو.',
       'hotelConfirmMockBooking': 'پشتڕاستکردنەوەی حجزی پێشبینین',
       'hotelMockBookingComplete': 'حجزی پێشبینین تەواو بوو',
-      'hotelMockBookingCompleteBody': 'هیچ ژوورێک لە هوتێل نەگیرا و هیچ پارەیەک وەرنەگیرا.',
+      'hotelMockBookingCompleteBody':
+          'هیچ ژوورێک لە هوتێل نەگیرا و هیچ پارەیەک وەرنەگیرا.',
       'hotelViewReservations': 'حجزەکانت ببینە',
       'hotelGuestRequired': 'تکایە وردەکارییە پێویستەکانی میوان تەواو بکە.',
       'hotelConsentRequired': 'تکایە مەرجەکانی حجز قبوڵ بکە.',
-      'hotelRateUnavailable': 'ئەم نرخە چیتر بەردەست نییە. هەڵبژاردەیەکی تر هەڵبژێرە.',
+      'hotelRateUnavailable':
+          'ئەم نرخە چیتر بەردەست نییە. هەڵبژاردەیەکی تر هەڵبژێرە.',
       'hotelPropertyPolicies': 'ڕێساکانی هوتێل',
       'hotelPolicyCheckInFrom': 'چوونە ژوورەوە لە',
       'hotelPolicyCheckOutUntil': 'چوونە دەرەوە تا',
-      'hotelPolicyChildren': 'منداڵان',
+      'hotelPolicyChildren': 'ساوا',
       'hotelPolicyCribs': 'لانکە',
       'hotelPolicyExtraBeds': 'جێگای زیادە',
       'hotelPolicyAgeRestriction': 'سنووری تەمەن',
@@ -1334,7 +1346,7 @@ class AppLocalizations {
       'hotelPolicyAccessibility': 'دەستڕاگەیشتن',
       'hotelFacilityGeneral': 'گشتی',
       'hotelFacilityInternet': 'ئینتەرنێت',
-      'hotelFacilityParking': 'وەستانگە',
+      'hotelFacilityParking': 'گەراج',
       'hotelFacilityFoodAndDrink': 'خواردن و خواردنەوە',
       'hotelFacilityWellness': 'تەندروستی',
       'hotelFacilityPool': 'مەلەوانگە',
@@ -1423,7 +1435,7 @@ class AppLocalizations {
       'carResultsListLabel': 'ئەنجامەکانی گەڕانی بەکرێدانی ئۆتۆمبێل',
       'carDetails': 'زانیاری ئۆتۆمبێل',
       'carPickupDropOffDetails': 'زانیاری وەرگرتن / گەڕاندنەوە',
-      'carLocation': 'شوێن',
+      'carLocation': 'ناونیشان',
       'carAdditionalOptions': 'هەڵبژاردنی زیادە',
       'carApply': 'جێبەجێکردن',
       'carAutomatic': 'ئۆتۆماتیک',
@@ -1438,7 +1450,7 @@ class AppLocalizations {
       'carExtrasTotal': 'زیادەکان',
       'carEstimatedTotal': 'کۆی خەمڵێنراو',
       'carRentalDayOne': '١ ڕۆژی کرێ',
-      'carRentalDaysMany': '{count} ڕۆژی کرێ',
+      'carRentalDaysMany': 'کرێی {count} ڕۆژان',
       'carEstimateNote': 'تەنها خەمڵاندنە — باج و کرێی دابینکەر لەخۆ ناگرێت.',
       'carRentalConditions': 'مەرجەکانی کرێ',
       'carFuelPolicy': 'سیاسەتی سووتەمەنی',
@@ -1457,7 +1469,8 @@ class AppLocalizations {
       'carRequiredDocuments': 'بەڵگەنامە پێویستەکان',
       'carOrSimilar': 'ئەم مۆدێلە یان ئۆتۆمبێلێکی هاوشێوە',
       'flightTicketing': 'بلیتی فڕۆکە',
-      'flightTicketingHint': 'فڕینی هەرزان، حیجزی ئاسان، پارەدانی پارێزراو',
+      'flightTicketingHint':
+          'فڕینی هەرزان، تۆمارکردنی ئاسان، پارەدانی پارێزراو',
       'findFlight': 'فڕین بدۆزەرەوە',
       'flightOneWay': 'یەک ئاراستە',
       'flightRoundTrip': 'چوون و گەڕانەوە',
@@ -1471,8 +1484,8 @@ class AppLocalizations {
       'flightDepartureDate': 'بەرواری ڕۆیشتن',
       'flightReturnDate': 'بەرواری گەڕانەوە',
       'flightPassengers': 'گەشتیاران',
-      'flightAdults': 'گەورەکان (١٢+)',
-      'flightChildren': 'منداڵان (٢–١١)',
+      'flightAdults': 'پێگەیشتوو (١٢+)',
+      'flightChildren': 'ساوا (٢–١١)',
       'flightInfants': 'ساواکان (خوار ٢ ساڵ)',
       'flightCabinClass': 'پۆلی کابین',
       'flightCabinEconomy': 'ئابووری',
@@ -1490,7 +1503,7 @@ class AppLocalizations {
       'flightReturnRequired': 'تکایە بەرواری گەڕانەوە هەڵبژێرە',
       'flightSearchReady': 'گەڕانەکەت ئامادەیە بۆ پەڕەی ئەنجامەکان',
       'flightPassengerSummary':
-          '{adults} گەورە · {children} منداڵ · {infants} ساوا',
+          '{adults} پێگەیشتوو · {children} ساوا · {infants} ساوا',
       'flightResultsOne': '١ فڕین دۆزرایەوە',
       'flightResultsMany': '{count} فڕین دۆزرایەوە',
       'flightSortBest': 'باشترین',
@@ -1515,10 +1528,10 @@ class AppLocalizations {
       'exploreToursHint': 'ئەزموونی ناوخۆیی، شوێنە شاراوەکان و ڕێبەری شارەزا',
       'findTours': 'گەشت بدۆزەرەوە',
       'placesCount': '{count}+ شوێن',
-      'navHome': 'ماڵەوە',
+      'navHome': 'سەرەکی',
       'navTrips': 'گەشتەکان',
       'navMap': 'نەخشە',
-      'navSaved': 'پاشەکەوتکراو',
+      'navSaved': 'دڵخوازەکانم',
       'featuredLoadFailed': 'نەتوانرا شوێنە هەڵبژێردراوەکان باربکرێن',
       'featuredEmpty': 'هێشتا هیچ شوێنێکی هەڵبژێردراو نییە',
       'signInToSave': 'بچۆ ژوورەوە بۆ پاشەکەوتکردن',
@@ -1694,7 +1707,7 @@ class AppLocalizations {
       'filterBeach': 'کەنارئاو',
       'filterSunsetView': 'دیمەنی خۆرئاوابوون',
       'filterCustomize': 'ڕێکخستنی خۆت',
-      'locationLabel': 'شوێن:',
+      'locationLabel': 'ناونیشان:',
       'distanceLabel': 'دووری:',
       'distanceFromCurrentLocation': '{distance} لە شوێنی ئێستاتەوە',
       'natureSpotsLoadFailed':
@@ -1761,11 +1774,11 @@ class AppLocalizations {
       'reviewJustNow': 'هەر ئێستا',
       'reviewHoursAgo': 'لەمەوبەر {count} کاتژمێر',
       'reviewOneHourAgo': 'لەمەوبەر ١ کاتژمێر',
-      'reviewDaysAgo': 'لەمەوبەر {count} ڕۆژ',
+      'reviewDaysAgo': 'لەمەوبەر {count} ڕۆژان',
       'reviewOneDayAgo': 'لەمەوبەر ١ ڕۆژ',
       'reviewWeeksAgo': 'لەمەوبەر {count} هەفتە',
       'reviewOneWeekAgo': 'لەمەوبەر ١ هەفتە',
-      'reviewMonthsAgo': 'لەمەوبەر {count} مانگ',
+      'reviewMonthsAgo': 'لەمەوبەر {count} مانگەکان',
       'reviewOneMonthAgo': 'لەمەوبەر ١ مانگ',
       'reviewYearsAgo': 'لەمەوبەر {count} ساڵ',
       'reviewOneYearAgo': 'لەمەوبەر ١ ساڵ',
@@ -1790,7 +1803,7 @@ class AppLocalizations {
       'placeTypeWaterfall': 'ئاوشار',
       'placeTypeRiver': 'ڕووبار',
       'placeTypeMuseum': 'مۆزەخانە',
-      'amenityParking': 'شوێنی ئۆتۆمبێل',
+      'amenityParking': 'گەراج',
       'amenityRestrooms': 'ئاودەست',
       'amenityRestaurants': 'چێشتخانە',
       'amenityCafes': 'کافێ',
@@ -1879,8 +1892,8 @@ class AppLocalizations {
       'bookingActionPickupInfo': 'زانیاری وەرگرتن',
       'bookingActionTourDetails': 'وردەکاری گەشت',
       'bookingActionViewDetails': 'بینینی وردەکاری',
-      'bookingAdultsCount': '{count} گەورە',
-      'bookingAdultCount': '{count} گەورە',
+      'bookingAdultsCount': '{count} پێگەیشتوو',
+      'bookingAdultCount': '{count} پێگەیشتوو',
       'bookingHours': '{count} کاتژمێر',
       'bookingsLoadFailed': 'نەتوانرا حیجزەکانت باربکرێن',
       'bookingsEmptyTitle': 'هێشتا هیچ حیجزێک نییە',
@@ -1901,7 +1914,7 @@ class AppLocalizations {
       'month4': 'نیسان',
       'month5': 'ئایار',
       'month6': 'حوزەیران',
-      'month7': 'تەمووز',
+      'month7': 'تەمموز',
       'month8': 'ئاب',
       'month9': 'ئەیلوول',
       'month10': 'تشرینی یەکەم',
@@ -1920,7 +1933,7 @@ class AppLocalizations {
       'toursEmpty': 'هیچ گەشتێک لەگەڵ گەڕانەکەت ناگونجێت',
       'toursHighlightedEmpty': 'هێشتا هیچ گەشتێک دیاری نەکراوە',
       'tourDayTravel': 'گەشتی {count} ڕۆژ',
-      'tourDaysTravel': 'گەشتی {count} ڕۆژ',
+      'tourDaysTravel': 'گەشتی {count} ڕۆژان',
       'tourPerPerson': 'بۆ هەر کەسێک',
       'tourPerPersonBadge': 'بۆ هەر کەسێک',
       'tourFeatureCamping': 'خێوەتگە',
@@ -1948,7 +1961,7 @@ class AppLocalizations {
       'tourTotalFor': 'کۆی گشتی {price}',
       'tourCancelFree24h': 'هەڵوەشاندنەوەی بێبەرامبەر تا 24 کاتژمێر پێشتر',
       'tourCancelFree48h': 'هەڵوەشاندنەوەی بێبەرامبەر تا 48 کاتژمێر پێشتر',
-      'tourCancelFree7d': 'هەڵوەشاندنەوەی بێبەرامبەر تا 7 ڕۆژ پێشتر',
+      'tourCancelFree7d': 'هەڵوەشاندنەوەی بێبەرامبەر تا 7 ڕۆژان پێشتر',
       'tourCancelNonRefundable': 'پارە ناگەڕێتەوە',
       'tourGuideLanguages': 'ڕێبەر قسە دەکات بە',
       'tourLanguageEnglish': 'ئینگلیزی',
@@ -2280,12 +2293,14 @@ class AppLocalizations {
       'hotelSpecialRequestsHint': 'الطلبات الاختيارية تخضع لتوفر الفندق',
       'hotelStripePreview': 'Stripe — معاينة فقط',
       'hotelFibPreview': 'FIB — معاينة فقط',
-      'hotelMockPaymentNotice': 'لن يتم إرسال أي دفعة. ينشئ هذا الدفع حجز معاينة محلياً فقط.',
+      'hotelMockPaymentNotice':
+          'لن يتم إرسال أي دفعة. ينشئ هذا الدفع حجز معاينة محلياً فقط.',
       'hotelRoomSubtotal': 'المجموع الفرعي للغرفة',
       'hotelBookingConsent': 'أوافق على السعر وشروط الإلغاء المعروضة.',
       'hotelConfirmMockBooking': 'تأكيد حجز المعاينة',
       'hotelMockBookingComplete': 'اكتمل حجز المعاينة',
-      'hotelMockBookingCompleteBody': 'لم يتم حجز غرفة لدى الفندق ولم يتم تحصيل أي مبلغ.',
+      'hotelMockBookingCompleteBody':
+          'لم يتم حجز غرفة لدى الفندق ولم يتم تحصيل أي مبلغ.',
       'hotelViewReservations': 'عرض حجوزاتك',
       'hotelGuestRequired': 'يرجى إكمال بيانات الضيف المطلوبة.',
       'hotelConsentRequired': 'يرجى الموافقة على شروط الحجز.',
@@ -4318,11 +4333,99 @@ class _KurdishMaterialDelegate
   bool isSupported(Locale locale) => locale.languageCode == 'ku';
 
   @override
-  Future<MaterialLocalizations> load(Locale locale) =>
-      GlobalMaterialLocalizations.delegate.load(const Locale('ar'));
+  Future<MaterialLocalizations> load(Locale locale) async {
+    // Initializes the bundled `intl` Arabic symbols used by the constructor
+    // below; Kurdish then overrides every displayed weekday/month name.
+    await GlobalMaterialLocalizations.delegate.load(const Locale('ar'));
+    return _KurdishMaterialLocalizations();
+  }
 
   @override
   bool shouldReload(_KurdishMaterialDelegate old) => false;
+}
+
+/// Arabic supplies the translated Material control labels and RTL behavior,
+/// while these overrides keep every calendar/date surface in Sorani Kurdish.
+class _KurdishMaterialLocalizations extends MaterialLocalizationAr {
+  _KurdishMaterialLocalizations()
+    : super(
+        localeName: 'ar',
+        fullYearFormat: intl.DateFormat('y', 'ar'),
+        compactDateFormat: intl.DateFormat('dd/MM/y', 'ar'),
+        shortDateFormat: intl.DateFormat('dd/MM/y', 'ar'),
+        mediumDateFormat: intl.DateFormat('dd MMM y', 'ar'),
+        longDateFormat: intl.DateFormat('EEEE، d MMMM y', 'ar'),
+        yearMonthFormat: intl.DateFormat('MMMM y', 'ar'),
+        shortMonthDayFormat: intl.DateFormat('d MMM', 'ar'),
+        decimalFormat: intl.NumberFormat.decimalPattern('ar'),
+        twoDigitZeroPaddedFormat: intl.NumberFormat('00', 'ar'),
+      );
+
+  static const List<String> _months = <String>[
+    '',
+    'کانوونی دووەم',
+    'شوبات',
+    'ئازار',
+    'نیسان',
+    'ئایار',
+    'حوزەیران',
+    'تەمموز',
+    'ئاب',
+    'ئەیلوول',
+    'تشرینی یەکەم',
+    'تشرینی دووەم',
+    'کانوونی یەکەم',
+  ];
+
+  static const List<String> _weekdays = <String>[
+    '',
+    'دووشەممە',
+    'سێشەممە',
+    'چوارشەممە',
+    'پێنجشەممە',
+    'هەینی',
+    'شەممە',
+    'یەکشەممە',
+  ];
+
+  String _number(int value) => formatDecimal(value);
+  String _month(DateTime date) => _months[date.month];
+
+  @override
+  String formatShortDate(DateTime date) =>
+      '${_number(date.day)}/${_number(date.month)}/${_number(date.year)}';
+
+  @override
+  String formatMediumDate(DateTime date) =>
+      '${_number(date.day)} ${_month(date)} ${_number(date.year)}';
+
+  @override
+  String formatFullDate(DateTime date) =>
+      '${_weekdays[date.weekday]}، ${formatMediumDate(date)}';
+
+  @override
+  String formatMonthYear(DateTime date) =>
+      '${_month(date)} ${_number(date.year)}';
+
+  @override
+  String formatShortMonthDay(DateTime date) =>
+      '${_number(date.day)} ${_month(date)}';
+
+  /// Sunday-first indexing required by Material; calendars rotate this list
+  /// using [firstDayOfWeekIndex] so Saturday is displayed first.
+  @override
+  List<String> get narrowWeekdays => const <String>[
+    'ی',
+    'د',
+    'س',
+    'چ',
+    'پ',
+    'ه',
+    'ش',
+  ];
+
+  @override
+  int get firstDayOfWeekIndex => 6;
 }
 
 class _KurdishCupertinoDelegate

@@ -273,7 +273,7 @@ const _divanFacilities = <HotelFacility>[
     id: 'free-parking',
     name: HotelText(
       en: 'Free private parking',
-      ku: 'وەستانگەی تایبەتی بەخۆڕایی',
+      ku: 'گەراجی تایبەتی بەخۆڕایی',
       ar: 'موقف خاص مجاني',
     ),
     category: HotelFacilityCategory.parking,

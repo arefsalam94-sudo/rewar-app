@@ -134,7 +134,7 @@ class FeaturedService {
       },
       subtitles: {
         'en': '3 days  •  Guided tour',
-        'ku': '٣ ڕۆژ  •  گەشتی ڕێبەرایەتیکراو',
+        'ku': '٣ ڕۆژان  •  گەشتی ڕێبەرایەتیکراو',
         'ar': '٣ أيام  •  جولة بمرشد',
       },
       imageAsset: 'assets/images/journey-tours.png',

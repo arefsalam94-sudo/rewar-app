@@ -82,7 +82,7 @@ void main() {
 
     expect(find.text('Pick-up'), findsOneWidget);
     expect(find.text('Drop-off'), findsOneWidget);
-    // Same pick-up and drop-off branch collapses to a single Location row.
+    // Same pick-up and drop-off branch collapses to one address row.
     expect(find.text('Location'), findsOneWidget);
     expect(find.text('Pick-up location'), findsNothing);
     expect(find.text('Erbil International Airport'), findsOneWidget);
