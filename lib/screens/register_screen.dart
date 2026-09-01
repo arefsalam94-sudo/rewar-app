@@ -49,6 +49,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   DateTime? _dateOfBirth;
   Gender? _gender;
+  bool _genderOpen = false;
   CountryCode _country = CountryCode.defaultCountry;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -104,19 +105,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return age;
   }
 
-  Future<void> _pickGender() async {
+  void _toggleGender() {
     FocusScope.of(context).unfocus();
+    setState(() => _genderOpen = !_genderOpen);
+  }
+
+  void _selectGender(Gender gender) {
     final l10n = AppLocalizations.of(context);
-    final picked = await showModalBottomSheet<Gender>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) =>
-          _GenderSheet(selected: _gender, dark: _darkMode),
-    );
-    if (picked == null || !mounted) return;
     setState(() {
-      _gender = picked;
-      _genderController.text = picked.label(l10n);
+      _gender = gender;
+      _genderController.text = gender.label(l10n);
+      _genderOpen = false;
     });
   }
 
@@ -484,17 +483,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
-                            controller: _genderController,
-                            hint: l10n.genderOptional,
-                            prefixIcon: Icons.person_add_alt,
-                            dark: _darkMode,
-                            readOnly: true,
-                            onTap: _pickGender,
-                            suffix: Icon(
-                              Icons.keyboard_arrow_down,
-                              color: accent,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              AppRecessedGlassField(
+                                controller: _genderController,
+                                hint: l10n.genderOptional,
+                                prefixIcon: Icons.person_add_alt,
+                                dark: _darkMode,
+                                readOnly: true,
+                                onTap: _toggleGender,
+                                suffix: Icon(
+                                  _genderOpen
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: accent,
+                                ),
+                              ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeOutCubic,
+                                alignment: Alignment.topCenter,
+                                child: !_genderOpen
+                                    ? const SizedBox.shrink()
+                                    : Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: _InlineGenderList(
+                                          selected: _gender,
+                                          dark: _darkMode,
+                                          onSelected: _selectGender,
+                                        ),
+                                      ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 14),
                           AppRecessedGlassField(
@@ -717,12 +738,17 @@ class _CountryCodeButton extends StatelessWidget {
   }
 }
 
-/// Bottom sheet listing the three gender options.
-class _GenderSheet extends StatelessWidget {
-  const _GenderSheet({required this.selected, required this.dark});
+/// In-place list shown immediately below the gender field.
+class _InlineGenderList extends StatelessWidget {
+  const _InlineGenderList({
+    required this.selected,
+    required this.dark,
+    required this.onSelected,
+  });
 
   final Gender? selected;
   final bool dark;
+  final ValueChanged<Gender> onSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -730,42 +756,30 @@ class _GenderSheet extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final accent = dark ? AppColors.luminousMint : AppColors.actionNavy;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: AppLiquidGlass(
-          borderRadius: 20,
-          dark: dark,
-          quality: AppLiquidGlassQuality.standard,
-          // Scrollable for the same reason the country sheet is: a modal
-          // sheet is capped at 9/16 of the screen, which three options can
-          // exceed on a short phone once the system font is enlarged.
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final (index, gender) in Gender.values.indexed) ...[
-                  // A white hairline between options, so they read as
-                  // separate rows rather than one block of text.
-                  if (index > 0) const _SheetDivider(),
-                  _SheetOptionTile(
-                    label: gender.label(l10n),
-                    selected: selected == gender,
-                    accent: accent,
-                    textColor: colorScheme.onSurface,
-                    onTap: () => Navigator.of(context).pop(gender),
-                  ),
-                ],
-              ],
+    return GlassPanel(
+      borderRadius: 20,
+      dark: dark,
+      depth: GlassDepth.middle,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (index, gender) in Gender.values.indexed) ...[
+            if (index > 0) const _SheetDivider(),
+            _SheetOptionTile(
+              label: gender.label(l10n),
+              selected: selected == gender,
+              accent: accent,
+              textColor: colorScheme.onSurface,
+              onTap: () => onSelected(gender),
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
 }
 
-/// A single option inside the gender sheet.
+/// A single option inside an expandable list or picker sheet.
 ///
 /// Each row is its own rounded tile with a soft white glow, so the options
 /// read as separate cards rather than one continuous list.

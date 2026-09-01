@@ -544,7 +544,7 @@ void main() {
     expect(find.text('Please choose your date of birth'), findsOneWidget);
   });
 
-  testWidgets('Gender sheet shows the three options as separated tiles', (
+  testWidgets('Gender expands below the field as separated tiles', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(_host(const RegisterScreen()));
@@ -562,6 +562,14 @@ void main() {
     expect(find.text('Female'), findsOneWidget);
     expect(find.text('Other'), findsOneWidget);
 
+    final fieldRect = tester.getRect(
+      find.ancestor(of: genderField, matching: find.byType(TextFormField)),
+    );
+    expect(
+      tester.getRect(find.text('Male')).top,
+      greaterThan(fieldRect.bottom),
+    );
+
     // Each option sits at a visibly different vertical position, with a gap
     // between them rather than sitting flush.
     final male = tester.getRect(find.text('Male'));
@@ -570,7 +578,7 @@ void main() {
     expect(female.top, greaterThan(male.bottom));
     expect(other.top, greaterThan(female.bottom));
 
-    // Picking one closes the sheet and fills the field.
+    // Picking one closes the inline list and fills the field.
     await tester.tap(find.text('Female'));
     await tester.pumpAndSettle();
     expect(find.text('Male'), findsNothing);
