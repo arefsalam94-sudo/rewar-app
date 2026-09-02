@@ -1360,7 +1360,7 @@ class AppLocalizations {
       'hotelBedTwin': 'دوو جێگای تاک',
       'hotelBedDouble': 'جێگای دووکەسی',
       'hotelBedQueen': 'جێگای کوین',
-      'hotelBedKing': 'جێگای کینگ',
+      'hotelBedKing': 'جێگای شاهانە',
       'hotelBedSofa': 'قەنەفەی جێگا',
       'hotelBedBunk': 'جێگای چینچین',
       'hotelBedCount': '{count} × {bed}',

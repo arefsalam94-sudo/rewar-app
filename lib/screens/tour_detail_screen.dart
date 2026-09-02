@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../services/map_availability.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/nature_detail.dart';
 import '../models/tour.dart';
@@ -624,7 +626,7 @@ class _MapCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: lat == null || lng == null
+                child: lat == null || lng == null || !googleMapsAvailable
                     ? _Unavailable(
                         AppLocalizations.of(context).tourMapUnavailable,
                       )

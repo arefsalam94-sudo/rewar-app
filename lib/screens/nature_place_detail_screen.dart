@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../services/map_availability.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/nature_detail.dart';
 import '../models/nature_spot.dart';
@@ -596,7 +598,7 @@ class _LocationCard extends StatelessWidget {
         height: height,
         child: Stack(
           children: [
-            if (latitude != null && longitude != null)
+            if (googleMapsAvailable && latitude != null && longitude != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(28),
                 child: AbsorbPointer(

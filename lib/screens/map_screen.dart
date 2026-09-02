@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../l10n/app_localizations.dart';
+import '../services/map_availability.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/glass_panel.dart';
@@ -37,7 +38,9 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _centerOnCurrentLocation();
+    if (googleMapsAvailable) {
+      _centerOnCurrentLocation();
+    }
   }
 
   @override
@@ -102,25 +105,39 @@ class _MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: widget.target ?? _fallbackLocation,
-                zoom: widget.target == null ? _fallbackZoom : _targetZoom,
-              ),
-              markers: {
-                if (widget.target != null)
-                  Marker(
-                    markerId: const MarkerId('map-target'),
-                    position: widget.target!,
+            child: googleMapsAvailable
+                ? GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: widget.target ?? _fallbackLocation,
+                      zoom: widget.target == null ? _fallbackZoom : _targetZoom,
+                    ),
+                    markers: {
+                      if (widget.target != null)
+                        Marker(
+                          markerId: const MarkerId('map-target'),
+                          position: widget.target!,
+                        ),
+                    },
+                    onMapCreated: _onMapCreated,
+                    myLocationEnabled: _locationPermissionGranted,
+                    myLocationButtonEnabled: _locationPermissionGranted,
+                    compassEnabled: true,
+                    mapToolbarEnabled: false,
+                    zoomControlsEnabled: false,
+                  )
+                : ColoredBox(
+                    color: AppColors.glassBaseTint(
+                      context,
+                    ).withValues(alpha: .22),
+                    child: Center(
+                      child: Text(
+                        AppLocalizations.of(context).hotelMapUnavailable,
+                        style: TextStyle(
+                          color: AppColors.secondaryText(context),
+                        ),
+                      ),
+                    ),
                   ),
-              },
-              onMapCreated: _onMapCreated,
-              myLocationEnabled: _locationPermissionGranted,
-              myLocationButtonEnabled: _locationPermissionGranted,
-              compassEnabled: true,
-              mapToolbarEnabled: false,
-              zoomControlsEnabled: false,
-            ),
           ),
           SafeArea(
             child: Align(

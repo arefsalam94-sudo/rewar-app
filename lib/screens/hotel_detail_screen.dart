@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../services/map_availability.dart';
+
 import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
 import '../models/hotel_detail.dart';
@@ -1218,7 +1220,7 @@ class _LocationCard extends StatelessWidget {
             height: 170,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: lat == null || lng == null
+              child: lat == null || lng == null || !googleMapsAvailable
                   ? ColoredBox(
                       color: AppColors.glassBaseTint(
                         context,

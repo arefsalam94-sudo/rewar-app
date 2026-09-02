@@ -464,7 +464,7 @@ const _divanRooms = <HotelRoomType>[
     hotelId: 'preview-divan-erbil',
     name: HotelText(
       en: 'King Room',
-      ku: 'ژووری کینگ',
+      ku: 'ژووری شاهانە',
       ar: 'غرفة كينغ',
     ),
     description: HotelText(

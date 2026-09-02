@@ -34,6 +34,25 @@ class FirebaseBootstrap {
 
   static Future<void> ensureInitialized() async {
     if (_ready) return;
+
+    // firebase_options.dart currently contains Android and iOS apps only.
+    // Avoid touching currentPlatform elsewhere: its generated getter throws,
+    // which can pause an IDE debugger even when the exception is caught.
+    final isConfiguredPlatform =
+        !kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.android ||
+            defaultTargetPlatform == TargetPlatform.iOS);
+    if (!isConfiguredPlatform) {
+      _ready = false;
+      _error = UnsupportedError(
+        'Firebase is not configured for the current platform.',
+      );
+      debugPrint(
+        'Firebase is not configured for this platform; using preview mode.',
+      );
+      return;
+    }
+
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,

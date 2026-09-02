@@ -47,6 +47,10 @@ class KurdistanParadiseApp extends StatelessWidget {
             locale: locale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
+            // Browser refreshes can retain an argument-dependent page such as
+            // /hotel/rooms. It cannot be rebuilt without its Hotel and search
+            // objects, so restart the web app from the real entry point.
+            initialRoute: '/',
             // Real entry point: Splash → Language → Login (Login opens in the
             // language chosen on the Language screen).
             home: const SplashScreen(),
