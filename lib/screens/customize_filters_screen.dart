@@ -68,70 +68,93 @@ class _CustomizeFiltersScreenState extends State<CustomizeFiltersScreen> {
       body: PageBackground(
         imageAsset: exploreNatureBackgroundAsset,
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 720),
-                  child: GlassPanel(
-                    // L1 of the canonical three-deep glass stack.
-                    borderRadius: _panelRadius(context),
-                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _Header(),
-                        const SizedBox(height: 14),
-                        _CounterRow(
-                          count: _draft.customizeCount,
-                          onReset: _draft.customizeCount == 0
-                              ? null
-                              : _resetAll,
-                        ),
-                        const SizedBox(height: 14),
-                        _FilterGroupCard(
-                          icon: Icons.explore_outlined,
-                          title: l10n.placeType,
+          child: Stack(
+            children: [
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 20,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: GlassPanel(
+                        // L1 of the canonical three-deep glass stack.
+                        borderRadius: _panelRadius(context),
+                        padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            for (final type in NaturePlaceType.values)
-                              _FilterChoiceChip(
-                                icon: placeTypeIcon(type),
-                                label: l10n.placeTypeLabel(type),
-                                selected: _draft.placeTypes.contains(type.id),
-                                onTap: () => _togglePlaceType(type.id),
-                              ),
+                            _Header(),
+                            const SizedBox(height: 14),
+                            _CounterRow(
+                              count: _draft.customizeCount,
+                              onReset: _draft.customizeCount == 0
+                                  ? null
+                                  : _resetAll,
+                            ),
+                            const SizedBox(height: 14),
+                            _FilterGroupCard(
+                              icon: Icons.explore_outlined,
+                              title: l10n.placeType,
+                              children: [
+                                for (final type in NaturePlaceType.values)
+                                  _FilterChoiceChip(
+                                    icon: placeTypeIcon(type),
+                                    label: l10n.placeTypeLabel(type),
+                                    selected: _draft.placeTypes.contains(
+                                      type.id,
+                                    ),
+                                    onTap: () => _togglePlaceType(type.id),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _FilterGroupCard(
+                              icon: Icons.apartment_rounded,
+                              title: l10n.facilitiesAmenities,
+                              children: [
+                                for (final amenity in NatureAmenity.values)
+                                  _FilterChoiceChip(
+                                    icon: amenityIcon(amenity),
+                                    label: l10n.amenityLabel(amenity),
+                                    selected: _draft.amenities.contains(
+                                      amenity.id,
+                                    ),
+                                    onTap: () => _toggleAmenity(amenity.id),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: _hairline(context),
+                            ),
+                            const SizedBox(height: 14),
+                            _ShowPlacesButton(
+                              count: _matchCount,
+                              onTap: _apply,
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        _FilterGroupCard(
-                          icon: Icons.apartment_rounded,
-                          title: l10n.facilitiesAmenities,
-                          children: [
-                            for (final amenity in NatureAmenity.values)
-                              _FilterChoiceChip(
-                                icon: amenityIcon(amenity),
-                                label: l10n.amenityLabel(amenity),
-                                selected: _draft.amenities.contains(amenity.id),
-                                onTap: () => _toggleAmenity(amenity.id),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Divider(
-                          height: 1,
-                          thickness: 1,
-                          color: _hairline(context),
-                        ),
-                        const SizedBox(height: 14),
-                        _ShowPlacesButton(count: _matchCount, onTap: _apply),
-                      ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
+              // Keep page navigation outside the content card, in the same
+              // physical top-left position for LTR and RTL languages.
+              Positioned(
+                left: 8,
+                top: 8,
+                child: GlassBackButton(
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -195,21 +218,14 @@ IconData amenityIcon(NatureAmenity amenity) => switch (amenity) {
 
 // --- Header ------------------------------------------------------------------
 
-/// Back button and title on one line, subtitle beneath — as drawn.
+/// Card title and subtitle; page navigation sits outside this surface.
 class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
     return Row(
-      // The app's shared navigation convention keeps back controls on the
-      // physical left in every language.
-      textDirection: TextDirection.ltr,
       children: [
-        // Cancels rather than applies: the button at the bottom is the
-        // commit. Returns no value, so the caller keeps its filters.
-        GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
-        const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

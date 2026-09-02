@@ -399,6 +399,25 @@ void main() {
   });
 
   group('Customize Filters screen', () {
+    testWidgets('back button stays at the physical top-left outside the card', (
+      tester,
+    ) async {
+      await _pumpCustomize(tester, locale: const Locale('ku'));
+
+      final back = find.byType(GlassBackButton);
+      final card = find.ancestor(
+        of: find.text('ڕێکخستنی پاڵاوتنەکان'),
+        matching: find.byType(GlassPanel),
+      );
+      final backRect = tester.getRect(back);
+      final cardRect = tester.getRect(card);
+
+      expect(backRect.left, 8);
+      expect(backRect.top, 8);
+      expect(backRect.bottom, lessThan(cardRect.top));
+      expect(find.descendant(of: card, matching: back), findsNothing);
+    });
+
     testWidgets('Customize opens it, and applying filters the list', (
       tester,
     ) async {
