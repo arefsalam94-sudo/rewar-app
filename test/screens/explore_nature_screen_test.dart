@@ -9,6 +9,7 @@ import 'package:kurdistan_paradise_travel_guide/screens/explore_nature_screen.da
 import 'package:kurdistan_paradise_travel_guide/services/device_location_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/nature_spots_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 
@@ -175,22 +176,27 @@ void main() {
       expect(exploreNatureBackgroundBlurEnabled, isFalse);
     });
 
-    testWidgets('content cards use the documented base sheen glass', (
+    testWidgets(
+        'content cards use the final canonical Liquid Glass surface', (
       tester,
     ) async {
       await _pumpScreen(tester, service: _FakeNatureSpotsService());
 
-      final contentPanels = tester
-          .widgetList<GlassPanel>(find.byType(GlassPanel))
+      // Explore Nature is fully migrated: nothing on this screen still
+      // renders through the legacy GlassPanel shell.
+      expect(find.byType(GlassPanel), findsNothing);
+
+      final contentSurfaces = tester
+          .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
           .toList();
-      expect(contentPanels, isNotEmpty);
+      expect(contentSurfaces, isNotEmpty);
       expect(
-        contentPanels.where((panel) => panel.borderRadius == 28),
+        contentSurfaces.where((surface) => surface.borderRadius == 28),
         everyElement(
-          isA<GlassPanel>().having(
-            (panel) => panel.depth,
-            'depth',
-            GlassDepth.base,
+          isA<AppLiquidGlass>().having(
+            (surface) => surface.useCanonicalGlass,
+            'useCanonicalGlass',
+            isTrue,
           ),
         ),
       );
@@ -498,17 +504,29 @@ void main() {
       }
     });
 
-    testWidgets('uses the documented three-level glass color stack', (
+    testWidgets('uses the final canonical Liquid Glass surface', (
       tester,
     ) async {
       await _pumpCustomize(tester);
 
-      final panels = tester
-          .widgetList<GlassPanel>(find.byType(GlassPanel))
+      // Customize Filters is fully migrated: nothing on this screen still
+      // renders through the legacy GlassPanel shell.
+      expect(find.byType(GlassPanel), findsNothing);
+
+      final surfaces = tester
+          .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
           .toList();
-      expect(panels.any((panel) => panel.depth == GlassDepth.base), isTrue);
-      expect(panels.any((panel) => panel.depth == GlassDepth.middle), isTrue);
-      expect(panels.any((panel) => panel.depth == GlassDepth.top), isTrue);
+      expect(surfaces, isNotEmpty);
+      expect(
+        surfaces,
+        everyElement(
+          isA<AppLiquidGlass>().having(
+            (surface) => surface.useCanonicalGlass,
+            'useCanonicalGlass',
+            isTrue,
+          ),
+        ),
+      );
     });
 
     testWidgets('the counter spans both groups and Reset All clears them', (

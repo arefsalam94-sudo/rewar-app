@@ -7,6 +7,7 @@ import 'package:kurdistan_paradise_travel_guide/screens/help_support_screen.dart
 import 'package:kurdistan_paradise_travel_guide/screens/policy_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_list_row.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
@@ -65,7 +66,8 @@ void main() {
       );
     });
 
-    testWidgets('every row uses the documented white-sheen glass fill and '
+    testWidgets(
+        'every row uses the final canonical Liquid Glass surface and '
         'there is no outer background card', (tester) async {
       await _pump(tester);
 
@@ -73,21 +75,23 @@ void main() {
       expect(rows.length, HelpTopic.values.length);
 
       final cards = tester
-          .widgetList<GlassPanel>(find.byType(GlassPanel))
+          .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
           .where((p) => p.borderRadius == GlassListRow.radius)
           .toList();
       expect(cards.length, HelpTopic.values.length);
       for (final card in cards) {
-        expect(card.depth, GlassDepth.base);
+        expect(card.useCanonicalGlass, isTrue);
       }
 
-      // Aside from the back button's circular glass surface, every panel on
-      // this page is one of the topic rows. There is no large backing card
-      // around the list.
+      // Aside from the back button's circular glass surface, every
+      // canonical glass surface on this page is one of the topic rows —
+      // there is no large backing card around the list, and nothing on
+      // this screen is still on the legacy GlassPanel shell.
       expect(
-        find.byType(GlassPanel),
+        find.byType(AppLiquidGlass),
         findsNWidgets(HelpTopic.values.length + 1),
       );
+      expect(find.byType(GlassPanel), findsNothing);
     });
 
     testWidgets('rows carry a downward chevron, not a forward one', (
@@ -133,7 +137,7 @@ void main() {
       for (final topic in HelpTopic.values) {
         final card = find.ancestor(
           of: find.byIcon(helpTopicIcon(topic)),
-          matching: find.byType(GlassPanel),
+          matching: find.byType(AppLiquidGlass),
         );
         expect(
           tester.getSize(card).height,
@@ -161,11 +165,11 @@ void main() {
 
       final firstCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.account)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final secondCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.bookings)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final firstTopBefore = tester.getTopLeft(firstCard).dy;
       final secondTopBefore = tester.getTopLeft(secondCard).dy;
@@ -184,19 +188,19 @@ void main() {
 
       final firstCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.account)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final secondCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.bookings)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final thirdCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.payments)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final fourthCard = find.ancestor(
         of: find.byIcon(helpTopicIcon(HelpTopic.cancellation)),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final firstTop = tester.getTopLeft(firstCard).dy;
       final secondTop = tester.getTopLeft(secondCard).dy;

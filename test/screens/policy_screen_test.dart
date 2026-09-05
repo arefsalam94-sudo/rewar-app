@@ -7,8 +7,8 @@ import 'package:kurdistan_paradise_travel_guide/screens/policy_document_screen.d
 import 'package:kurdistan_paradise_travel_guide/screens/policy_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 
 void main() {
   group('PolicyScreen — layout', () {
@@ -50,13 +50,13 @@ void main() {
       await _pump(tester);
 
       final panels = tester
-          .widgetList<GlassPanel>(find.byType(GlassPanel))
+          .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
           .toList();
       // One per topic, plus the shared back button's own circle.
       final cards = panels.where((p) => p.borderRadius == 28).toList();
       expect(cards.length, PolicyTopic.values.length);
       for (final card in cards) {
-        expect(card.depth, GlassDepth.base);
+        expect(card.useCanonicalGlass, isTrue);
       }
     });
 
@@ -98,7 +98,7 @@ void main() {
       for (final topic in PolicyTopic.values) {
         final card = find.ancestor(
           of: find.byIcon(policyTopicIcon(topic)),
-          matching: find.byType(GlassPanel),
+          matching: find.byType(AppLiquidGlass),
         );
         expect(tester.getSize(card).height, greaterThanOrEqualTo(48));
       }

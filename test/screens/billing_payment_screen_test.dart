@@ -6,6 +6,7 @@ import 'package:kurdistan_paradise_travel_guide/screens/billing_payment_screen.d
 import 'package:kurdistan_paradise_travel_guide/screens/new_card_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 
@@ -29,9 +30,12 @@ void main() {
         expect(find.text(text), findsOneWidget, reason: text);
       }
 
-      // One panel is the circular back button and one is the payment card.
-      // The two bottom hints are plain icon/text rows, not stroked pills.
-      expect(find.byType(GlassPanel), findsNWidgets(2));
+      // The circular back button and the payment card both render through
+      // the canonical real Liquid Glass renderer, not the legacy GlassPanel
+      // shell. The two bottom hints are plain icon/text rows, not stroked
+      // pills.
+      expect(find.byType(GlassPanel), findsNothing);
+      expect(find.byType(AppLiquidGlass), findsNWidgets(2));
     });
 
     testWidgets('puts the title below the physical-left back button', (
@@ -62,9 +66,9 @@ void main() {
       expect(find.byType(ImageFiltered), findsOneWidget);
 
       final card = tester
-          .widgetList<GlassPanel>(find.byType(GlassPanel))
-          .singleWhere((panel) => panel.borderRadius == 28);
-      expect(card.depth, GlassDepth.base);
+          .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
+          .singleWhere((surface) => surface.borderRadius == 28);
+      expect(card.useCanonicalGlass, isTrue);
     });
 
     testWidgets('Add Card calls the hosted-flow hook when supplied', (

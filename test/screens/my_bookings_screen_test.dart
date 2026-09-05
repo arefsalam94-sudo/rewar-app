@@ -7,8 +7,8 @@ import 'package:kurdistan_paradise_travel_guide/screens/my_bookings_screen.dart'
 import 'package:kurdistan_paradise_travel_guide/services/bookings_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/ticket_card.dart';
 
 void main() {
@@ -329,12 +329,12 @@ void main() {
       // draws white chips; the design file wins.
       await _pump(tester);
 
-      expect(_chipPanel(tester, 'All').selected, isTrue);
-      expect(_chipPanel(tester, 'Hotels').selected, isFalse);
+      expect(_chipSelected(tester, 'All'), isTrue);
+      expect(_chipSelected(tester, 'Hotels'), isFalse);
 
       await _pump(tester, dark: true);
-      expect(_chipPanel(tester, 'All').selected, isTrue);
-      expect(_chipPanel(tester, 'Hotels').selected, isFalse);
+      expect(_chipSelected(tester, 'All'), isTrue);
+      expect(_chipSelected(tester, 'Hotels'), isFalse);
     });
 
     testWidgets('headings are pure white in dark mode', (tester) async {
@@ -427,12 +427,30 @@ class _CountingService extends BookingsService {
 
 // --- Helpers -----------------------------------------------------------------
 
-GlassPanel _chipPanel(WidgetTester tester, String label) {
-  return tester.widget<GlassPanel>(
-    find
-        .ancestor(of: find.text(label), matching: find.byType(GlassPanel))
-        .first,
+/// Whether the type chip labelled [label] renders as the compact-selectable
+/// pattern's selected state: a solid `compactSelectedFill` capsule, no real
+/// glass (Design_system_CANONICAL.md §15) — mirrored from Explore Nature's
+/// own filter-chip check. Unselected renders its own canonical
+/// `AppLiquidGlass` surface instead.
+bool _chipSelected(WidgetTester tester, String label) {
+  final glass = find.ancestor(
+    of: find.text(label),
+    matching: find.byType(AppLiquidGlass),
   );
+  if (glass.evaluate().isNotEmpty) {
+    expect(
+      tester.widget<AppLiquidGlass>(glass.first).useCanonicalGlass,
+      isTrue,
+      reason: '$label should be real canonical Liquid Glass when unselected',
+    );
+    return false;
+  }
+  expect(
+    find.ancestor(of: find.text(label), matching: find.byType(DecoratedBox)),
+    findsWidgets,
+    reason: '$label should be a solid DecoratedBox fill when selected',
+  );
+  return true;
 }
 
 Future<void> _selectSegment(WidgetTester tester, String label) async {

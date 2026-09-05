@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/models/legal_document.dart';
+import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/legal_document_body.dart';
 
@@ -131,7 +132,7 @@ void main() {
       await _pump(tester, _document());
       expect(
         tester.widget<Text>(find.text('Heading')).style!.color,
-        const Color(0xFF1B1B1B), // DESIGN_LIGHT F.md -> text-heading
+        AppColors.actionNavy, // current AppColors.heading light value
       );
     });
 

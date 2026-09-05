@@ -11,8 +11,8 @@ import 'package:kurdistan_paradise_travel_guide/services/settings_preferences.da
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/theme_controller.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/theme_mode_toggle.dart';
 
 void main() {
@@ -62,8 +62,11 @@ void main() {
         expect(find.text(text), findsWidgets, reason: text);
       }
 
-      // Shared back button + profile card + three grouped cards.
-      expect(find.byType(GlassPanel), findsNWidgets(6));
+      // Back button + profile card + three grouped cards, plus the theme
+      // row's already-canonical `ThemeModeToggle` — six canonical glass
+      // surfaces in total. (Was asserted against the pre-canonical
+      // `GlassPanel` type, which `ThemeModeToggle` never used.)
+      expect(find.byType(AppLiquidGlass), findsNWidgets(6));
       expect(find.byType(ThemeModeToggle), findsOneWidget);
       expect(find.byType(Switch), findsOneWidget);
     });
@@ -78,7 +81,7 @@ void main() {
         SettingsScreen.backgroundAsset,
       );
       expect(find.byType(ImageFiltered), findsOneWidget);
-      expect(find.byType(GlassPanel), findsWidgets);
+      expect(find.byType(AppLiquidGlass), findsWidgets);
     });
 
     testWidgets('dark mode still blurs the photo, as the design file '

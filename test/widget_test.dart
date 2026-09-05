@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:oc_liquid_glass/oc_liquid_glass.dart';
 
 import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/l10n/locale_controller.dart';
@@ -40,12 +41,15 @@ import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.da
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/theme_controller.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/app_recessed_glass_field.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/auth_glass_field.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/home_bottom_nav.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/home_drawer.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/liquid_glass_surface.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/recessed_liquid_glass_field.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/theme_mode_toggle.dart';
 
 /// Wraps a screen with the same localization setup the real app uses.
@@ -486,39 +490,201 @@ void main() {
     expect(find.textContaining('Gender is required'), findsNothing);
   });
 
-  testWidgets('Register puts every input inside one container', (
-    WidgetTester tester,
-  ) async {
+  testWidgets(
+    'Register renders seven independent real-glass fields, not one shared '
+    'outer glass card', (WidgetTester tester) async {
     await tester.pumpWidget(_host(const RegisterScreen()));
     await tester.pumpAndSettle();
 
-    final container = find.ancestor(
-      of: find.byType(AppRecessedGlassField).first,
-      matching: find.byType(GlassPanel),
-    );
-    expect(container, findsOneWidget);
+    // Nesting seven independent real Liquid Glass fields inside an
+    // additional large outer real-glass shader was the confirmed cause of
+    // the Android rendering corruption this architecture fixes
+    // (Design_system_CANONICAL.md §9: no visible glass surface directly
+    // over another one). The approved fix keeps each field as its own
+    // standalone real-glass surface and wraps the seven of them in a
+    // plain, non-shader Container instead.
+    final fields = find.byType(TextFormField);
+    expect(fields, findsNWidgets(7));
 
-    // All seven fields share that one container.
-    expect(
-      find.descendant(
-        of: container,
-        matching: find.byType(AppRecessedGlassField),
-      ),
-      findsNWidgets(7),
+    // Every field has exactly one ancestor LiquidGlassGroup — its own,
+    // not a shared one. `.evaluate().single` throws if a field is nested
+    // inside more than one (or the wrong) group.
+    final fieldGroups = <Element>{};
+    for (var index = 0; index < 7; index++) {
+      final group = find.ancestor(
+        of: fields.at(index),
+        matching: find.byType(LiquidGlassGroup),
+      );
+      fieldGroups.add(group.evaluate().single);
+    }
+    // Seven distinct groups, not seven fields sharing one.
+    expect(fieldGroups, hasLength(7));
+
+    // The outer container holding all seven fields is NOT itself a real
+    // glass surface: no single LiquidGlassSurface is an ancestor of every
+    // field at once.
+    final sharedOuterSurface = find.ancestor(
+      of: fields.first,
+      matching: find.byType(LiquidGlassSurface),
     );
-    // The title and the Register button stay outside it.
-    expect(
-      find.descendant(of: container, matching: find.byType(PrimaryButton)),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: container,
-        matching: find.widgetWithText(PrimaryButton, 'Register'),
-      ),
-      findsNothing,
-    );
-    expect(tester.widget<GlassPanel>(container).depth, GlassDepth.base);
+    for (final surfaceElement in sharedOuterSurface.evaluate()) {
+      final surfaceFinder = find.byWidget(surfaceElement.widget);
+      final fieldsInsideThisSurface = find.descendant(
+        of: surfaceFinder,
+        matching: find.byType(TextFormField),
+      );
+      expect(
+        fieldsInsideThisSurface.evaluate().length,
+        lessThan(7),
+        reason:
+            'no single real-glass surface should contain all seven fields',
+      );
+    }
+
+    // The title and the Register button stay outside every field's group.
+    for (final groupElement in fieldGroups) {
+      final groupFinder = find.byWidget(groupElement.widget);
+      expect(
+        find.descendant(of: groupFinder, matching: find.byType(PrimaryButton)),
+        findsNothing,
+      );
+    }
+  });
+
+  testWidgets('Register fields match Login standalone glass trees', (
+    WidgetTester tester,
+  ) async {
+    ({Element group, Element surface}) standaloneGlassTree(Finder field) {
+      expect(
+        find.descendant(
+          of: field,
+          matching: find.byType(AppRecessedGlassField),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: field,
+          matching: find.byType(RecessedLiquidGlassField),
+        ),
+        findsOneWidget,
+      );
+
+      final groups = find.descendant(
+        of: field,
+        matching: find.byType(LiquidGlassGroup),
+      );
+      final packageGroups = find.descendant(
+        of: field,
+        matching: find.byType(OCLiquidGlassGroup),
+      );
+      final surfaces = find.descendant(
+        of: field,
+        matching: find.byType(LiquidGlassSurface),
+      );
+      final packageSurfaces = find.descendant(
+        of: field,
+        matching: find.byType(OCLiquidGlass),
+      );
+
+      expect(groups, findsOneWidget);
+      expect(packageGroups, findsOneWidget);
+      expect(surfaces, findsOneWidget);
+      expect(packageSurfaces, findsOneWidget);
+
+      return (
+        group: groups.evaluate().single,
+        surface: surfaces.evaluate().single,
+      );
+    }
+
+    // Register's fields are a private implementation
+    // (register_screen.dart's `_LoginStyleField`), not `AuthGlassField`, so
+    // they can't be found by that type from this test's library. They are
+    // still built from the exact same literal CanonicalGlassShell chain
+    // (Register's own approved copy of Login's field construction), so
+    // this walks UP from each field's leaf `TextFormField` instead of down
+    // from a named wrapper type — same tree shape, verified structurally.
+    ({Element group, Element surface}) standaloneGlassTreeFromLeaf(
+      Finder leaf,
+    ) {
+      final groups = find.ancestor(
+        of: leaf,
+        matching: find.byType(LiquidGlassGroup),
+      );
+      final packageGroups = find.ancestor(
+        of: leaf,
+        matching: find.byType(OCLiquidGlassGroup),
+      );
+      final surfaces = find.ancestor(
+        of: leaf,
+        matching: find.byType(LiquidGlassSurface),
+      );
+      final packageSurfaces = find.ancestor(
+        of: leaf,
+        matching: find.byType(OCLiquidGlass),
+      );
+
+      expect(groups, findsOneWidget);
+      expect(packageGroups, findsOneWidget);
+      expect(surfaces, findsOneWidget);
+      expect(packageSurfaces, findsOneWidget);
+
+      return (
+        group: groups.evaluate().single,
+        surface: surfaces.evaluate().single,
+      );
+    }
+
+    await tester.pumpWidget(_host(const LoginScreen()));
+    await tester.pumpAndSettle();
+
+    final loginFields = find.byType(AuthGlassField);
+    expect(loginFields, findsNWidgets(2));
+    final loginTrees = [
+      for (var index = 0; index < 2; index++)
+        standaloneGlassTree(loginFields.at(index)),
+    ];
+    expect(loginTrees.map((tree) => tree.group).toSet(), hasLength(2));
+    expect(loginTrees.map((tree) => tree.surface).toSet(), hasLength(2));
+
+    final loginEmailRect = tester.getRect(loginFields.at(0));
+    final loginPasswordRect = tester.getRect(loginFields.at(1));
+    final loginGap = loginPasswordRect.top - loginEmailRect.bottom;
+
+    expect(loginEmailRect.height, closeTo(56, 0.001));
+    expect(loginPasswordRect.height, closeTo(loginEmailRect.height, 0.001));
+    expect(loginGap, closeTo(14, 0.001));
+
+    await tester.pumpWidget(_host(const RegisterScreen()));
+    await tester.pumpAndSettle();
+
+    final registerFields = find.byType(TextFormField);
+    expect(registerFields, findsNWidgets(7));
+
+    final registerGroups = <Element>{};
+    final registerSurfaces = <Element>{};
+    Rect? previousRect;
+    for (var index = 0; index < 7; index++) {
+      final field = registerFields.at(index);
+      final tree = standaloneGlassTreeFromLeaf(field);
+      final rect = tester.getRect(field);
+
+      registerGroups.add(tree.group);
+      registerSurfaces.add(tree.surface);
+      expect(rect.height, closeTo(loginEmailRect.height, 0.001));
+      if (previousRect != null) {
+        expect(rect.top - previousRect.bottom, closeTo(loginGap, 0.001));
+        expect(rect.top, greaterThan(previousRect.bottom));
+      }
+
+      previousRect = rect;
+    }
+
+    // Identity checks prove these are seven different shader groups and seven
+    // different surfaces, not seven fields registered into one shared group.
+    expect(registerGroups, hasLength(7));
+    expect(registerSurfaces, hasLength(7));
   });
 
   testWidgets('Register requires a date of birth before submitting', (
@@ -969,7 +1135,7 @@ void main() {
       expect(style.foregroundColor!.resolve(enabled), AppColors.darkOnPrimary);
     });
 
-    testWidgets('input placeholders are white at exactly 60% opacity', (
+    testWidgets('input placeholders are white at the canonical field-hint opacity', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(
@@ -982,7 +1148,10 @@ void main() {
       expect(color.r, 1.0);
       expect(color.g, 1.0);
       expect(color.b, 1.0);
-      expect(color.a, closeTo(0.60, 0.01));
+      // The username field now renders through the same canonical v2 field
+      // system (AppColors.fieldHint) as Login/Register/Settings, whose dark
+      // hint opacity is 0.70 — not the pre-v2 field's 0.60.
+      expect(color.a, closeTo(0.70, 0.01));
     });
 
     testWidgets('the background photo is blurred in both themes', (
@@ -1052,11 +1221,13 @@ void main() {
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
 
-      // The visible circle must not have grown with it.
+      // The visible circle must not have grown with it. Login's back button
+      // renders through the canonical real Liquid Glass shell, not the
+      // legacy GlassPanel.
       final circle = tester.getSize(
         find.descendant(
           of: find.byType(GlassBackButton),
-          matching: find.byType(GlassPanel),
+          matching: find.byType(AppLiquidGlass),
         ),
       );
       expect(circle.width, GlassBackButton.visualSize);

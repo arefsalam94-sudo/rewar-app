@@ -12,8 +12,8 @@ import 'package:kurdistan_paradise_travel_guide/services/favorites_service.dart'
 import 'package:kurdistan_paradise_travel_guide/services/tours_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/page_background.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
 
@@ -582,7 +582,7 @@ void main() {
           find
               .ancestor(
                 of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-                matching: find.byType(GlassPanel),
+                matching: find.byType(AppLiquidGlass),
               )
               .first,
         );
@@ -630,7 +630,7 @@ void main() {
                       of: find.byKey(
                         tourCardThumbnailKey('gali-alibag-waterfall'),
                       ),
-                      matching: find.byType(GlassPanel),
+                      matching: find.byType(AppLiquidGlass),
                     )
                     .first,
                 matching: find.text('AB group'),
@@ -662,7 +662,7 @@ void main() {
       final thumb = find.byKey(tourCardThumbnailKey('gali-alibag-waterfall'));
       final photo = tester.getRect(thumb);
       final card = tester.getRect(
-        find.ancestor(of: thumb, matching: find.byType(GlassPanel)).first,
+        find.ancestor(of: thumb, matching: find.byType(AppLiquidGlass)).first,
       );
 
       // The approved reference draws the photo as its own rounded panel
@@ -688,7 +688,7 @@ void main() {
           find
               .ancestor(
                 of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-                matching: find.byType(GlassPanel),
+                matching: find.byType(AppLiquidGlass),
               )
               .first,
         );
@@ -709,14 +709,14 @@ void main() {
         find
             .ancestor(
               of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-              matching: find.byType(GlassPanel),
+              matching: find.byType(AppLiquidGlass),
             )
             .first,
       );
       final cardFinder = find
           .ancestor(
             of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-            matching: find.byType(GlassPanel),
+            matching: find.byType(AppLiquidGlass),
           )
           .first;
       // Two tours depart from Rawanduz, so the lines are read off this card.
@@ -752,7 +752,7 @@ void main() {
       final cardFinder = find
           .ancestor(
             of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-            matching: find.byType(GlassPanel),
+            matching: find.byType(AppLiquidGlass),
           )
           .first;
       final card = tester.getRect(cardFinder);
@@ -810,7 +810,7 @@ void main() {
       // date is measured against.
       final badge = tester.getRect(
         find
-            .ancestor(of: find.text(r'$55'), matching: find.byType(GlassPanel))
+            .ancestor(of: find.text(r'$55'), matching: find.byType(AppLiquidGlass))
             .first,
       );
       expect(date.bottom, lessThan(price.top));
@@ -901,7 +901,7 @@ void main() {
       final card = find
           .ancestor(
             of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-            matching: find.byType(GlassPanel),
+            matching: find.byType(AppLiquidGlass),
           )
           .first;
       final facilityIcons = tester

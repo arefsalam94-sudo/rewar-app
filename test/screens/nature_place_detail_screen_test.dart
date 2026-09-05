@@ -9,7 +9,9 @@ import 'package:kurdistan_paradise_travel_guide/screens/nature_place_detail_scre
 import 'package:kurdistan_paradise_travel_guide/services/device_location_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/nature_spots_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/page_background.dart';
 
 void main() {
@@ -82,6 +84,31 @@ void main() {
     expect(reviewTapped, isTrue);
   });
 
+  testWidgets('cards use the final canonical Liquid Glass surface', (
+    tester,
+  ) async {
+    await _pump(tester, spot: spot);
+
+    // Nature detail is fully migrated: nothing on this screen still renders
+    // through the legacy GlassPanel shell.
+    expect(find.byType(GlassPanel), findsNothing);
+
+    final surfaces = tester
+        .widgetList<AppLiquidGlass>(find.byType(AppLiquidGlass))
+        .toList();
+    expect(surfaces, isNotEmpty);
+    expect(
+      surfaces,
+      everyElement(
+        isA<AppLiquidGlass>().having(
+          (surface) => surface.useCanonicalGlass,
+          'useCanonicalGlass',
+          isTrue,
+        ),
+      ),
+    );
+  });
+
   testWidgets('draws five gallery dots for the five preview slides', (
     tester,
   ) async {
@@ -93,20 +120,34 @@ void main() {
         findsOneWidget,
       );
     }
+
+    // The canonical pill keeps every dot the same size and marks the active
+    // one by color instead, so the pill's geometry does not shift as the
+    // gallery pages.
+    Color dotColor(int index) {
+      final box = tester.widget<Container>(
+        find.byKey(ValueKey('nature-detail-gallery-dot-$index')),
+      );
+      return ((box.decoration as BoxDecoration).color)!;
+    }
+
     expect(
       tester.getSize(find.byKey(const ValueKey('nature-detail-gallery-dot-0'))),
-      const Size.square(9),
+      const Size.square(8),
     );
+    expect(dotColor(0), isNot(dotColor(1)));
 
     await tester.drag(
       find.byKey(const ValueKey('nature-detail-gallery')),
       const Offset(-300, 0),
     );
     await tester.pumpAndSettle();
+
     expect(
       tester.getSize(find.byKey(const ValueKey('nature-detail-gallery-dot-1'))),
-      const Size.square(9),
+      const Size.square(8),
     );
+    expect(dotColor(1), isNot(dotColor(0)));
   });
 
   testWidgets('uses the selected place cover as the blurred page background', (
