@@ -7,10 +7,12 @@ import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/app_liquid_glass.dart';
-import '../widgets/app_recessed_glass_field.dart';
+import '../widgets/auth_glass_field.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/social_auth_button.dart';
 import 'forget_password_screen.dart';
 import 'home_screen.dart';
 import 'language_selection_screen.dart';
@@ -155,6 +157,10 @@ class _LoginScreenState extends State<LoginScreen> {
         resizeToAvoidBottomInset: true,
         body: PageBackground(
           dark: _darkMode,
+          // `background-gradient-opacity: 0.45` (Design_system_CANONICAL.md
+          // §8). Local override — the shared default (0.55) stays untouched
+          // for every other screen.
+          gradientOpacity: 0.45,
           child: SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -190,14 +196,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildCard() {
-    final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
-    // Dark mode's action colour is Luminous Mint, light mode's is navy.
-    final accent = AppColors.selectionAccent(context);
+
+    // Same canonical surface renderer Settings' cards use
+    // (`AppLiquidGlass(useCanonicalGlass: true)` → `_CanonicalGlass`), not a
+    // parallel hand-built `LiquidGlassGroup`/`LiquidGlassSurface` shell — the
+    // shared renderer applies the card's tint edge-to-edge *before* content
+    // padding, matching the Settings cards' soft edge highlight instead of
+    // insetting the tint and leaving the shader's raw specular edge exposed.
     return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
       borderRadius: 28,
-      dark: _darkMode,
-      quality: AppLiquidGlassQuality.premium,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       child: Form(
         key: _formKey,
@@ -211,7 +221,8 @@ class _LoginScreenState extends State<LoginScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 28,
-                color: colorScheme.onSurface,
+                // `text-heading` (Design_system_CANONICAL.md §11).
+                color: AppColors.heading(context),
               ),
             ),
             // Debug-only, and renders nothing once Firebase is configured.
@@ -224,7 +235,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   'This account cannot exist in a release build.',
             ),
             const SizedBox(height: 22),
-            AppRecessedGlassField(
+            AuthGlassField(
               controller: _emailController,
               hint: l10n.email,
               keyboardType: TextInputType.emailAddress,
@@ -248,7 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
             ),
             const SizedBox(height: 14),
-            AppRecessedGlassField(
+            AuthGlassField(
               controller: _passwordController,
               hint: l10n.password,
               obscureText: _obscurePassword,
@@ -258,7 +269,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   _obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: AppColors.secondaryText(context),
+                  // `field-icon` (Design_system_CANONICAL.md §12) — this
+                  // toggle lives inside the password field.
+                  color: AppColors.fieldIcon(context),
                   size: 20,
                 ),
                 onPressed: () =>
@@ -279,7 +292,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 14,
-                    color: accent,
+                    // `authActionLink` — same color on photo or glass.
+                    color: AppColors.authActionLink(context),
                   ),
                 ),
               ),
@@ -292,8 +306,13 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _SocialButton(
-                    icon: Icon(Icons.apple, size: 24, color: accent),
+                  child: SocialAuthButton(
+                    icon: Icon(
+                      Icons.apple,
+                      size: 24,
+                      // `socialAuthContent`.
+                      color: AppColors.socialAuthContent(context),
+                    ),
                     label: 'Apple',
                     dark: _darkMode,
                     onTap: () => _notWired('Would sign in with Apple'),
@@ -301,8 +320,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _SocialButton(
-                    icon: Icon(Icons.g_mobiledata, size: 30, color: accent),
+                  child: SocialAuthButton(
+                    icon: Icon(
+                      Icons.g_mobiledata,
+                      size: 30,
+                      // `socialAuthContent`.
+                      color: AppColors.socialAuthContent(context),
+                    ),
                     label: 'Gmail',
                     dark: _darkMode,
                     onTap: () => _notWired('Would sign in with Google'),
@@ -321,8 +345,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 15,
-                      // The design file's own example of secondary text.
-                      color: AppColors.secondaryText(context),
+                      // `text-secondary` (Design_system_CANONICAL.md §11).
+                      color: AppColors.secondaryTextV3(context),
                     ),
                     children: [
                       TextSpan(text: l10n.dontHaveAccount),
@@ -330,7 +354,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         text: l10n.registerNow,
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: accent,
+                          // `authActionLink` — same color on photo or
+                          // glass.
+                          color: AppColors.authActionLink(context),
                         ),
                       ),
                     ],
@@ -365,6 +391,7 @@ class _TopBar extends StatelessWidget {
               onTap: onBack,
               dark: dark,
               useAppLiquidGlass: true,
+              useCanonicalGlass: true,
             ),
           ),
           Align(
@@ -378,74 +405,12 @@ class _TopBar extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 22,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: AppColors.heading(context),
                 ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// A frosted social sign-in button (icon + label).
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.dark = false,
-  });
-
-  final Widget icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return AppLiquidGlass(
-      borderRadius: 14,
-      dark: dark,
-      quality: AppLiquidGlassQuality.standard,
-      interactive: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                icon,
-                const SizedBox(width: 8),
-                // Two of these sit side by side, so each gets under half the
-                // screen. Without this the label pushes the row past its
-                // width on a narrow phone, or once the system font is
-                // enlarged. Scaling down keeps the whole word readable,
-                // where clipping would leave "Gm…".
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -457,7 +422,7 @@ class _OrDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppColors.secondaryText(context);
+    final color = AppColors.secondaryTextV3(context);
     Widget line() => Expanded(
       child: Container(height: 1.2, color: color.withValues(alpha: 0.45)),
     );

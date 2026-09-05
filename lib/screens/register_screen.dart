@@ -12,12 +12,12 @@ import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/app_liquid_glass.dart';
-import '../widgets/app_recessed_glass_field.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/social_auth_button.dart';
 import 'terms_of_service_screen.dart';
 import 'verification_code_screen.dart';
 
@@ -401,7 +401,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ? AppTheme.darkForLocale(Localizations.localeOf(context))
         : AppTheme.lightForLocale(Localizations.localeOf(context));
     final colorScheme = theme.colorScheme;
-    final accent = AppColors.selectionAccent(context);
 
     return Theme(
       data: theme,
@@ -409,6 +408,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         resizeToAvoidBottomInset: true,
         body: PageBackground(
           dark: _darkMode,
+          // `background-gradient-opacity: 0.45` (Design_system_CANONICAL.md
+          // §8). Local override — the shared default (0.55) stays untouched
+          // for every other screen.
+          gradientOpacity: 0.45,
           child: SafeArea(
             child: SingleChildScrollView(
               // Same insets as Login so the back button doesn't move.
@@ -425,6 +428,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: GlassBackButton(
                           dark: _darkMode,
                           useAppLiquidGlass: true,
+                          useCanonicalGlass: true,
                           onTap: () => Navigator.of(context).maybePop(),
                         ),
                       ),
@@ -435,7 +439,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         fontWeight: FontWeight.w700,
                         fontSize: 38,
                         height: 1.05,
-                        color: colorScheme.onSurface,
+                        // `text-heading` (Design_system_CANONICAL.md §11).
+                        color: AppColors.heading(context),
                       ),
                     ),
                     const PreviewModeBanner(
@@ -447,21 +452,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // Every input lives in one card; the title above and the
                     // Register button below sit outside it.
                     //
-                    // Fill/border come straight from `DESIGN light.md`
-                    // ("Card Fill: a 20% opacity version of the brand
-                    // gradient", "1px white inner border (20% opacity)") via
-                    // old brand-gradient card fill, and from the former
-                    // emerald glass in dark mode. Radius is the light file's
-                    // "Standard Cards: 16px".
-                    AppLiquidGlass(
-                      borderRadius: 28,
-                      dark: _darkMode,
-                      quality: AppLiquidGlassQuality.standard,
+                    // APPROVED, NOT TEMPORARY — do not convert this back to
+                    // real glass. The outer grouping is deliberately a plain
+                    // transparent Container: it contributes width, padding,
+                    // radius and layout bounds only, with no shader, blur or
+                    // tint. The Column below already carries
+                    // `crossAxisAlignment: stretch`, so this wrapper does not
+                    // change the card's width (Geometry Lock).
+                    //
+                    // The seven fields below are each their own real
+                    // canonical glass surface. Stacking those seven shaders
+                    // inside an additional outer real-glass shader produced
+                    // repeated horizontal reflection-band corruption on
+                    // Android hardware. The fix is to demote the *parent*,
+                    // never the children — see 07_DESIGN_EXCEPTIONS.md §1 and
+                    // 06_MIGRATION_RULES.md §7. An earlier revision of this
+                    // comment labelled the Container a "TEMPORARY DIAGNOSTIC"
+                    // and asked for a revert once tested; that test was run,
+                    // and this non-shader Container is its approved result.
+                    Container(
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(28),
+                        color: Colors.transparent,
+                      ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _nameController,
                             hint: l10n.fullName,
                             prefixIcon: Icons.person_outline,
@@ -470,7 +489,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) => _validateName(value, l10n),
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _dobController,
                             hint: l10n.age,
                             prefixIcon: Icons.calendar_today_outlined,
@@ -479,14 +498,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onTap: _pickDateOfBirth,
                             suffix: Icon(
                               Icons.keyboard_arrow_down,
-                              color: accent,
+                              // `field-icon` (Design_system_CANONICAL.md
+                              // §12).
+                              color: AppColors.fieldIcon(context),
                             ),
                           ),
                           const SizedBox(height: 14),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              AppRecessedGlassField(
+                              _LoginStyleField(
                                 controller: _genderController,
                                 hint: l10n.genderOptional,
                                 prefixIcon: Icons.person_add_alt,
@@ -497,7 +518,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   _genderOpen
                                       ? Icons.keyboard_arrow_up
                                       : Icons.keyboard_arrow_down,
-                                  color: accent,
+                                  // `field-icon` (Design_system_CANONICAL.md
+                                  // §12).
+                                  color: AppColors.fieldIcon(context),
                                 ),
                               ),
                               AnimatedSize(
@@ -518,7 +541,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ],
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _phoneController,
                             hint: l10n.phoneNumber,
                             prefixIcon: Icons.phone_outlined,
@@ -532,12 +555,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefix: _CountryCodeButton(
                               country: _country,
                               onTap: _pickCountry,
-                              color: colorScheme.onSurface,
                             ),
                             validator: (value) => _validatePhone(value, l10n),
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _emailController,
                             hint: l10n.emailAddress,
                             prefixIcon: Icons.mail_outline,
@@ -547,7 +569,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             validator: (value) => _validateEmail(value, l10n),
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _passwordController,
                             hint: l10n.password,
                             prefixIcon: Icons.lock_outline,
@@ -556,7 +578,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             textInputAction: TextInputAction.next,
                             suffix: _EyeToggle(
                               obscured: _obscurePassword,
-                              color: accent,
+                              // `field-icon` (Design_system_CANONICAL.md
+                              // §12) — this toggle lives inside the
+                              // password field.
+                              color: AppColors.fieldIcon(context),
                               onTap: () => setState(
                                 () => _obscurePassword = !_obscurePassword,
                               ),
@@ -565,7 +590,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 _validatePassword(value, l10n),
                           ),
                           const SizedBox(height: 14),
-                          AppRecessedGlassField(
+                          _LoginStyleField(
                             controller: _confirmController,
                             hint: l10n.confirmPassword,
                             prefixIcon: Icons.lock_outline,
@@ -574,7 +599,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             textInputAction: TextInputAction.done,
                             suffix: _EyeToggle(
                               obscured: _obscureConfirm,
-                              color: accent,
+                              // `field-icon` (Design_system_CANONICAL.md
+                              // §12) — this toggle lives inside the
+                              // confirm-password field.
+                              color: AppColors.fieldIcon(context),
                               onTap: () => setState(
                                 () => _obscureConfirm = !_obscureConfirm,
                               ),
@@ -589,7 +617,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               height: 1.3,
-                              color: AppColors.onPhotoSecondary(context),
+                              // `field-helper` (Design_system_CANONICAL.md
+                              // §12) — this sits inside the glass card, not
+                              // on the bare photo.
+                              color: AppColors.fieldHelper(context),
                             ),
                           ),
                         ],
@@ -617,13 +648,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       onTap: _submitting ? null : _onRegister,
                     ),
                     const SizedBox(height: 20),
-                    _OrDivider(color: AppColors.onPhotoSecondary(context)),
+                    // `text-on-photo-secondary` (Design_system_CANONICAL.md
+                    // §11) — this divider sits directly on the background
+                    // photo, outside the glass card.
+                    _OrDivider(
+                      color: AppColors.textOnPhotoSecondaryCanonical(context),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
-                          child: _SocialButton(
-                            icon: Icon(Icons.apple, size: 24, color: accent),
+                          child: SocialAuthButton(
+                            icon: Icon(
+                              Icons.apple,
+                              size: 24,
+                              // `socialAuthContent`.
+                              color: AppColors.socialAuthContent(context),
+                            ),
                             label: 'Apple',
                             dark: _darkMode,
                             onTap: () => _notWired('Apple'),
@@ -631,11 +672,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _SocialButton(
+                          child: SocialAuthButton(
                             icon: Icon(
                               Icons.g_mobiledata,
                               size: 30,
-                              color: accent,
+                              // `socialAuthContent`.
+                              color: AppColors.socialAuthContent(context),
                             ),
                             label: 'Gmail',
                             dark: _darkMode,
@@ -654,7 +696,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           TextSpan(
                             style: TextStyle(
                               fontSize: 15,
-                              color: AppColors.onPhotoSecondary(context),
+                              // `text-on-photo-secondary`
+                              // (Design_system_CANONICAL.md §11).
+                              color: AppColors.textOnPhotoSecondaryCanonical(
+                                context,
+                              ),
                             ),
                             children: [
                               TextSpan(text: l10n.alreadyHaveAccount),
@@ -663,8 +709,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
                                   decoration: TextDecoration.underline,
-                                  decorationColor: accent,
-                                  color: accent,
+                                  // `authActionLink` — same color on photo
+                                  // or glass.
+                                  decorationColor: AppColors.authActionLink(
+                                    context,
+                                  ),
+                                  color: AppColors.authActionLink(context),
                                 ),
                               ),
                             ],
@@ -699,18 +749,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 /// Tappable `🇮🇶 +964` prefix that opens the country sheet.
 class _CountryCodeButton extends StatelessWidget {
-  const _CountryCodeButton({
-    required this.country,
-    required this.onTap,
-    required this.color,
-  });
+  const _CountryCodeButton({required this.country, required this.onTap});
 
   final CountryCode country;
   final VoidCallback onTap;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
+    // This sits inline inside the phone field: the dial code reads as the
+    // field's own value, and the caret as the field's own icon
+    // (Design_system_CANONICAL.md §12).
+    final valueColor = AppColors.fieldValue(context);
+    final iconColor = AppColors.fieldIcon(context);
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -727,11 +777,11 @@ class _CountryCodeButton extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: color,
+                color: valueColor,
               ),
             ),
           ),
-          Icon(Icons.arrow_drop_down, size: 20, color: color),
+          Icon(Icons.arrow_drop_down, size: 20, color: iconColor),
         ],
       ),
     );
@@ -753,23 +803,27 @@ class _InlineGenderList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    final accent = dark ? AppColors.luminousMint : AppColors.actionNavy;
 
-    return GlassPanel(
+    return AppLiquidGlass(
       borderRadius: 20,
       dark: dark,
-      depth: GlassDepth.middle,
+      quality: AppLiquidGlassQuality.standard,
+      // Canonical real glass (Design_system_CANONICAL.md §9), replacing the
+      // legacy GlassPanel shell. The option rows inside are
+      // GlassLayer.embedded, so this stays one shader rather than glass
+      // stacked on glass.
+      useCanonicalGlass: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (index, gender) in Gender.values.indexed) ...[
+            // A white hairline between options, so they read as separate
+            // rows rather than one block of text.
             if (index > 0) const _SheetDivider(),
             _SheetOptionTile(
               label: gender.label(l10n),
               selected: selected == gender,
-              accent: accent,
-              textColor: colorScheme.onSurface,
+              dark: dark,
               onTap: () => onSelected(gender),
             ),
           ],
@@ -781,60 +835,84 @@ class _InlineGenderList extends StatelessWidget {
 
 /// A single option inside an expandable list or picker sheet.
 ///
-/// Each row is its own rounded tile with a soft white glow, so the options
-/// read as separate cards rather than one continuous list.
+/// Compact selection (`Design_system_CANONICAL.md` §15): unselected is
+/// ordinary Liquid Glass; selected is a solid `compact-selected-fill`
+/// capsule with contrasting content — no outline, no selection stroke.
 class _SheetOptionTile extends StatelessWidget {
   const _SheetOptionTile({
     required this.label,
     required this.selected,
-    required this.accent,
-    required this.textColor,
+    required this.dark,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
-  final Color accent;
-  final Color textColor;
+  final bool dark;
   final VoidCallback onTap;
+
+  static const double _radius = 14;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: GlassPanel(
-        borderRadius: 14,
-        depth: GlassDepth.top,
-        selected: selected,
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        color: textColor,
-                      ),
-                    ),
+    // `compact-selected-fill` / `compact-selected-content`
+    // (Light_mode_CANONICAL.md / Dark_mode_CANONICAL.md §7).
+    final selectedFill = dark ? AppColors.luminousMint : AppColors.actionNavy;
+    final selectedContent = dark ? AppColors.darkOnPrimary : Colors.white;
+    // `compact-unselected-content` (Light §7) /
+    // `compact-unselected-content-primary` (Dark §7).
+    final unselectedContent = dark ? Colors.white : AppColors.actionNavy;
+
+    final row = Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(_radius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(_radius),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                    color: selected ? selectedContent : unselectedContent,
                   ),
-                  if (selected) Icon(Icons.check, color: accent),
-                ],
+                ),
               ),
-            ),
+              if (selected) Icon(Icons.check, color: selectedContent),
+            ],
           ),
         ),
       ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: selected
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                color: selectedFill,
+                borderRadius: BorderRadius.circular(_radius),
+              ),
+              child: row,
+            )
+          : AppLiquidGlass(
+              borderRadius: _radius,
+              dark: dark,
+              quality: AppLiquidGlassQuality.standard,
+              useCanonicalGlass: true,
+              // A compact option row (Design_system_CANONICAL.md §9/§15)
+              // nested inside the sheet's own visible glass surface —
+              // embedded, not a second shader, so it doesn't stack glass
+              // on glass.
+              optics: GlassOptics.compact,
+              layer: GlassLayer.embedded,
+              child: row,
+            ),
     );
   }
 }
@@ -861,8 +939,7 @@ class _CountrySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final accent = dark ? AppColors.luminousMint : AppColors.actionNavy;
+    final accent = AppColors.fieldIcon(context);
 
     return SafeArea(
       child: Padding(
@@ -871,6 +948,7 @@ class _CountrySheet extends StatelessWidget {
           borderRadius: 20,
           dark: dark,
           quality: AppLiquidGlassQuality.standard,
+          useCanonicalGlass: true,
           child: ListView(
             shrinkWrap: true,
             children: [
@@ -884,7 +962,7 @@ class _CountrySheet extends StatelessWidget {
                     textDirection: TextDirection.ltr,
                     child: Text(
                       '${country.dialCode}  (${country.isoCode})',
-                      style: TextStyle(color: colorScheme.onSurface),
+                      style: TextStyle(color: AppColors.heading(context)),
                     ),
                   ),
                   trailing: selected.isoCode == country.isoCode
@@ -927,62 +1005,135 @@ class _OrDivider extends StatelessWidget {
   }
 }
 
-/// Frosted social sign-up button, matching Login's.
-class _SocialButton extends StatelessWidget {
-  const _SocialButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
+/// Literal copy of Login's field construction: the exact
+/// `RecessedLiquidGlassField` branch Login's fields render through
+/// (`useCanonicalGlass: true`, `layer: GlassLayer.surface`,
+/// `dropShadow: false`, `useV2FieldColors: true`), reproduced directly here
+/// instead of going through `AuthGlassField`/`AppRecessedGlassField` — an
+/// independent instance of the same box for each of Register's seven
+/// fields, not a shared abstraction.
+class _LoginStyleField extends StatelessWidget {
+  const _LoginStyleField({
+    required this.controller,
+    required this.hint,
     required this.dark,
+    this.prefixIcon,
+    this.prefix,
+    this.suffix,
+    this.obscureText = false,
+    this.readOnly = false,
+    this.onTap,
+    this.keyboardType,
+    this.textInputAction,
+    this.inputFormatters,
+    this.validator,
   });
 
-  final Widget icon;
-  final String label;
-  final VoidCallback onTap;
+  final TextEditingController controller;
+  final String hint;
   final bool dark;
+  final IconData? prefixIcon;
+  final Widget? prefix;
+  final Widget? suffix;
+  final bool obscureText;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final List<TextInputFormatter>? inputFormatters;
+  final String? Function(String?)? validator;
+
+  static const double _radius = 14;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return AppLiquidGlass(
-      borderRadius: 14,
-      dark: dark,
-      quality: AppLiquidGlassQuality.standard,
-      interactive: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                icon,
-                const SizedBox(width: 8),
-                // Same guard as Login's social buttons: two share the row, so
-                // the label must be allowed to shrink rather than overflow on
-                // a narrow screen or at an enlarged system font size.
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+    final accent = AppColors.fieldIcon(context);
+    final tint = AppColors.canonicalGlassBodyTint;
+    final tintOpacity = AppColors.canonicalGlassBodyTintOpacity(context);
+
+    OutlineInputBorder borderWith(Color color, double width) {
+      return OutlineInputBorder(
+        borderRadius: BorderRadius.circular(_radius),
+        borderSide: BorderSide(color: color, width: width),
+      );
+    }
+
+    final field = TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      validator: validator,
+      textInputAction: textInputAction,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      readOnly: readOnly,
+      onTap: onTap,
+      maxLines: 1,
+      showCursor: !readOnly,
+      cursorColor: AppColors.fieldCursor(context),
+      style: TextStyle(color: AppColors.fieldValue(context), fontSize: 16),
+      decoration: InputDecoration(
+        counterText: '',
+        hintText: hint,
+        hintStyle: TextStyle(color: AppColors.fieldHint(context), fontSize: 16),
+        prefixIcon: (prefixIcon == null && prefix == null)
+            ? null
+            : Padding(
+                padding: const EdgeInsetsDirectional.only(start: 18, end: 12),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (prefixIcon != null)
+                        Icon(prefixIcon, color: accent, size: 22),
+                      if (prefix != null) ...[
+                        const SizedBox(width: 10),
+                        prefix!,
+                      ],
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
+              ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 0),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: Colors.transparent,
+        constraints: const BoxConstraints(minHeight: 56),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        enabledBorder: borderWith(Colors.transparent, 0),
+        border: borderWith(Colors.transparent, 0),
+        focusedBorder: borderWith(Colors.transparent, 0),
+        errorBorder: borderWith(Colors.transparent, 0),
+        focusedErrorBorder: borderWith(Colors.transparent, 0),
+        errorStyle: TextStyle(
+          color: colorScheme.error,
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
+    );
+
+    final tintedField = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_radius),
+        color: tint.withValues(alpha: tintOpacity),
+        border: null,
+      ),
+      child: field,
+    );
+
+    // Login's fields sit 14dp apart — closer than the shader's own drop
+    // shadow blur radius — so the surface renders with no shadow and a
+    // `ClipRRect` bounding the otherwise-unclipped `BackdropFilter`
+    // (`RecessedLiquidGlassField.dropShadow`).
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(_radius),
+      child: CanonicalGlassShell(borderRadius: _radius, child: tintedField),
     );
   }
 }

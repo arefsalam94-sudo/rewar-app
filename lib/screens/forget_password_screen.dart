@@ -4,8 +4,9 @@ import '../l10n/app_localizations.dart';
 import '../models/reset_target.dart';
 import '../services/password_reset_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'verification_code_screen.dart';
@@ -118,6 +119,8 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: GlassBackButton(
+                    useAppLiquidGlass: true,
+                    useCanonicalGlass: true,
                     onTap: () => Navigator.of(context).maybePop(),
                   ),
                 ),
@@ -194,14 +197,20 @@ class _ContactOption extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  static const double _radius = 28;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = colorScheme.brightness == Brightness.dark;
-    return GlassPanel(
-      borderRadius: 28,
-      borderColor: selected ? AppColors.accent(context) : null,
-      borderWidth: selected ? 2 : null,
+    // Large selectable card (Design_system_CANONICAL.md §15): stays real
+    // Liquid Glass in both states; selection reads through a border
+    // highlight rather than the compact chip's solid fill, since this is a
+    // full standalone card, not a compact option.
+    final content = AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
+      borderRadius: _radius,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -255,6 +264,15 @@ class _ContactOption extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (!selected) return content;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(_radius),
+        border: Border.all(color: AppColors.accent(context), width: 2),
+      ),
+      child: content,
     );
   }
 }

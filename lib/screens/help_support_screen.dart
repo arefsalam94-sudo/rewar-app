@@ -59,6 +59,8 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                 children: [
                   GlassBackButton(
                     onTap: () => Navigator.of(context).maybePop(),
+                    useAppLiquidGlass: true,
+                    useCanonicalGlass: true,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -91,6 +93,7 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   expanded: _expandedTopic == topic,
                   expandedChild: _HelpTopicDetails(topic: topic),
                   onTap: () => _toggle(topic),
+                  useCanonicalGlass: true,
                 ),
                 const SizedBox(height: GlassListRow.gap),
               ],
@@ -143,7 +146,7 @@ class _HelpTopicDetails extends StatelessWidget {
                 fontSize: 16,
                 height: 24 / 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
               ),
             )
           else
@@ -194,7 +197,7 @@ class _QuestionAnswer extends StatelessWidget {
           style: TextStyle(
             fontSize: 15,
             height: 22 / 15,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
       ],

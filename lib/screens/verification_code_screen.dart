@@ -9,6 +9,7 @@ import '../services/email_verification_service.dart';
 import '../services/password_reset_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
@@ -324,6 +325,8 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: GlassBackButton(
+                              useAppLiquidGlass: true,
+                              useCanonicalGlass: true,
                               onTap: () => Navigator.of(context).maybePop(),
                             ),
                           ),
@@ -357,7 +360,6 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                         _CodeBox(
                           controller: _controller,
                           focusNode: _focusNode,
-                          hasError: _errorText != null,
                         ),
                         const SizedBox(height: 18),
                         _ResendRow(
@@ -465,28 +467,26 @@ class _Subtitle extends StatelessWidget {
 /// platform gives us paste, OS-level SMS autofill (`oneTimeCode`) and correct
 /// backspace behaviour for free; the visible cells are drawn from its value.
 ///
-/// Design note: the panel's left→right mint→green gradient reuses the
-/// confirmed brand stops from `DESIGN_SYSTEM.md`
-/// (`pageGradientTop` → `pageGradientBottom`). The *horizontal* direction is
-/// new — recorded in `DESIGN_SYSTEM.md` as the "gradient panel" pattern.
+/// The code panel follows the shared glass treatment while keeping its
+/// six-cell structure and left-to-right data direction.
 class _CodeBox extends StatelessWidget {
-  const _CodeBox({
-    required this.controller,
-    required this.focusNode,
-    required this.hasError,
-  });
+  const _CodeBox({required this.controller, required this.focusNode});
 
   final TextEditingController controller;
   final FocusNode focusNode;
-  final bool hasError;
 
   static const double _height = 96;
   static const double _radius = 22;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isDark = colorScheme.brightness == Brightness.dark;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shadowColor = isDark
+        ? AppColors.darkGlassShadowColor
+        : AppColors.lightGlassShadowColor;
+    final shadowOpacity = isDark
+        ? AppColors.darkGlassShadowOpacity
+        : AppColors.lightGlassShadowOpacity;
 
     return SizedBox(
       height: _height,
@@ -521,43 +521,17 @@ class _CodeBox extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: focusNode.requestFocus,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(_radius),
-                  gradient: isDark
-                      ? LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          stops: const [0.0, 0.15, 1.0],
-                          colors: [
-                            AppColors.darkGlassTop.withValues(alpha: 0.58),
-                            AppColors.darkGlassTop.withValues(alpha: 0.45),
-                            AppColors.darkGlassBottom.withValues(alpha: 0.45),
-                          ],
-                        )
-                      : const LinearGradient(
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                          colors: [
-                            AppColors.pageGradientTop,
-                            AppColors.pageGradientBottom,
-                          ],
-                        ),
-                  border: Border.all(
-                    color: hasError
-                        ? colorScheme.error
-                        : Colors.white.withValues(
-                            alpha: isDark ? AppColors.darkBorderOpacity : 0.85,
-                          ),
-                    width: hasError ? 2 : 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.10),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
+              // Same canonical renderer every other real-glass surface in
+              // the app uses (`Design_system_CANONICAL.md` §9) — retires
+              // the old V2 default this call site used to fall back to.
+              // Shadow/radius unchanged.
+              child: CanonicalGlassShell(
+                borderRadius: _radius,
+                shadow: BoxShadow(
+                  color: shadowColor.withValues(alpha: shadowOpacity),
+                  offset: const Offset(0, AppColors.glassFloatingShadowOffsetY),
+                  blurRadius: AppColors.glassFloatingShadowBlurRadius,
+                  spreadRadius: AppColors.glassFloatingShadowSpreadRadius,
                 ),
                 // The code itself always reads left-to-right, including in
                 // Kurdish and Arabic.

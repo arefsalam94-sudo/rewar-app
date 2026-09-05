@@ -6,7 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/app_liquid_glass.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'home_screen.dart';
@@ -176,21 +177,30 @@ class _Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = dark ? AppColors.luminousMint : AppColors.actionNavy;
 
-    return GlassPanel(
-      borderRadius: _size,
-      dark: dark,
-      // A brighter ring than the default, matching the mockup's crisp edge.
-      // DESIGN dark.md: white strokes sit at 10-15% opacity — "a solid,
-      // fully opaque white border is wrong". Light mode keeps the crisp ring
-      // the mockup shows.
-      borderColor: Colors.white.withValues(
-        alpha: dark ? AppColors.darkBorderOpacity : 0.90,
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // A brighter ring than the default, matching the mockup's crisp
+        // edge. DESIGN dark.md: white strokes sit at 10-15% opacity — "a
+        // solid, fully opaque white border is wrong". Light mode keeps the
+        // crisp ring the mockup shows.
+        border: Border.all(
+          color: Colors.white.withValues(
+            alpha: dark ? AppColors.darkBorderOpacity : 0.90,
+          ),
+          width: 2,
+        ),
       ),
-      borderWidth: 2,
-      child: SizedBox(
-        width: _size,
-        height: _size,
-        child: ClipOval(child: _picture(accent)),
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
+        layer: GlassLayer.surface,
+        borderRadius: _size,
+        dark: dark,
+        child: SizedBox(
+          width: _size,
+          height: _size,
+          child: ClipOval(child: _picture(accent)),
+        ),
       ),
     );
   }

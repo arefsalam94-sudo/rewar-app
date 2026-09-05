@@ -6,9 +6,10 @@ import '../services/legal_document_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/legal_document_body.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 
@@ -110,6 +111,8 @@ class _TermsOfServiceScreenState extends State<TermsOfServiceScreen> {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: GlassBackButton(
+                        useAppLiquidGlass: true,
+                        useCanonicalGlass: true,
                         dark: isDark,
                         onTap: () => Navigator.of(context).maybePop(),
                       ),
@@ -192,7 +195,9 @@ class _CardShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
       borderRadius: 28,
       dark: dark,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),

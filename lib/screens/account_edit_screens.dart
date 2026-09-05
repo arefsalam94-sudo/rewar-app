@@ -7,8 +7,8 @@ import '../l10n/app_localizations.dart';
 import '../services/account_settings_service.dart';
 import '../services/preview_identity.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'policy_screen.dart';
@@ -127,6 +127,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     key: const Key('edit-profile-photo'),
                     onPressed: _pickImage,
                     icon: const Icon(Icons.camera_alt_outlined),
+                    // Canonical primary-action fill — not the unthemed
+                    // default, which resolves to `colorScheme.primary`
+                    // (legacy green).
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.accent(context),
+                      foregroundColor:
+                          Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.darkOnPrimary
+                          : Colors.white,
+                    ),
                   ),
                 ),
               ],
@@ -598,6 +608,8 @@ class _EditShell extends StatelessWidget {
               alignment: AlignmentDirectional.centerStart,
               child: GlassBackButton(
                 onTap: () => Navigator.of(context).maybePop(),
+                useAppLiquidGlass: true,
+                useCanonicalGlass: true,
               ),
             ),
             const SizedBox(height: 22),
@@ -614,14 +626,15 @@ class _EditShell extends StatelessWidget {
               subtitle,
               style: TextStyle(
                 fontSize: 16,
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
               ),
             ),
             const SizedBox(height: 28),
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 620),
-                child: GlassPanel(
+                child: AppLiquidGlass(
+                  useCanonicalGlass: true,
                   borderRadius: 28,
                   padding: const EdgeInsets.all(24),
                   child: child,
@@ -657,21 +670,38 @@ class _EditField extends StatelessWidget {
     keyboardType: keyboardType,
     obscureText: obscure,
     textCapitalization: capitalization,
+    // Canonical field-value color — the unstyled default otherwise falls
+    // through to the ambient text theme rather than the field's own token.
+    style: TextStyle(color: AppColors.fieldValue(context)),
+    cursorColor: AppColors.fieldCursor(context),
     decoration: InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      // `labelText` plays both the hint role (large, before typing) and the
+      // label role (small, floated above once filled/focused) — mapped to
+      // the matching canonical token for each state.
+      labelStyle: TextStyle(color: AppColors.fieldHint(context)),
+      floatingLabelStyle: TextStyle(color: AppColors.fieldLabel(context)),
+      prefixIcon: Icon(icon, color: AppColors.fieldIcon(context)),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.18),
+      // Embedded canonical tint — this field always sits inside
+      // `_EditShell`'s own visible canonical glass surface, so it uses the
+      // shared embedded fill instead of a hard-coded white.
+      fillColor: AppColors.canonicalGlassBodyTint.withValues(
+        alpha: AppColors.canonicalGlassEmbeddedTintOpacity(context),
+      ),
+      // No painted border on real glass (`Design_system_CANONICAL.md`
+      // §10) — including on focus; the tint fill is the only separation.
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: Colors.white.withValues(alpha: 0.55),
-          width: 1.2,
-        ),
+        borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: AppColors.accent(context), width: 1.8),
+        borderSide: BorderSide.none,
       ),
     ),
   );

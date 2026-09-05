@@ -7,7 +7,7 @@ import '../services/onboarding_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
-import '../widgets/app_liquid_glass.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/theme_mode_toggle.dart';
 import 'login_screen.dart';
@@ -92,7 +92,6 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
     final theme = isDark
         ? AppTheme.darkForLocale(Localizations.localeOf(context))
         : AppTheme.lightForLocale(Localizations.localeOf(context));
-    final colorScheme = theme.colorScheme;
 
     return Theme(
       data: theme,
@@ -106,6 +105,11 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
           body: PageBackground(
             dark: isDark,
             imageAsset: 'assets/images/Language.webp',
+            // `background-gradient-opacity: 0.45` (Design_system_CANONICAL.md
+            // §8 / Light & Dark CANONICAL §2). Passed as a local override
+            // rather than changing the shared `AppColors.backgroundGradientOpacity`
+            // default (0.55), so every other screen is unaffected.
+            gradientOpacity: 0.45,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -142,9 +146,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                     Icon(
                                       Icons.public,
                                       size: 76,
-                                      color: isDark
-                                          ? AppColors.luminousMint
-                                          : AppColors.actionNavy,
+                                      // `icon-accent`
+                                      // (Design_system_CANONICAL.md §13).
+                                      color: AppColors.iconAccent(context),
                                     ),
                               ),
                               const SizedBox(height: 24),
@@ -155,7 +159,8 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                   fontWeight: FontWeight.w700,
                                   fontSize: 30,
                                   height: 1.1,
-                                  color: colorScheme.onSurface,
+                                  // `text-heading` (Design system final v2.md).
+                                  color: AppColors.heading(context),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -165,20 +170,59 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.w400,
                                   fontSize: 16,
-                                  color: AppColors.secondaryText(context),
+                                  // `text-secondary` at V3's exact opacity
+                                  // (Light/Dark mode final v3.md).
+                                  color: AppColors.secondaryTextV3(context),
                                 ),
                               ),
                               const SizedBox(height: 40),
-                              for (var i = 0; i < _options.length; i++) ...[
-                                _LanguageButton(
-                                  option: _options[i],
-                                  selected: _selectedIndex == i,
-                                  dark: isDark,
-                                  onTap: () => _selectLanguage(i),
+                              // Real oc_liquid_glass shader, canonical
+                              // baseline (Design_system_CANONICAL.md §9).
+                              // One group shared by the three language
+                              // cards (well under the 4-surface-per-group
+                              // limit) — deliberately kept as one shared
+                              // group rather than each card getting its own
+                              // (`CanonicalGlassShell`'s one-group-per-
+                              // surface shape), so three real glass cards
+                              // still cost one shader pass, not three.
+                              // [canonicalGlassSettingsFor] is the same size
+                              // -normalization the shared renderer applies
+                              // everywhere else; at this radius (28, the
+                              // canonical reference size) it returns
+                              // [kLiquidGlassSettingsCanonical] completely
+                              // unscaled, so this is a no-op today. Geometry
+                              // below is byte-for-byte the same as before —
+                              // only the glass material and text/selection
+                              // colors changed (Geometry Lock, §2).
+                              LiquidGlassGroup(
+                                settings: canonicalGlassSettingsFor(28),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  // Without this, the default
+                                  // CrossAxisAlignment.center lets each card
+                                  // shrink-wrap to its text instead of
+                                  // filling the row — this one line is what
+                                  // keeps the cards wide (Geometry Lock).
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    for (
+                                      var i = 0;
+                                      i < _options.length;
+                                      i++
+                                    ) ...[
+                                      _LanguageButton(
+                                        option: _options[i],
+                                        selected: _selectedIndex == i,
+                                        dark: isDark,
+                                        onTap: () => _selectLanguage(i),
+                                      ),
+                                      if (i != _options.length - 1)
+                                        const SizedBox(height: 18),
+                                    ],
+                                  ],
                                 ),
-                                if (i != _options.length - 1)
-                                  const SizedBox(height: 18),
-                              ],
+                              ),
                               const SizedBox(height: 32),
                               // The app's single light/dark switch. Lives here
                               // rather than on Login so the choice is made
@@ -227,45 +271,75 @@ class _LanguageButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return AppLiquidGlass(
+    final shadowColor = dark
+        ? AppColors.darkGlassShadowColor
+        : AppColors.lightGlassShadowColor;
+
+    return LiquidGlassSurface(
       borderRadius: 28,
-      dark: dark,
-      selected: selected,
-      quality: AppLiquidGlassQuality.standard,
-      interactive: true,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
+      shadow: BoxShadow(
+        // V3 `glass-shadow-opacity: 0.10` (was 0.14).
+        color: shadowColor.withValues(alpha: AppColors.glassShadowOpacityV3),
+        offset: const Offset(0, AppColors.glassFloatingShadowOffsetY),
+        blurRadius: AppColors.glassFloatingShadowBlurRadius,
+        spreadRadius: AppColors.glassFloatingShadowSpreadRadius,
+      ),
+      // Canonical large-selectable-card tint (Design_system_CANONICAL.md
+      // §16 / Light & Dark CANONICAL §8):
+      // - unselected: the same neutral canonical body tint every other
+      //   canonical glass surface uses, so this card reads as the same
+      //   material as Login/Register/toolbar/fields.
+      // - selected: `large-selection-accent` (navy in light, mint in dark) at
+      //   up to 0.05 — still never a solid fill, never a painted border, and
+      //   the shader configuration itself never changes by state.
+      child: DecoratedBox(
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  option.label,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: FontWeight.w700,
-                    fontSize: 22,
-                    color: colorScheme.error,
-                  ),
+          color: selected
+              ? AppColors.largeSelectionAccent(
+                  context,
+                ).withValues(alpha: AppColors.largeSelectionTintOpacityV3)
+              : AppColors.canonicalGlassBodyTint.withValues(
+                  alpha: AppColors.canonicalGlassBodyTintOpacity(context),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  option.hint,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTheme.fontFamilyForCode(option.code),
-                    fontWeight: FontWeight.w400,
-                    fontSize: 16,
-                    color: AppColors.secondaryText(context),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(28),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    option.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Plus Jakarta Sans',
+                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                      // `text-card-title` (Light/Dark mode final v2.md).
+                      color: AppColors.heading(context),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    option.hint,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: AppTheme.fontFamilyForCode(option.code),
+                      fontWeight: FontWeight.w400,
+                      fontSize: 16,
+                      // `text-secondary` / `text-card-metadata` at V3's exact
+                      // opacity: Light `#3E4945` at 1.00, Dark `#FFFFFF` at
+                      // 0.80.
+                      color: AppColors.secondaryTextV3(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

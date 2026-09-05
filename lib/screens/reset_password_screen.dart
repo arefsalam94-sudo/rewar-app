@@ -4,8 +4,9 @@ import '../l10n/app_localizations.dart';
 import '../models/reset_target.dart';
 import '../services/password_reset_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/gradient_field.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
@@ -173,6 +174,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: GlassBackButton(
+                                useAppLiquidGlass: true,
+                                useCanonicalGlass: true,
                                 onTap: () => Navigator.of(context).maybePop(),
                               ),
                             ),
@@ -201,7 +204,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                                 'really be changed.',
                           ),
                           const SizedBox(height: 40),
-                          GradientField(
+                          AppRecessedGlassField(
                             controller: _passwordController,
                             hint: l10n.newPassword,
                             prefixIcon: Icons.lock_outline,
@@ -215,9 +218,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             ),
                             validator: (value) =>
                                 _validatePassword(value, l10n),
+                            useV2FieldColors: true,
+                            useCanonicalGlass: true,
+                            layer: GlassLayer.surface,
+                            dropShadow: false,
                           ),
                           const SizedBox(height: 18),
-                          GradientField(
+                          AppRecessedGlassField(
                             controller: _confirmController,
                             hint: l10n.confirmPassword,
                             prefixIcon: Icons.lock_outline,
@@ -231,6 +238,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               ),
                             ),
                             validator: (value) => _validateConfirm(value, l10n),
+                            useV2FieldColors: true,
+                            useCanonicalGlass: true,
+                            layer: GlassLayer.surface,
+                            dropShadow: false,
                           ),
                           if (_errorText != null) ...[
                             const SizedBox(height: 18),

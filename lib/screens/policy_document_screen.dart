@@ -5,9 +5,10 @@ import '../models/legal_document.dart';
 import '../models/policy_topic.dart';
 import '../services/legal_document_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/legal_document_body.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import 'policy_screen.dart';
 
@@ -91,6 +92,8 @@ class _PolicyDocumentScreenState extends State<PolicyDocumentScreen> {
                     // controls on the physical left in every language.
                     alignment: Alignment.centerLeft,
                     child: GlassBackButton(
+                      useAppLiquidGlass: true,
+                      useCanonicalGlass: true,
                       onTap: () => Navigator.of(context).maybePop(),
                     ),
                   ),
@@ -155,7 +158,9 @@ class _CardShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
+    layer: GlassLayer.surface,
     // `rounded-card`, and the low-opacity brand-gradient fill from the design
     // files' "Liquid Glass Cards" — so the background photo reads through.
     borderRadius: 28,

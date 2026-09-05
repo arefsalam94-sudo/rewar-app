@@ -8,8 +8,9 @@ import '../services/settings_preferences.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/theme_controller.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/theme_mode_toggle.dart';
 import 'login_screen.dart';
@@ -497,50 +498,69 @@ class _ChoiceOption extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  static const double _radius = 12;
+
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppColors.accent(context).withValues(alpha: 0.14)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    color: selected
-                        ? AppColors.selectionAccent(context)
-                        : AppColors.heading(context),
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(
-                  Icons.check_rounded,
-                  size: 20,
-                  color: AppColors.selectionAccent(context),
-                ),
-            ],
+    // The same compact-selection system already proven on Flight
+    // Ticketing's cabin-class picker: selected = solid navy/mint fill with
+    // contrast content; unselected = embedded canonical glass. Not
+    // `AppColors.selectionAccent`, which resolves to the legacy Light-mode
+    // green (`#00624D`), and not `GlassPanel(selected:)`, whose selected
+    // tint the canonical glass path doesn't render at all.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final selectedContent = isDark ? AppColors.darkOnPrimary : Colors.white;
+    final content = selected ? selectedContent : AppColors.heading(context);
+
+    final row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 32),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 16,
+              height: 20 / 16,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              color: content,
+            ),
           ),
         ),
       ),
     );
+
+    final body = Semantics(
+      button: true,
+      selected: selected,
+      child: Material(
+        color: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_radius),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(onTap: onTap, child: row),
+      ),
+    );
+
+    return selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: selectedFill,
+              borderRadius: BorderRadius.circular(_radius),
+            ),
+            child: body,
+          )
+        : AppLiquidGlass(
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
+            borderRadius: _radius,
+            child: body,
+          );
   }
 }
 
@@ -554,7 +574,11 @@ class _SettingsHeader extends StatelessWidget {
     return Row(
       textDirection: TextDirection.ltr,
       children: [
-        GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+        GlassBackButton(
+          onTap: () => Navigator.of(context).maybePop(),
+          useAppLiquidGlass: true,
+          useCanonicalGlass: true,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -585,54 +609,49 @@ class _ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accent(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 12, 14),
-            child: Row(
-              children: [
-                _ProfileAvatar(url: profile.profileImageUrl, accent: accent),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        profile.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.heading(context),
-                        ),
-                      ),
-                      if (profile.phone?.isNotEmpty == true) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          profile.phone!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textDirection: TextDirection.ltr,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ],
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 12, 14),
+        child: Row(
+          children: [
+            _ProfileAvatar(url: profile.profileImageUrl, accent: accent),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    profile.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.heading(context),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                _ForwardChevron(color: accent),
-              ],
+                  if (profile.phone?.isNotEmpty == true) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      profile.phone!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.ltr,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.heading(context),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 6),
+            _ForwardChevron(color: accent),
+          ],
         ),
       ),
     );
@@ -697,7 +716,8 @@ class _SettingsGroup extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
     child: Column(
@@ -744,11 +764,10 @@ class _SettingsRow extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: accent.withValues(alpha: 0.55),
-                width: 1.2,
-              ),
-              color: Colors.white.withValues(alpha: 0.10),
+              // Canonical stroke-only icon ring (`Design_system_CANONICAL.md`
+              // §13): transparent center, full-opacity accent border — not
+              // the translucent white fill/dimmed border this used before.
+              border: Border.all(color: accent, width: 1.2),
             ),
             child: Icon(icon, size: 20, color: accent),
           ),
@@ -762,7 +781,7 @@ class _SettingsRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 15.5,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: AppColors.heading(context),
               ),
             ),
           ),
@@ -778,7 +797,7 @@ class _SettingsRow extends StatelessWidget {
                 textDirection: forceValueLtr ? TextDirection.ltr : null,
                 style: TextStyle(
                   fontSize: 14.5,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: AppColors.heading(context),
                 ),
               ),
             ),

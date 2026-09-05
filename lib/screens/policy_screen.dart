@@ -55,6 +55,8 @@ class PolicyScreen extends StatelessWidget {
                 // on the physical left in every language.
                 alignment: Alignment.centerLeft,
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -71,6 +73,7 @@ class PolicyScreen extends StatelessWidget {
                   // preview mode rather than showing a blank legal page, and
                   // a test asserts the asset covers all seven ids.
                   onTap: () => _open(context, topic),
+                  useCanonicalGlass: true,
                 ),
                 const SizedBox(height: 16),
               ],

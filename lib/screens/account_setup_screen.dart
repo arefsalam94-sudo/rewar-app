@@ -9,9 +9,10 @@ import '../services/profile_setup_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
+import '../widgets/app_liquid_glass.dart';
+import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
-import '../widgets/gradient_field.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
@@ -241,6 +242,8 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: GlassBackButton(
+                                useAppLiquidGlass: true,
+                                useCanonicalGlass: true,
                                 dark: _darkMode,
                                 onTap: () => Navigator.of(context).maybePop(),
                               ),
@@ -280,7 +283,7 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                             ),
                           ),
                           const SizedBox(height: 44),
-                          GradientField(
+                          AppRecessedGlassField(
                             controller: _nameController,
                             hint: l10n.username,
                             prefixIcon: Icons.person_outline,
@@ -288,6 +291,9 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                             textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) => _onCreateAccount(),
                             validator: (value) => _validateName(value, l10n),
+                            useV2FieldColors: true,
+                            useCanonicalGlass: true,
+                            layer: GlassLayer.surface,
                           ),
                           if (_errorText != null) ...[
                             const SizedBox(height: 16),
@@ -354,7 +360,9 @@ class _AvatarPicker extends StatelessWidget {
             left: 0,
             child: GestureDetector(
               onTap: onTap,
-              child: GlassPanel(
+              child: AppLiquidGlass(
+                useCanonicalGlass: true,
+                layer: GlassLayer.surface,
                 borderRadius: _size,
                 dark: dark,
                 child: SizedBox(
@@ -424,7 +432,9 @@ class _ImageSourceSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           dark: dark,
           child: Column(
