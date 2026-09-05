@@ -53,6 +53,10 @@ dependencies:
   # (Apple Maps on iOS, the user's chosen maps app on Android).
   url_launcher: ^6.3.2
   google_maps_flutter: ^2.18.0
+  # Key-free map used only by the Explore Tours map card and tour map page.
+  # 0.26.x matches this project's AGP 9 legacy-Kotlin mode. Version 0.27's
+  # built-in-Kotlin-only Android script does not configure in that mode.
+  maplibre_gl: 0.26.2
   geolocator: ^14.0.3
   # Key-free coordinate forecast used by nature-place detail cards.
   http: ^1.6.0

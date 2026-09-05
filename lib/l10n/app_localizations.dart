@@ -1001,6 +1001,17 @@ class AppLocalizations {
           'Bus transport is not available for this tour',
       'tourWeatherUnavailable': 'Weather is unavailable',
       'tourMapUnavailable': 'Map is unavailable',
+      'tourMapMyLocation': 'My location',
+      'tourMapTourCategory': 'Tour',
+      'tourMapViewDetails': 'View Details',
+      'tourMapLocationServicesDisabled':
+          'Turn on location services to show your position.',
+      'tourMapPermissionDenied':
+          'Location permission was denied. The map is still available.',
+      'tourMapPermissionDeniedForever':
+          'Location access is blocked. Enable it in your device settings.',
+      'tourMapLocationFailed':
+          'Your location could not be found. Please try again.',
       'tourWriteReviewPrompt': 'Joined this tour?',
       'tourNoReviewsYet': 'No reviews yet. Be the first to share your tour.',
       'tourReviewSignInBody':
@@ -1994,6 +2005,17 @@ class AppLocalizations {
       'tourTransportUnavailable': 'گواستنەوە بە پاس بۆ ئەم گەشتە بەردەست نییە',
       'tourWeatherUnavailable': 'زانیاری کەشوهەوا بەردەست نییە',
       'tourMapUnavailable': 'نەخشە بەردەست نییە',
+      'tourMapMyLocation': 'شوێنی من',
+      'tourMapTourCategory': 'گەشت',
+      'tourMapViewDetails': 'بینینی وردەکارییەکان',
+      'tourMapLocationServicesDisabled':
+          'خزمەتگوزارییەکانی شوێن چالاک بکە بۆ پیشاندانی شوێنەکەت.',
+      'tourMapPermissionDenied':
+          'مۆڵەتی شوێن ڕەتکرایەوە. نەخشەکە هێشتا بەردەستە.',
+      'tourMapPermissionDeniedForever':
+          'دەستگەیشتن بە شوێن قەدەغەکراوە. لە ڕێکخستنەکانی ئامێرەکەت چالاکی بکە.',
+      'tourMapLocationFailed':
+          'شوێنەکەت نەدۆزرایەوە. تکایە دووبارە هەوڵ بدەرەوە.',
       'tourWriteReviewPrompt': 'بەشداری ئەم گەشتەت کردووە؟',
       'tourNoReviewsYet':
           'هێشتا بۆچوون نییە. یەکەم کەس بە کە ئەزموونی گەشتەکەت باس دەکات.',
@@ -2949,6 +2971,14 @@ class AppLocalizations {
       'tourTransportUnavailable': 'النقل بالحافلة غير متاح لهذه الجولة',
       'tourWeatherUnavailable': 'معلومات الطقس غير متاحة',
       'tourMapUnavailable': 'الخريطة غير متاحة',
+      'tourMapMyLocation': 'موقعي',
+      'tourMapTourCategory': 'جولة',
+      'tourMapViewDetails': 'عرض التفاصيل',
+      'tourMapLocationServicesDisabled': 'فعّل خدمات الموقع لإظهار موقعك.',
+      'tourMapPermissionDenied': 'تم رفض إذن الموقع. لا تزال الخريطة متاحة.',
+      'tourMapPermissionDeniedForever':
+          'الوصول إلى الموقع محظور. فعّله من إعدادات جهازك.',
+      'tourMapLocationFailed': 'تعذر العثور على موقعك. يرجى المحاولة مرة أخرى.',
       'tourWriteReviewPrompt': 'هل شاركت في هذه الجولة؟',
       'tourNoReviewsYet': 'لا توجد مراجعات بعد. كن أول من يشارك تجربة الجولة.',
       'tourReviewSignInBody':
@@ -4069,6 +4099,15 @@ class AppLocalizations {
   String get tourTransportUnavailable => _t('tourTransportUnavailable');
   String get tourWeatherUnavailable => _t('tourWeatherUnavailable');
   String get tourMapUnavailable => _t('tourMapUnavailable');
+  String get tourMapMyLocation => _t('tourMapMyLocation');
+  String get tourMapTourCategory => _t('tourMapTourCategory');
+  String get tourMapViewDetails => _t('tourMapViewDetails');
+  String get tourMapLocationServicesDisabled =>
+      _t('tourMapLocationServicesDisabled');
+  String get tourMapPermissionDenied => _t('tourMapPermissionDenied');
+  String get tourMapPermissionDeniedForever =>
+      _t('tourMapPermissionDeniedForever');
+  String get tourMapLocationFailed => _t('tourMapLocationFailed');
   String get tourWriteReviewPrompt => _t('tourWriteReviewPrompt');
   String get tourNoReviewsYet => _t('tourNoReviewsYet');
   String get tourReviewSignInBody => _t('tourReviewSignInBody');

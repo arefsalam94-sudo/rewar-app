@@ -1123,10 +1123,8 @@ class _PanoramaBackground extends StatelessWidget {
   static const String _asset = 'assets/images/3 page/panorama.webp';
   static const String _nightAsset = 'assets/images/3 page/panorama night.webp';
 
-  /// Natural pixel size of the panorama, and of one slide's third of it.
-  static const double _imageWidth = 3240;
-  static const double _imageHeight = 1920;
-  static double get _sliceWidth => _imageWidth / 3;
+  /// Natural pixel height of the panorama, used to avoid oversized decodes.
+  static const double _imageHeight = _PanoramaGeometry.sourceHeight;
 
   /// The image provider is `const` so all three slides share one decode: a
   /// new provider instance each frame would defeat the image cache.
@@ -1182,22 +1180,10 @@ class _PanoramaBackground extends StatelessWidget {
     final media = MediaQuery.of(context);
     final size = media.size;
 
-    // Scale so a single third always covers the screen in both directions.
-    // Phones taller than 16:9 are covered by height, which crops a little off
-    // each side rather than letterboxing.
-    final scale = (size.height / _imageHeight) > (size.width / _sliceWidth)
-        ? size.height / _imageHeight
-        : size.width / _sliceWidth;
-
-    final renderedWidth = _imageWidth * scale;
-    final renderedHeight = _imageHeight * scale;
-    final sliceWidth = _sliceWidth * scale;
-
     // Centre the current third on screen. Clamped so a rubber-band overscroll
     // at either end can't drag the photo's edge into view.
     final clamped = progress.clamp(0.0, (slideCount - 1).toDouble());
-    final dx = size.width / 2 - (clamped + 0.5) * sliceWidth;
-    final dy = (size.height - renderedHeight) / 2;
+    final geometry = _PanoramaGeometry.resolve(size, clamped);
 
     // Crossfade the two identically aligned panoramas as one complete scene.
     // Page two settles at 100% day, page three at 100% night, and every point
@@ -1207,12 +1193,13 @@ class _PanoramaBackground extends StatelessWidget {
 
     // Decoding above the size actually drawn wastes memory, so on smaller
     // screens the image is decoded down to the height it will be shown at.
-    final targetHeightPx = (renderedHeight * media.devicePixelRatio).round();
+    final targetHeightPx = (geometry.renderedHeight * media.devicePixelRatio)
+        .round();
     final cacheHeight = targetHeightPx < _imageHeight ? targetHeightPx : null;
 
     return ClipRect(
       child: Transform.translate(
-        offset: Offset(dx, dy),
+        offset: geometry.offset,
         transformHitTests: false,
         child: OverflowBox(
           alignment: Alignment.topLeft,
@@ -1221,8 +1208,8 @@ class _PanoramaBackground extends StatelessWidget {
           maxWidth: double.infinity,
           maxHeight: double.infinity,
           child: SizedBox(
-            width: renderedWidth,
-            height: renderedHeight,
+            width: geometry.renderedWidth,
+            height: geometry.renderedHeight,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -1258,6 +1245,51 @@ class _PanoramaBackground extends StatelessWidget {
   }
 }
 
+/// The one source-to-screen transform shared by the panorama and anything
+/// attached to it. Keeping this calculation in one place prevents the car
+/// from drifting away from the road when the viewport aspect ratio changes.
+class _PanoramaGeometry {
+  const _PanoramaGeometry({
+    required this.scale,
+    required this.renderedWidth,
+    required this.renderedHeight,
+    required this.offset,
+  });
+
+  static const double sourceWidth = 3240;
+  static const double sourceHeight = 1920;
+  static const double sourceSliceWidth = sourceWidth / 3;
+
+  final double scale;
+  final double renderedWidth;
+  final double renderedHeight;
+  final Offset offset;
+
+  factory _PanoramaGeometry.resolve(Size viewport, double pageProgress) {
+    // Cover one panorama third. Tall phones therefore crop the sides, while
+    // the road and car receive the exact same scale and crop.
+    final scale = math.max(
+      viewport.height / sourceHeight,
+      viewport.width / sourceSliceWidth,
+    );
+    final renderedWidth = sourceWidth * scale;
+    final renderedHeight = sourceHeight * scale;
+    final renderedSliceWidth = sourceSliceWidth * scale;
+
+    return _PanoramaGeometry(
+      scale: scale,
+      renderedWidth: renderedWidth,
+      renderedHeight: renderedHeight,
+      offset: Offset(
+        viewport.width / 2 - (pageProgress + 0.5) * renderedSliceWidth,
+        (viewport.height - renderedHeight) / 2,
+      ),
+    );
+  }
+
+  Offset sourceToViewport(Offset sourcePoint) => offset + sourcePoint * scale;
+}
+
 /// A perspective-scaled car following the marked road on the night panorama.
 ///
 /// Coordinates are measured directly on the 3240×1920 source image. The car
@@ -1268,12 +1300,8 @@ class _RoadCarMotion extends StatelessWidget {
 
   final double progress;
 
-  static const String _asset = 'assets/images/3 page/car - 3ed page.png';
+  static const String _asset = 'assets/images/3 page/car - 3ed page relit.png';
   static const AssetImage provider = AssetImage(_asset);
-
-  static const double _panoramaWidth = 3240;
-  static const double _panoramaHeight = 1920;
-  static const double _sliceWidth = _panoramaWidth / 3;
 
   // Centres of the supplied green and blue marks, with two controls following
   // the red road stroke between them.
@@ -1287,9 +1315,14 @@ class _RoadCarMotion extends StatelessWidget {
   // it turns.
   static const double _assetForwardHeading = 2.92;
 
-  static const double _startBoxWidth = 360;
-  static const double _endBoxWidth = 360;
-  static const double _assetAspectRatio = 1536 / 1024;
+  // Width of the road at the two ends of the centre line, measured in the
+  // panorama's source pixels. The vehicle grows with the road instead of
+  // using a fixed screen size, which supplies the perspective during a drag.
+  static const double _startRoadWidth = 80;
+  static const double _endRoadWidth = 205;
+  // Preserve the replacement PNG's natural proportions. Using the old
+  // 260x140 display ratio stretched the new 1448x1086 artwork sideways.
+  static const double _carBoxAspectRatio = 1448 / 1086;
   static const Offset _roadAlignmentNudge = Offset.zero;
 
   static Offset _pointOnPath(double t) {
@@ -1314,18 +1347,11 @@ class _RoadCarMotion extends StatelessWidget {
     final pageProgress = progress.clamp(0.0, 2.0);
     final rawMotion = (pageProgress - 1.0).clamp(0.0, 1.0);
     final motion = Curves.easeInOutSine.transform(rawMotion);
+    final panorama = _PanoramaGeometry.resolve(size, pageProgress);
 
-    final scale = (size.height / _panoramaHeight) > (size.width / _sliceWidth)
-        ? size.height / _panoramaHeight
-        : size.width / _sliceWidth;
-    final renderedHeight = _panoramaHeight * scale;
-    final renderedSliceWidth = _sliceWidth * scale;
-    final dx = size.width / 2 - (pageProgress + 0.5) * renderedSliceWidth;
-    final dy = (size.height - renderedHeight) / 2;
-
-    final sourceBoxWidth = lerpDouble(_startBoxWidth, _endBoxWidth, motion)!;
-    final boxWidth = sourceBoxWidth * scale;
-    final boxHeight = boxWidth / _assetAspectRatio;
+    final sourceBoxWidth = lerpDouble(_startRoadWidth, _endRoadWidth, motion)!;
+    final boxWidth = sourceBoxWidth * panorama.scale;
+    final boxHeight = boxWidth / _carBoxAspectRatio;
 
     final sourceAnchor = _pointOnPath(motion);
     final tangent = _pathTangent(motion);
@@ -1350,10 +1376,7 @@ class _RoadCarMotion extends StatelessWidget {
         rotateVector(rearVector, rotation);
     final carAnchor = sourceAnchor + frontAlignmentOffset;
 
-    final viewportAnchor = Offset(
-      dx + carAnchor.dx * scale,
-      dy + carAnchor.dy * scale,
-    );
+    final viewportAnchor = panorama.sourceToViewport(carAnchor);
 
     return IgnorePointer(
       child: ClipRect(
@@ -1385,7 +1408,7 @@ class _RoadCarMotion extends StatelessWidget {
                     Image(
                       key: const ValueKey('onboarding-road-car'),
                       image: provider,
-                      fit: BoxFit.fill,
+                      fit: BoxFit.contain,
                       filterQuality: FilterQuality.high,
                       gaplessPlayback: true,
                       excludeFromSemantics: true,
@@ -1403,8 +1426,8 @@ class _RoadCarMotion extends StatelessWidget {
   }
 }
 
-/// Paints the car's contact shadow and warm headlight spill in the car's local
-/// coordinate system, so both effects rotate and scale with the road tangent.
+/// Paints road-plane lighting in the car's local coordinate system, so every
+/// shadow remains attached to the tyres while the car translates and scales.
 class _RoadCarEffectsPainter extends CustomPainter {
   const _RoadCarEffectsPainter({required this.intensity});
 
@@ -1412,16 +1435,82 @@ class _RoadCarEffectsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final shadow = Paint()
-      ..color = Colors.black.withValues(alpha: 0.58)
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.035);
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(size.width * 0.56, size.height * 0.70),
-        width: size.width * 0.65,
-        height: size.height * 0.17,
-      ),
-      shadow,
+    final arrival = 0.35 + 0.65 * intensity;
+
+    // The closest lamps are above and to the right of the vehicle in the
+    // panorama. Their broad shadows therefore trail down-road to the left.
+    // Separate, low-opacity lobes keep the result believable among several
+    // road lights instead of reading as one studio drop shadow.
+    _drawSoftShadow(
+      canvas,
+      size,
+      center: const Offset(0.35, 0.80),
+      width: 0.72,
+      height: 0.105,
+      angle: -0.08,
+      opacity: 0.30 * arrival,
+    );
+    _drawSoftShadow(
+      canvas,
+      size,
+      center: const Offset(0.48, 0.825),
+      width: 0.55,
+      height: 0.075,
+      angle: 0.06,
+      opacity: 0.20 * arrival,
+    );
+
+    // Dense ambient occlusion directly beneath the chassis prevents any
+    // bright road pixels from making the transparent cutout appear to float.
+    final underbody = Path()
+      ..moveTo(size.width * 0.20, size.height * 0.69)
+      ..quadraticBezierTo(
+        size.width * 0.51,
+        size.height * 0.73,
+        size.width * 0.84,
+        size.height * 0.65,
+      )
+      ..lineTo(size.width * 0.73, size.height * 0.81)
+      ..quadraticBezierTo(
+        size.width * 0.48,
+        size.height * 0.86,
+        size.width * 0.23,
+        size.height * 0.78,
+      )
+      ..close();
+    canvas.drawPath(
+      underbody,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.64 * arrival)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.018),
+    );
+
+    // Small high-density patches at the three visible tyre contact points.
+    // These are the visual anchors that make the weight of the car meet the
+    // asphalt; the broader lamp shadows above remain deliberately softer.
+    _drawContactShadow(
+      canvas,
+      size,
+      center: const Offset(0.22, 0.765),
+      width: 0.20,
+      angle: 0.05,
+      opacity: 0.76 * arrival,
+    );
+    _drawContactShadow(
+      canvas,
+      size,
+      center: const Offset(0.66, 0.815),
+      width: 0.19,
+      angle: -0.04,
+      opacity: 0.82 * arrival,
+    );
+    _drawContactShadow(
+      canvas,
+      size,
+      center: const Offset(0.89, 0.625),
+      width: 0.13,
+      angle: -0.14,
+      opacity: 0.68 * arrival,
     );
 
     final lightStrength = 0.22 + 0.58 * intensity;
@@ -1454,6 +1543,72 @@ class _RoadCarEffectsPainter extends CustomPainter {
           const Color(0xFFFFE3A3).withValues(alpha: 0.16 * intensity),
           Colors.transparent,
         ]),
+    );
+    canvas.restore();
+  }
+
+  void _drawSoftShadow(
+    Canvas canvas,
+    Size size, {
+    required Offset center,
+    required double width,
+    required double height,
+    required double angle,
+    required double opacity,
+  }) {
+    final centerOnCanvas = Offset(
+      center.dx * size.width,
+      center.dy * size.height,
+    );
+    final shadowWidth = width * size.width;
+    final shadowHeight = height * size.height;
+
+    canvas.save();
+    canvas.translate(centerOnCanvas.dx, centerOnCanvas.dy);
+    canvas.rotate(angle);
+    canvas.scale(1, shadowHeight / shadowWidth);
+    canvas.drawCircle(
+      Offset.zero,
+      shadowWidth / 2,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          Offset.zero,
+          shadowWidth / 2,
+          [
+            Colors.black.withValues(alpha: opacity),
+            Colors.black.withValues(alpha: opacity * 0.42),
+            Colors.transparent,
+          ],
+          const [0, 0.45, 1],
+        ),
+    );
+    canvas.restore();
+  }
+
+  void _drawContactShadow(
+    Canvas canvas,
+    Size size, {
+    required Offset center,
+    required double width,
+    required double angle,
+    required double opacity,
+  }) {
+    final centerOnCanvas = Offset(
+      center.dx * size.width,
+      center.dy * size.height,
+    );
+    canvas.save();
+    canvas.translate(centerOnCanvas.dx, centerOnCanvas.dy);
+    canvas.rotate(angle);
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: width * size.width,
+        height: size.height * 0.035,
+      ),
+      Paint()
+        ..color = Colors.black.withValues(alpha: opacity)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.009),
     );
     canvas.restore();
   }

@@ -35,9 +35,9 @@
 	<string>Choose a photo from your library to use as your profile picture.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save photos you take for your profile picture.</string>
-	<!-- Used to center the in-app Google Map on the traveller. -->
+	<!-- Used only while the traveller is viewing an in-app map. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Show nearby places, hotels and tours while you browse.</string>
+	<string>Your location is used to show your position on the map and nearby places.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

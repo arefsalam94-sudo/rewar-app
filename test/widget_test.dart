@@ -1993,7 +1993,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(artwork('car - 3ed page.webp'), findsOneWidget);
+      expect(artwork('car - 3ed page relit.png'), findsOneWidget);
       expect(find.byKey(const ValueKey('road-car-effects')), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.arrow_forward));

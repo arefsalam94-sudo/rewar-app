@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-import '../services/map_availability.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/map_place.dart';
 import '../models/nature_detail.dart';
 import '../models/tour.dart';
 import '../services/device_location_service.dart';
@@ -16,9 +14,10 @@ import '../widgets/glass_panel.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
+import '../widgets/tour_map_view.dart';
 import 'booking_traveler_info_screen.dart';
-import 'map_screen.dart';
 import 'tour_assets.dart';
+import 'tour_map_screen.dart';
 import 'tour_reviews_screen.dart';
 
 /// Detail and price-estimate page for one Explore Tours departure.
@@ -237,19 +236,33 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
     return AppLocalizations.of(context).distanceFromCurrentLocation(label);
   }
 
-  void _openMap() {
+  Future<void> _openMap() async {
     final lat = widget.tour.latitude;
     final lng = widget.tour.longitude;
     if (lat == null || lng == null) return;
-    final language = Localizations.localeOf(context).languageCode;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => MapScreen(
-          target: LatLng(lat, lng),
-          title: widget.tour.name(language),
-        ),
+    final selectedTourId = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) =>
+            TourMapScreen(selectedTour: widget.tour, toursService: _service),
       ),
     );
+    if (!mounted ||
+        selectedTourId == null ||
+        selectedTourId == widget.tour.id) {
+      return;
+    }
+    try {
+      final selectedTour = await _service.fetchTour(selectedTourId);
+      if (!mounted || selectedTour == null) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) =>
+              TourDetailScreen(tour: selectedTour, toursService: _service),
+        ),
+      );
+    } catch (error) {
+      debugPrint('Could not open the selected tour: $error');
+    }
   }
 
   Future<void> _openReviews() async {
@@ -613,6 +626,8 @@ class _MapCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final lat = tour.latitude;
     final lng = tour.longitude;
+    final language = Localizations.localeOf(context).languageCode;
+    final place = MapPlace.fromTour(tour, language);
     return GlassPanel(
       borderRadius: 28,
       padding: const EdgeInsets.all(14),
@@ -626,7 +641,7 @@ class _MapCard extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: lat == null || lng == null || !googleMapsAvailable
+                child: lat == null || lng == null || place == null
                     ? _Unavailable(
                         AppLocalizations.of(context).tourMapUnavailable,
                       )
@@ -634,20 +649,12 @@ class _MapCard extends StatelessWidget {
                         fit: StackFit.expand,
                         children: [
                           IgnorePointer(
-                            child: GoogleMap(
-                              initialCameraPosition: CameraPosition(
-                                target: LatLng(lat, lng),
-                                zoom: 11,
-                              ),
-                              markers: {
-                                Marker(
-                                  markerId: const MarkerId('tour'),
-                                  position: LatLng(lat, lng),
-                                ),
-                              },
-                              zoomControlsEnabled: false,
-                              mapToolbarEnabled: false,
-                              myLocationButtonEnabled: false,
+                            child: TourMapView(
+                              places: [place],
+                              initialLatitude: lat,
+                              initialLongitude: lng,
+                              initialZoom: 11,
+                              interactive: false,
                             ),
                           ),
                           Material(
