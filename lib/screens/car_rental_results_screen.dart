@@ -5,8 +5,9 @@ import '../models/car_rental.dart';
 import '../services/car_rental_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/rental_car_parts.dart';
 import 'car_rental_details_screen.dart';
@@ -133,6 +134,8 @@ class _CarRentalResultsScreenState extends State<CarRentalResultsScreen> {
                 top: 8,
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).maybePop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
               Positioned(
@@ -174,8 +177,8 @@ class _ResultCountBadge extends StatelessWidget {
       liveRegion: true,
       label: label,
       excludeSemantics: true,
-      child: GlassPanel(
-        depth: GlassDepth.top,
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 22,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 9),
         child: Text(
@@ -283,8 +286,6 @@ class CarResultCard extends StatelessWidget {
     final modelYear = l10n.carModelYear(vehicle.modelYear);
     final branch = vehicle.location.name.forLanguage(language);
     final distance = rentalDistanceText(vehicle.location, deviceLocation);
-    final payAtPickup =
-        vehicle.paymentOption == RentalPaymentOption.payAtPickup;
 
     final facilities = <Widget>[
       RentalFacility(
@@ -330,21 +331,18 @@ class CarResultCard extends StatelessWidget {
       l10n.carPricePerDay(rentalPriceAmount(vehicle)),
     ].join(', ');
 
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: semanticsLabel,
-      excludeSemantics: true,
-      child: GlassPanel(
-        borderRadius: 28,
-        padding: EdgeInsets.zero,
-        selected: selected,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(28),
-            child: Padding(
+    // Large selectable card (Design_system_CANONICAL.md §16): stays real
+    // Liquid Glass in both states. `AppLiquidGlass.selected` has no effect
+    // once `useCanonicalGlass` is true — the canonical branch doesn't read
+    // it — so the "highlighted card" this screen documents relies on a
+    // border highlight instead, the same fix already applied to Forget
+    // Password's contact cards and Flight Search Results' sort cards.
+    const radius = 28.0;
+    final content = AppLiquidGlass(
+      useCanonicalGlass: true,
+      borderRadius: radius,
+      onTap: onTap,
+      child: Padding(
               padding: const EdgeInsets.all(12),
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -400,7 +398,7 @@ class CarResultCard extends StatelessWidget {
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          color: AppColors.secondaryText(
+                                          color: AppColors.secondaryTextV3(
                                             context,
                                           ),
                                           fontSize: 13,
@@ -415,6 +413,9 @@ class CarResultCard extends StatelessWidget {
                                   maxWidth: 150,
                                   iconSize: 28,
                                   fontSize: 13,
+                                  // Nested inside this card's own visible
+                                  // canonical glass surface.
+                                  layer: GlassLayer.embedded,
                                 ),
                               ],
                             ),
@@ -431,7 +432,6 @@ class CarResultCard extends StatelessWidget {
                                 l10n,
                                 vehicle.paymentOption,
                               ),
-                              success: payAtPickup,
                               iconSize: 30,
                               fontSize: 12,
                             ),
@@ -449,9 +449,25 @@ class CarResultCard extends StatelessWidget {
                 },
               ),
             ),
-          ),
-        ),
-      ),
+    );
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: selected
+          ? Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                border: Border.all(
+                  color: AppColors.accent(context),
+                  width: 2,
+                ),
+              ),
+              child: content,
+            )
+          : content,
     );
   }
 }
@@ -501,7 +517,7 @@ class _LocationAndPrice extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                     fontSize: 11,
                     height: 1.35,
                   ),
@@ -558,7 +574,8 @@ class _SkeletonCard extends StatelessWidget {
   const _SkeletonCard();
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(12),
     child: Row(
@@ -643,7 +660,8 @@ class _MessagePane extends StatelessWidget {
     return ListView(
       padding: padding,
       children: [
-        GlassPanel(
+        AppLiquidGlass(
+          useCanonicalGlass: true,
           borderRadius: 28,
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -666,14 +684,20 @@ class _MessagePane extends StatelessWidget {
                   body,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                     fontSize: 14,
                     height: 1.45,
                   ),
                 ),
               ],
               const SizedBox(height: 12),
-              TextButton(onPressed: onAction, child: Text(actionLabel)),
+              TextButton(
+                onPressed: onAction,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accent(context),
+                ),
+                child: Text(actionLabel),
+              ),
             ],
           ),
         ),

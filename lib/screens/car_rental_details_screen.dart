@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/rental_car_parts.dart';
@@ -126,6 +127,8 @@ class _CarRentalDetailsScreenState extends State<CarRentalDetailsScreen> {
                 top: 8,
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).maybePop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
             ],
@@ -183,7 +186,8 @@ class _CarDetailsCard extends StatelessWidget {
       ),
     ];
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -197,6 +201,9 @@ class _CarDetailsCard extends StatelessWidget {
               maxWidth: 170,
               iconSize: 30,
               fontSize: 13,
+              // Nested inside this card's own visible canonical glass
+              // surface.
+              layer: GlassLayer.embedded,
             ),
           ),
           const SizedBox(height: 14),
@@ -212,7 +219,7 @@ class _CarDetailsCard extends StatelessWidget {
           Text(
             '(${l10n.carModelYear(vehicle.modelYear)})',
             style: TextStyle(
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
               fontSize: 14,
             ),
           ),
@@ -257,7 +264,8 @@ class _PickupDropOffCard extends StatelessWidget {
     final pickupBranch = criteria.pickupLocation.name.forLanguage(language);
     final dropOffBranch = criteria.dropOffLocation.name.forLanguage(language);
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Column(
@@ -328,7 +336,8 @@ class _AdditionalOptionsCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final extras = vehicle.extras;
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
       child: Column(
@@ -379,7 +388,8 @@ class _PriceSummaryCard extends StatelessWidget {
       ),
     );
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
@@ -411,7 +421,7 @@ class _PriceSummaryCard extends StatelessWidget {
           Text(
             l10n.carEstimateNote,
             style: TextStyle(
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
               fontSize: 12,
               height: 1.4,
             ),
@@ -499,7 +509,8 @@ class _RentalConditionsCard extends StatelessWidget {
         ),
     ];
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Column(
@@ -519,7 +530,7 @@ class _RentalConditionsCard extends StatelessWidget {
             Text(
               l10n.carOrSimilar,
               style: TextStyle(
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
                 fontSize: 12,
                 height: 1.4,
               ),

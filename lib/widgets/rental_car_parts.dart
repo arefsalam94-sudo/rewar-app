@@ -5,41 +5,35 @@ import '../models/car_rental.dart';
 import '../services/currency_rates_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
+import 'liquid_glass_surface.dart';
 
 /// Building blocks shared by the Car Rental page's card and the Car Rental
 /// Results page's card, so the two layouts stay visually identical while
 /// arranging the same pieces differently.
 
-/// Circular tinted icon used for facilities, payment, and location.
-///
-/// `success` swaps the informational (blue) tokens for the success (green)
-/// ones — per DESIGN_SYSTEM.md 7.6 those are the only two roles used here.
+/// Standalone-icon family (`Design_system_CANONICAL.md` §13): stroke-only
+/// ring, transparent center, `icon-accent` glyph — no filled circle. Used
+/// for facilities, payment, and location. Replaces the legacy filled
+/// `statusInfoFill`/`statusSuccessFill` treatment, which rendered every Car
+/// Rental icon as a solid blue- or green-tinted disc.
 class RentalCircleIcon extends StatelessWidget {
-  const RentalCircleIcon({
-    super.key,
-    required this.icon,
-    required this.size,
-    this.success = false,
-  });
+  const RentalCircleIcon({super.key, required this.icon, required this.size});
 
   final IconData icon;
   final double size;
-  final bool success;
 
   @override
   Widget build(BuildContext context) {
-    final fill = success
-        ? AppColors.statusSuccessFill(context)
-        : AppColors.statusInfoFill(context);
-    final content = success
-        ? AppColors.statusSuccessContent(context)
-        : AppColors.statusInfoContent(context);
+    final accent = AppColors.accent(context);
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: fill),
-      child: Icon(icon, color: content, size: size * 0.56),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: accent, width: 1.5),
+      ),
+      child: Icon(icon, color: accent, size: size * 0.56),
     );
   }
 }
@@ -50,7 +44,6 @@ class RentalFacility extends StatelessWidget {
     super.key,
     required this.icon,
     required this.label,
-    this.success = false,
     this.iconSize = 30,
     this.fontSize = 11,
     this.gap = 4,
@@ -58,7 +51,6 @@ class RentalFacility extends StatelessWidget {
 
   final IconData icon;
   final String label;
-  final bool success;
   final double iconSize;
   final double fontSize;
   final double gap;
@@ -67,7 +59,7 @@ class RentalFacility extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      RentalCircleIcon(icon: icon, size: iconSize, success: success),
+      RentalCircleIcon(icon: icon, size: iconSize),
       SizedBox(width: gap),
       Flexible(
         child: Text(
@@ -98,6 +90,7 @@ class RentalCompanyBadge extends StatelessWidget {
     this.borderRadius = 24,
     this.padding = const EdgeInsetsDirectional.fromSTEB(6, 5, 12, 5),
     this.gap = 8,
+    this.layer = GlassLayer.surface,
   });
 
   final RentalCompany company;
@@ -108,14 +101,21 @@ class RentalCompanyBadge extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double gap;
 
+  /// [GlassLayer.surface] (default) for standalone use, such as floating
+  /// over the featured carousel photo. [GlassLayer.embedded] when nested
+  /// inside another visible canonical glass surface (a car card), so the
+  /// two don't stack into a second shader.
+  final GlassLayer layer;
+
   @override
   Widget build(BuildContext context) {
     final language = Localizations.localeOf(context).languageCode;
     final name = company.name.forLanguage(language);
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: GlassPanel(
-        depth: GlassDepth.top,
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
+        layer: layer,
         borderRadius: borderRadius,
         padding: padding,
         child: Row(
@@ -181,12 +181,18 @@ class RentalPriceBadge extends StatelessWidget {
     this.amountFontSize = 22,
     this.unitFontSize = 13,
     this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    this.layer = GlassLayer.embedded,
   });
 
   final RentalVehicle vehicle;
   final double amountFontSize;
   final double unitFontSize;
   final EdgeInsetsGeometry padding;
+
+  /// [GlassLayer.embedded] (default) — every current call site sits nested
+  /// inside a car card's own visible canonical glass surface. Pass
+  /// [GlassLayer.surface] if a future call site needs to float standalone.
+  final GlassLayer layer;
 
   @override
   Widget build(BuildContext context) {
@@ -197,8 +203,9 @@ class RentalPriceBadge extends StatelessWidget {
     // "/day" anywhere in the widget layer.
     final full = l10n.carPricePerDay(amount);
     final unit = full.replaceFirst(amount, '');
-    return GlassPanel(
-      depth: GlassDepth.top,
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: layer,
       borderRadius: 16,
       padding: padding,
       child: Text.rich(
@@ -215,7 +222,7 @@ class RentalPriceBadge extends StatelessWidget {
             TextSpan(
               text: unit,
               style: TextStyle(
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
                 fontSize: unitFontSize,
                 fontWeight: FontWeight.w500,
               ),

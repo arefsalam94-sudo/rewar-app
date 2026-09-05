@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
 import 'rental_car_parts.dart';
 
 /// Building blocks for the Car Rental Details screen.
@@ -94,7 +94,8 @@ class _RentalImageCarouselState extends State<RentalImageCarousel> {
     return Semantics(
       container: true,
       label: l10n.carGalleryLabel(widget.vehicleName),
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 28,
         padding: EdgeInsets.zero,
         child: AspectRatio(
@@ -236,7 +237,7 @@ class RentalOptionRow extends StatelessWidget {
         Text(
           priceLabel,
           style: TextStyle(
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
             fontSize: 13,
             height: 1.3,
           ),
@@ -294,12 +295,16 @@ class _CheckboxOption extends StatelessWidget {
         children: [
           Expanded(child: label),
           const SizedBox(width: 8),
-          // The framework checkbox carries the theme's selected/unselected
-          // tokens and its own 48dp target, and it is what the Car Rental
-          // search card and Terms screen already use.
           Checkbox(
             value: selected,
             onChanged: (value) => onChanged(value ?? false),
+            // `Design_system_CANONICAL.md` §19: "selected uses theme
+            // active color + contrast check" — navy/mint, not the unthemed
+            // default (`colorScheme.primary`, brand green in Light mode).
+            activeColor: AppColors.accent(context),
+            checkColor: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkOnPrimary
+                : Colors.white,
           ),
         ],
       ),
@@ -438,7 +443,7 @@ class RentalDetailRow extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
                 fontSize: 14,
                 height: 1.35,
               ),

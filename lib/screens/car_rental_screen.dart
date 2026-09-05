@@ -8,9 +8,11 @@ import '../models/car_rental.dart';
 import '../services/car_rental_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/rental_car_parts.dart';
@@ -147,14 +149,14 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       return StatefulBuilder(
         builder: (context, setSheetState) => Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: GlassPanel(
-            depth: GlassDepth.middle,
+          child: AppLiquidGlass(
+            useCanonicalGlass: true,
             borderRadius: 28,
             padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  CalendarDatePicker(
+                  CanonicalCalendarDatePicker(
                     initialDate: selectedDate,
                     firstDate: firstDate,
                     lastDate: DateTime(
@@ -197,50 +199,50 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     });
   }
 
-  Future<TimeOfDay?> _showTime(TimeOfDay initialTime) =>
-      showModalBottomSheet<TimeOfDay>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        backgroundColor: Colors.transparent,
-        builder: (sheetContext) {
-          var selected = DateTime(
-            2020,
-            1,
-            1,
-            initialTime.hour,
-            initialTime.minute,
-          );
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: GlassPanel(
-              depth: GlassDepth.middle,
-              borderRadius: 28,
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 220,
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.time,
-                      initialDateTime: selected,
-                      use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-                      onDateTimeChanged: (value) => selected = value,
-                    ),
+  Future<TimeOfDay?> _showTime(
+    TimeOfDay initialTime,
+  ) => showModalBottomSheet<TimeOfDay>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      var selected = DateTime(2020, 1, 1, initialTime.hour, initialTime.minute);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          borderRadius: 28,
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppLiquidGlass(
+                useCanonicalGlass: true,
+                layer: GlassLayer.embedded,
+                borderRadius: 20,
+                child: SizedBox(
+                  height: 220,
+                  child: CanonicalCupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.time,
+                    initialDateTime: selected,
+                    use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+                    onDateTimeChanged: (value) => selected = value,
                   ),
-                  PrimaryButton(
-                    label: AppLocalizations.of(context).done,
-                    onTap: () => Navigator.of(sheetContext).pop(
-                      TimeOfDay(hour: selected.hour, minute: selected.minute),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          );
-        },
+              PrimaryButton(
+                label: AppLocalizations.of(context).done,
+                onTap: () => Navigator.of(
+                  sheetContext,
+                ).pop(TimeOfDay(hour: selected.hour, minute: selected.minute)),
+              ),
+            ],
+          ),
+        ),
       );
+    },
+  );
 
   void _clearDateTimeErrors() {
     _errors.remove('pickupFuture');
@@ -480,7 +482,11 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      GlassBackButton(onTap: onBack),
+      GlassBackButton(
+        onTap: onBack,
+        useAppLiquidGlass: true,
+        useCanonicalGlass: true,
+      ),
       const SizedBox(width: 12),
       Expanded(
         child: Text(
@@ -517,9 +523,12 @@ class _FeaturedCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const AspectRatio(
+      return AspectRatio(
         aspectRatio: 1.92,
-        child: GlassPanel(child: Center(child: CircularProgressIndicator())),
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
       );
     }
     if (cars.isEmpty) return const SizedBox.shrink();
@@ -584,6 +593,8 @@ class _CompactCompanyBadge extends StatelessWidget {
     iconSize: 20,
     fontSize: 11,
     gap: 4,
+    // Nested inside the car card's own visible canonical glass surface.
+    layer: GlassLayer.embedded,
   );
 }
 
@@ -671,7 +682,8 @@ class _SearchCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final language = Localizations.localeOf(context).languageCode;
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -711,6 +723,14 @@ class _SearchCard extends StatelessWidget {
                   Checkbox(
                     value: differentDropOff,
                     onChanged: (value) => onDifferentDropOff(value ?? false),
+                    // `Design_system_CANONICAL.md` §19: "selected uses
+                    // theme active color + contrast check" — navy/mint,
+                    // not the unthemed default (`colorScheme.primary`,
+                    // brand green in Light mode).
+                    activeColor: AppColors.accent(context),
+                    checkColor: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.darkOnPrimary
+                        : Colors.white,
                   ),
                   Expanded(
                     child: Text(
@@ -888,13 +908,14 @@ class _RentalField extends StatelessWidget {
       Semantics(
         button: true,
         label: label,
-        child: GlassPanel(
-          depth: GlassDepth.middle,
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.embedded,
           borderRadius: 14,
-          borderColor: error == null
-              ? null
-              : Theme.of(context).colorScheme.error,
-          borderWidth: error == null ? null : AppColors.selectionStrokeWidth,
+          // No painted border for the error state — canonical glass never
+          // takes a painted edge (`Design_system_CANONICAL.md` §10); the
+          // error text below the field is the only error indicator, same as
+          // the app's other canonical fields.
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(14),
@@ -912,7 +933,7 @@ class _RentalField extends StatelessWidget {
                         maxLines: compact ? 2 : 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: AppColors.heading(context),
+                          color: AppColors.fieldValue(context),
                           fontSize: compact ? 13 : 16,
                         ),
                       ),
@@ -946,42 +967,56 @@ class _GlassSearchButton extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    depth: GlassDepth.top,
-    borderRadius: 24,
-    child: InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) {
+    // Canonical primary-action treatment (`Design_system_CANONICAL.md`
+    // §11), matching `PrimaryButton`: solid navy fill / white content in
+    // Light, mint fill / deep-emerald content in Dark. A search action is
+    // not glass — it must never read as a translucent icon bubble.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final foreground = isDark ? AppColors.darkOnPrimary : Colors.white;
+    return Material(
+      color: background,
       borderRadius: BorderRadius.circular(24),
-      child: Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 16, 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            loading
-                ? const SizedBox.square(
-                    dimension: 38,
-                    child: Padding(
-                      padding: EdgeInsets.all(9),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : const RentalCircleIcon(icon: Icons.search, size: 38),
-            const SizedBox(width: 8),
-            Text(
-              loading
-                  ? AppLocalizations.of(context).carSearching
-                  : AppLocalizations.of(context).carSearch,
-              style: TextStyle(
-                color: AppColors.heading(context),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(8, 6, 16, 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox.square(
+                dimension: 38,
+                child: Center(
+                  child: loading
+                      ? SizedBox.square(
+                          dimension: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: foreground,
+                          ),
+                        )
+                      : Icon(Icons.search, color: foreground, size: 22),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                loading
+                    ? AppLocalizations.of(context).carSearching
+                    : AppLocalizations.of(context).carSearch,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _RentalCarCard extends StatelessWidget {
@@ -1003,177 +1038,171 @@ class _RentalCarCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: vehicle.name.forLanguage(language),
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 28,
-        padding: EdgeInsets.zero,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 112,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 112,
+                    height: 132,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: RentalVehicleImage(
+                        asset: vehicle.images.first,
+                        cacheWidth: 336,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
                       height: 132,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: RentalVehicleImage(
-                          asset: vehicle.images.first,
-                          cacheWidth: 336,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 132,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        vehicle.name.forLanguage(language),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.heading(context),
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      Text(
-                                        l10n.carModelYear(vehicle.modelYear),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.secondaryText(
-                                            context,
-                                          ),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                _CompactCompanyBadge(company: vehicle.company),
-                              ],
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: Wrap(
-                                    spacing: 8,
-                                    runSpacing: 7,
-                                    children: [
-                                      RentalFacility(
-                                        icon: Icons.person_outline,
-                                        label: l10n.carPersons(
-                                          vehicle.passengers,
-                                        ),
-                                      ),
-                                      RentalFacility(
-                                        icon: Icons.bolt,
-                                        label: rentalPowertrainLabel(
-                                          l10n,
-                                          vehicle.powertrain,
-                                        ),
-                                      ),
-                                      RentalFacility(
-                                        icon: Icons.work_outline,
-                                        label: l10n.carBags(vehicle.bags),
-                                      ),
-                                      if (vehicle.airConditioning)
-                                        RentalFacility(
-                                          icon: Icons.ac_unit,
-                                          label: l10n.carAirConditioning,
-                                        ),
-                                      RentalFacility(
-                                        icon: Icons.payments_outlined,
-                                        label: rentalPaymentLabel(
-                                          l10n,
-                                          vehicle.paymentOption,
-                                        ),
-                                        success:
-                                            vehicle.paymentOption ==
-                                            RentalPaymentOption.payAtPickup,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const RentalCircleIcon(icon: Icons.location_on, size: 42),
-                    const SizedBox(width: 8),
-                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            vehicle.location.name.forLanguage(language),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.heading(context),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      vehicle.name.forLanguage(language),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: AppColors.heading(context),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      l10n.carModelYear(vehicle.modelYear),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: AppColors.secondaryTextV3(
+                                          context,
+                                        ),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              _CompactCompanyBadge(company: vehicle.company),
+                            ],
                           ),
-                          if (distance != null)
-                            Text(
-                              l10n.distanceFromCurrentLocation(distance),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.secondaryText(context),
-                                fontSize: 12,
+                          Expanded(
+                            child: Center(
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 7,
+                                  children: [
+                                    RentalFacility(
+                                      icon: Icons.person_outline,
+                                      label: l10n.carPersons(
+                                        vehicle.passengers,
+                                      ),
+                                    ),
+                                    RentalFacility(
+                                      icon: Icons.bolt,
+                                      label: rentalPowertrainLabel(
+                                        l10n,
+                                        vehicle.powertrain,
+                                      ),
+                                    ),
+                                    RentalFacility(
+                                      icon: Icons.work_outline,
+                                      label: l10n.carBags(vehicle.bags),
+                                    ),
+                                    if (vehicle.airConditioning)
+                                      RentalFacility(
+                                        icon: Icons.ac_unit,
+                                        label: l10n.carAirConditioning,
+                                      ),
+                                    RentalFacility(
+                                      icon: Icons.payments_outlined,
+                                      label: rentalPaymentLabel(
+                                        l10n,
+                                        vehicle.paymentOption,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
+                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    GlassPanel(
-                      depth: GlassDepth.top,
-                      borderRadius: 14,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      child: Text(
-                        l10n.carPricePerDay(rentalPriceAmount(vehicle)),
-                        textDirection: TextDirection.ltr,
-                        style: TextStyle(
-                          color: AppColors.heading(context),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const RentalCircleIcon(icon: Icons.location_on, size: 42),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vehicle.location.name.forLanguage(language),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.heading(context),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
+                        if (distance != null)
+                          Text(
+                            l10n.distanceFromCurrentLocation(distance),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: AppColors.secondaryTextV3(context),
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AppLiquidGlass(
+                    useCanonicalGlass: true,
+                    layer: GlassLayer.embedded,
+                    borderRadius: 14,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Text(
+                      l10n.carPricePerDay(rentalPriceAmount(vehicle)),
+                      textDirection: TextDirection.ltr,
+                      style: TextStyle(
+                        color: AppColors.heading(context),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -1185,10 +1214,11 @@ class _CarsLoading extends StatelessWidget {
   const _CarsLoading();
 
   @override
-  Widget build(BuildContext context) => const GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
     borderRadius: 28,
-    padding: EdgeInsets.all(32),
-    child: Center(child: CircularProgressIndicator()),
+    padding: const EdgeInsets.all(32),
+    child: const Center(child: CircularProgressIndicator()),
   );
 }
 
@@ -1200,7 +1230,8 @@ class _CarsMessage extends StatelessWidget {
   final VoidCallback? onAction;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(24),
     child: Column(
@@ -1209,7 +1240,13 @@ class _CarsMessage extends StatelessWidget {
         const SizedBox(height: 10),
         Text(message, textAlign: TextAlign.center),
         if (actionLabel != null && onAction != null)
-          TextButton(onPressed: onAction, child: Text(actionLabel!)),
+          TextButton(
+            onPressed: onAction,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accent(context),
+            ),
+            child: Text(actionLabel!),
+          ),
       ],
     ),
   );
@@ -1300,8 +1337,13 @@ class _InlineLocationSearchState extends State<_InlineLocationSearch> {
           ? const SizedBox.shrink()
           : Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: GlassPanel(
-                depth: GlassDepth.middle,
+              child: AppLiquidGlass(
+                // The picker expands inside the search card's own visible
+                // canonical surface, so it rides that shader as embedded
+                // content instead of stacking a second one
+                // (06_MIGRATION_RULES.md §7).
+                useCanonicalGlass: true,
+                layer: GlassLayer.embedded,
                 borderRadius: 20,
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -1314,6 +1356,9 @@ class _InlineLocationSearchState extends State<_InlineLocationSearch> {
                       prefixIcon: Icons.search,
                       autofocus: true,
                       onChanged: _changed,
+                      useV2FieldColors: true,
+                      useCanonicalGlass: true,
+                      layer: GlassLayer.embedded,
                     ),
                     const SizedBox(height: 10),
                     // The panel sits inside the page scroll view, so the list
@@ -1352,8 +1397,13 @@ class _InlineLocationSearchState extends State<_InlineLocationSearch> {
                                   const SizedBox(height: 8),
                               itemBuilder: (context, index) {
                                 final location = _results[index];
-                                return GlassPanel(
-                                  depth: GlassDepth.top,
+                                // An unbounded repeated list inside the
+                                // panel's own glass: embedded content, never
+                                // its own shader
+                                // (07_DESIGN_EXCEPTIONS.md §9).
+                                return AppLiquidGlass(
+                                  useCanonicalGlass: true,
+                                  layer: GlassLayer.embedded,
                                   borderRadius: 14,
                                   child: ListTile(
                                     onTap: () => widget.onSelected(location),
