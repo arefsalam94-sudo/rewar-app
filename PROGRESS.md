@@ -2113,3 +2113,59 @@ including the rule that provider ids stay separate from ours and that
   service and the shared parts, covering all three languages, RTL, dark mode,
   a 320dp screen at a 1.6x font scale, the empty/hidden sections, the failed
   read, the occupancy ceiling and the criteria round-trip on back.
+
+---
+
+## App-wide UI migration — UI_TRANSFER_PACKAGE design system
+
+Not a page approval. This entry records the whole-project visual migration
+that brought the approved design system across from `d:/app/UI_TRANSFER_PACKAGE`
+(built from the preview line at commit `3e90f4e`).
+
+**Authority applied:** the transfer package won for visual design; this repo
+won for business logic, data, APIs, routes, state and newer functionality.
+
+### Source of truth
+
+`UI_TRANSFER_PACKAGE/docs/`, `shared_ui_code/` and `reference_screens/` are the
+authoritative visual specification. The older root-level design files
+(`DESIGN_SYSTEM F.md`, `DESIGN_LIGHT F.md`, `DESIGN_DARK F.md`) were **not**
+used for any decision in this migration and were left in place unchanged.
+They are historical for UI purposes.
+
+### What changed
+
+- All 20 shared design-system files were taken from the package verbatim,
+  including the canonical `liquid_glass_surface.dart` renderer, which this
+  repo did not have.
+- `oc_liquid_glass: 0.3.0` added (exact pin); `main()` precaches the shader.
+- 40 of 47 screen files were migrated; the other 7 were already compliant,
+  asset constants, or empty stubs.
+- No legacy `GlassPanel`/`GlassDepth` call site remains outside the shared
+  components' documented fallback branches, and an app-wide scan for glass
+  call sites that never opt in to the canonical renderer reports zero.
+
+### Exceptions deliberately preserved
+
+- **Register** — seven independent real-glass fields inside a *non-shader*
+  outer container. The stale in-code comment asking to restore the outer
+  glass shader was replaced with the approved rationale; performing that
+  revert reintroduces confirmed Android reflection-band corruption.
+- **Choose Room** — `_RoomCard` embedded, `_RateCard` real glass.
+- **Language Selection** — one shared `LiquidGlassGroup` batching three cards.
+- **Settings / account-edit** — the floating-label `_EditField` family.
+- **Onboarding** — keeps its own animated day-to-dusk panorama grading, so
+  the global background saturation normalization is not applied to it.
+- **Tour Map** — map tiles are a single light style; only the map surface
+  itself is not theme-switched. Its chrome is fully theme-aware.
+
+### Not done / still open
+
+- **Not seen on an Android device.** `oc_liquid_glass` renders differently on
+  real Android hardware than in Chrome/Web, and the transfer package is
+  explicit that Android is the authoritative reference. Every glass-bearing
+  screen still needs a hardware pass.
+- **No screenshots exist.** `UI_TRANSFER_PACKAGE/visual_reference/` is empty,
+  so nothing was diffed against an approved image.
+- **No Firestore, security-rule or seeding change** was made or needed — this
+  migration is presentation-only and touched no service, model or rule file.

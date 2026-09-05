@@ -16,7 +16,8 @@ import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'flight_search_results_screen.dart';
 
-const String flightTicketingBackgroundAsset = 'assets/images/plane new.jpg';
+const String flightTicketingBackgroundAsset =
+    'assets/images/flight ticketing - background.webp';
 
 class FlightTicketingScreen extends StatefulWidget {
   const FlightTicketingScreen({
