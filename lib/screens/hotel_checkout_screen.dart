@@ -7,10 +7,11 @@ import '../services/bookings_service.dart';
 import '../services/hotel_booking_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/hotel_parts.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'hotel_booking_confirmation_screen.dart';
@@ -165,6 +166,8 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
               Align(
                 alignment: Alignment.topLeft,
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -338,7 +341,9 @@ class _TitleCard extends StatelessWidget {
   const _TitleCard({required this.title});
   final String title;
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
+    layer: GlassLayer.surface,
     padding: const EdgeInsets.all(20),
     child: Row(
       children: [
@@ -363,8 +368,9 @@ class _Notice extends StatelessWidget {
   const _Notice({required this.text});
   final String text;
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    depth: GlassDepth.top,
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
+    layer: GlassLayer.surface,
     borderRadius: 16,
     padding: const EdgeInsets.all(12),
     child: Row(
@@ -382,7 +388,9 @@ class _Section extends StatelessWidget {
   final String title;
   final Widget child;
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
+    layer: GlassLayer.surface,
     padding: const EdgeInsets.all(20),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -415,24 +423,60 @@ class _PaymentOption extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  static const double _radius = 18;
+
+  // Compact selectable option (Design_system_CANONICAL.md §15), the same
+  // family as Flight Ticketing's cabin-class option: unselected renders as
+  // embedded canonical glass (it sits inside `_Section`'s own real glass
+  // surface — a second shader there would stack glass on glass); selected
+  // is a solid navy/mint fill with contrasting content, no shader.
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: GlassPanel(
-      depth: GlassDepth.middle,
-      selected: selected,
-      borderRadius: 18,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final selectedContent = isDark ? AppColors.darkOnPrimary : Colors.white;
+    final unselectedContent = isDark ? Colors.white : AppColors.actionNavy;
+    final content = selected ? selectedContent : unselectedContent;
+
+    final row = Padding(
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
-          Icon(icon),
+          Icon(icon, color: content),
           const SizedBox(width: 10),
-          Expanded(child: Text(label)),
-          Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off),
+          Expanded(child: Text(label, style: TextStyle(color: content))),
+          Icon(
+            selected ? Icons.radio_button_checked : Icons.radio_button_off,
+            color: content,
+          ),
         ],
       ),
-    ),
-  );
+    );
+
+    final body = Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_radius),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: onTap, child: row),
+    );
+
+    return selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: selectedFill,
+              borderRadius: BorderRadius.circular(_radius),
+            ),
+            child: body,
+          )
+        : AppLiquidGlass(
+            borderRadius: _radius,
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
+            child: body,
+          );
+  }
 }
 
 class _PriceRow extends StatelessWidget {

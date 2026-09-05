@@ -5,8 +5,15 @@ import '../models/hotel.dart';
 import '../models/hotel_detail.dart';
 import '../services/currency_rates_service.dart';
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
+import 'liquid_glass_surface.dart';
 
+/// The app's standalone-icon family (`Design_system_CANONICAL.md` §13):
+/// stroke-only ring, transparent center, `icon-accent` glyph — no filled
+/// circle. Replaces the legacy filled `statusInfoFill`/`statusInfoContent`
+/// treatment, which rendered every hotel icon (filters, facilities,
+/// counters) as a solid blue-tinted disc rather than the app's shared
+/// outline-icon look.
 class HotelCircleIcon extends StatelessWidget {
   const HotelCircleIcon({super.key, required this.icon, this.size = 42});
 
@@ -14,22 +21,18 @@ class HotelCircleIcon extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      shape: BoxShape.circle,
-      color: AppColors.statusInfoFill(context),
-      border: Border.all(
-        color: AppColors.accent(context).withValues(alpha: .7),
+  Widget build(BuildContext context) {
+    final accent = AppColors.accent(context);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: accent, width: 1.5),
       ),
-    ),
-    child: Icon(
-      icon,
-      size: size * .54,
-      color: AppColors.statusInfoContent(context),
-    ),
-  );
+      child: Icon(icon, size: size * .54, color: accent),
+    );
+  }
 }
 
 class HotelImage extends StatelessWidget {
@@ -59,17 +62,29 @@ class HotelImage extends StatelessWidget {
 }
 
 class HotelStars extends StatelessWidget {
-  const HotelStars({super.key, required this.rating, this.compact = false});
+  const HotelStars({
+    super.key,
+    required this.rating,
+    this.compact = false,
+    this.layer = GlassLayer.surface,
+  });
 
   final int rating;
   final bool compact;
+
+  /// [GlassLayer.surface] (default) for standalone use, such as floating
+  /// over a hotel photo. [GlassLayer.embedded] when nested inside another
+  /// visible canonical glass surface (e.g. a trending hotel card), so the
+  /// two don't stack into a second shader.
+  final GlassLayer layer;
 
   @override
   Widget build(BuildContext context) => Semantics(
     label: AppLocalizations.of(context).hotelStarClassification(rating),
     child: ExcludeSemantics(
-      child: GlassPanel(
-        depth: GlassDepth.top,
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
+        layer: layer,
         borderRadius: 18,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 8 : 11,
@@ -92,15 +107,23 @@ class HotelStars extends StatelessWidget {
 }
 
 class HotelReviewBadge extends StatelessWidget {
-  const HotelReviewBadge({super.key, required this.score});
+  const HotelReviewBadge({
+    super.key,
+    required this.score,
+    this.layer = GlassLayer.surface,
+  });
 
   final double score;
+
+  /// See [HotelStars.layer].
+  final GlassLayer layer;
 
   @override
   Widget build(BuildContext context) => Semantics(
     label: AppLocalizations.of(context).hotelReviewScore(score),
-    child: GlassPanel(
-      depth: GlassDepth.top,
+    child: AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: layer,
       borderRadius: 14,
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       child: Text(
@@ -421,7 +444,7 @@ class HotelCounterRow extends StatelessWidget {
                     '················',
                     maxLines: 1,
                     overflow: TextOverflow.clip,
-                    style: TextStyle(color: AppColors.secondaryText(context)),
+                    style: TextStyle(color: AppColors.secondaryTextV3(context)),
                   ),
                 ),
               ],

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/booking.dart';
 import '../theme/app_colors.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/app_liquid_glass.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'hotel_checkout_screen.dart';
@@ -34,7 +35,9 @@ class HotelBookingConfirmationScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560),
-                child: GlassPanel(
+                child: AppLiquidGlass(
+                  useCanonicalGlass: true,
+                  layer: GlassLayer.surface,
                   padding: const EdgeInsets.all(26),
                   child: Column(
                     children: [
@@ -44,14 +47,14 @@ class HotelBookingConfirmationScreen extends StatelessWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.selectionAccent(context),
+                            color: AppColors.iconAccent(context),
                             width: 2,
                           ),
                         ),
                         child: Icon(
                           Icons.science_outlined,
                           size: 38,
-                          color: AppColors.selectionAccent(context),
+                          color: AppColors.iconAccent(context),
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -71,8 +74,11 @@ class HotelBookingConfirmationScreen extends StatelessWidget {
                         style: TextStyle(color: AppColors.secondaryText(context)),
                       ),
                       const SizedBox(height: 20),
-                      GlassPanel(
-                        depth: GlassDepth.middle,
+                      AppLiquidGlass(
+                        useCanonicalGlass: true,
+                        // Nested inside this card's own visible glass
+                        // surface — embedded, not a second shader.
+                        layer: GlassLayer.embedded,
                         borderRadius: 20,
                         padding: const EdgeInsets.all(16),
                         child: Column(

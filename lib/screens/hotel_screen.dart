@@ -4,9 +4,10 @@ import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/hotel_parts.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import 'hotel_detail_screen.dart';
 
@@ -147,17 +148,19 @@ class _HotelScreenState extends State<HotelScreen>
                               if (snapshot.connectionState !=
                                       ConnectionState.done &&
                                   hotels.isEmpty) {
-                                return const SizedBox(
+                                return SizedBox(
                                   height: 220,
-                                  child: GlassPanel(
-                                    child: Center(
+                                  child: AppLiquidGlass(
+                                    useCanonicalGlass: true,
+                                    child: const Center(
                                       child: CircularProgressIndicator(),
                                     ),
                                   ),
                                 );
                               }
                               if (hotels.isEmpty) {
-                                return GlassPanel(
+                                return AppLiquidGlass(
+                                  useCanonicalGlass: true,
                                   padding: const EdgeInsets.all(24),
                                   child: Text(l10n.hotelPreviewData),
                                 );
@@ -209,7 +212,7 @@ class _HotelScreenState extends State<HotelScreen>
                               l10n.hotelPreviewData,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: AppColors.secondaryText(context),
+                                color: AppColors.secondaryTextV3(context),
                                 fontSize: 11,
                               ),
                             ),
@@ -292,7 +295,11 @@ class _Header extends StatelessWidget {
       textDirection: TextDirection.ltr,
       child: Row(
         children: [
-          GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+          GlassBackButton(
+            onTap: () => Navigator.of(context).maybePop(),
+            useAppLiquidGlass: true,
+            useCanonicalGlass: true,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Directionality(
@@ -572,8 +579,12 @@ class _FilterCard extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: true,
     expanded: expanded,
-    child: GlassPanel(
-      selected: expanded,
+    // Standalone filter card — the final canonical surface
+    // (Design_system_CANONICAL.md §9). The legacy `selected` glass tint had
+    // no canonical embedded/surface equivalent; the rotating chevron below
+    // already communicates the expanded state.
+    child: AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 24,
       child: InkWell(
         onTap: onTap,
@@ -603,7 +614,7 @@ class _FilterCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: AppColors.secondaryText(context),
+                        color: AppColors.secondaryTextV3(context),
                         fontSize: 10,
                       ),
                     ),
@@ -642,7 +653,9 @@ class _LocationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final language = Localizations.localeOf(context).languageCode;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone filter panel — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 26,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -650,9 +663,20 @@ class _LocationPanel extends StatelessWidget {
         children: [
           TextField(
             onChanged: onQueryChanged,
+            // This field keeps its own established 20px radius (the
+            // canonical `AppRecessedGlassField`/`RecessedLiquidGlassField`
+            // family hard-codes a 14px radius with no override), so only
+            // its colors were migrated to the canonical field tokens — see
+            // the migration report for the architectural gap this leaves.
+            style: TextStyle(color: AppColors.fieldValue(context)),
+            cursorColor: AppColors.fieldCursor(context),
             decoration: InputDecoration(
               hintText: l10n.hotelLocationHint,
-              prefixIcon: const Icon(Icons.location_on_outlined),
+              hintStyle: TextStyle(color: AppColors.fieldHint(context)),
+              prefixIcon: Icon(
+                Icons.location_on_outlined,
+                color: AppColors.fieldIcon(context),
+              ),
               filled: true,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -675,8 +699,10 @@ class _LocationPanel extends StatelessWidget {
             runSpacing: 9,
             children: [
               for (final destination in results)
-                GlassPanel(
-                  depth: GlassDepth.top,
+                AppLiquidGlass(
+                  // Nested inside this panel's own visible glass surface.
+                  useCanonicalGlass: true,
+                  layer: GlassLayer.embedded,
                   borderRadius: 22,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(22),
@@ -724,7 +750,12 @@ class _DatePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final formatter = MaterialLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone filter panel — the final canonical surface. The
+      // check-in/check-out taps below open the platform's native
+      // `showDatePicker`, not a custom calendar — see the migration report
+      // for why that internal styling was left untouched.
+      useCanonicalGlass: true,
       borderRadius: 26,
       padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
@@ -771,40 +802,40 @@ class _DateChoice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     width: width,
-    child: GlassPanel(
-      depth: GlassDepth.top,
+    child: AppLiquidGlass(
+      // Nested inside the Date panel's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 22,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              const HotelCircleIcon(icon: Icons.calendar_month_outlined),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(color: AppColors.secondaryText(context)),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const HotelCircleIcon(icon: Icons.calendar_month_outlined),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(color: AppColors.secondaryTextV3(context)),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppColors.heading(context),
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.heading(context),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     ),
@@ -824,7 +855,9 @@ class _GuestsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone filter panel — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 26,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -891,7 +924,9 @@ class _OptionsPanel extends StatelessWidget {
       HotelAmenity.parking,
       HotelAmenity.wifi,
     ];
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone filter panel — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 26,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -908,26 +943,20 @@ class _OptionsPanel extends StatelessWidget {
             ),
           Align(
             alignment: AlignmentDirectional.centerEnd,
-            child: GlassPanel(
-              depth: GlassDepth.top,
+            child: AppLiquidGlass(
+              // Nested inside the Options panel's own visible glass surface.
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
               borderRadius: 22,
-              child: InkWell(
-                onTap: onMore,
-                borderRadius: BorderRadius.circular(22),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 9,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const HotelCircleIcon(icon: Icons.tune, size: 30),
-                      const SizedBox(width: 7),
-                      Text(l10n.hotelMoreOptions),
-                    ],
-                  ),
-                ),
+              onTap: onMore,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const HotelCircleIcon(icon: Icons.tune, size: 30),
+                  const SizedBox(width: 7),
+                  Text(l10n.hotelMoreOptions),
+                ],
               ),
             ),
           ),
@@ -973,6 +1002,14 @@ class _AmenityCheckbox extends StatelessWidget {
             Checkbox(
               value: selected,
               onChanged: (value) => onChanged(value ?? false),
+              // `Design_system_CANONICAL.md` §19: "selected uses theme
+              // active color + contrast check" — navy/mint, not the
+              // unthemed default (`colorScheme.primary`, brand green in
+              // Light mode).
+              activeColor: AppColors.accent(context),
+              checkColor: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkOnPrimary
+                  : Colors.white,
             ),
           ],
         ),
@@ -987,35 +1024,44 @@ class _HotelSearchButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    child: GlassPanel(
-      depth: GlassDepth.top,
-      borderRadius: 30,
-      child: InkWell(
-        onTap: onTap,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // `action-fill` / `action-content` (Design_system_CANONICAL.md §14) —
+    // the primary search action. The legacy implementation rendered this as
+    // a translucent glass pill; the canonical primary-action style is a
+    // solid navy/mint fill with contrasting content.
+    final fill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final content = isDark ? AppColors.darkOnPrimary : Colors.white;
+    return Semantics(
+      button: true,
+      child: Material(
+        color: fill,
         borderRadius: BorderRadius.circular(30),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.search, color: AppColors.accent(context), size: 28),
-              const SizedBox(width: 10),
-              Text(
-                AppLocalizations.of(context).hotelSearch,
-                style: TextStyle(
-                  color: AppColors.heading(context),
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(30),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search, color: content, size: 28),
+                const SizedBox(width: 10),
+                Text(
+                  AppLocalizations.of(context).hotelSearch,
+                  style: TextStyle(
+                    color: content,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _TrendingHeader extends StatelessWidget {
@@ -1068,150 +1114,149 @@ class _TrendingHotelCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: hotel.name.forLanguage(language),
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        // Standalone information card — the final canonical surface.
+        useCanonicalGlass: true,
         borderRadius: 28,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final imageWidth = constraints.maxWidth < 310
-                    ? 90.0
-                    : constraints.maxWidth < 390
-                    ? 112.0
-                    : 142.0;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: SizedBox(
-                            width: imageWidth,
-                            height: 145,
-                            child: HotelImage(
-                              asset: hotel.imageAsset,
-                              cacheWidth: 420,
-                            ),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final imageWidth = constraints.maxWidth < 310
+                  ? 90.0
+                  : constraints.maxWidth < 390
+                  ? 112.0
+                  : 142.0;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: SizedBox(
+                          width: imageWidth,
+                          height: 145,
+                          child: HotelImage(
+                            asset: hotel.imageAsset,
+                            cacheWidth: 420,
                           ),
                         ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Align(
-                                alignment: AlignmentDirectional.centerEnd,
-                                child: HotelCompactRatingPair(
-                                  key: ValueKey(
-                                    'trending-hotel-rating-${hotel.id}',
-                                  ),
-                                  score: hotel.reviewScore,
-                                  starRating: hotel.starRating,
+                      ),
+                      const SizedBox(width: 13),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: HotelCompactRatingPair(
+                                key: ValueKey(
+                                  'trending-hotel-rating-${hotel.id}',
                                 ),
+                                score: hotel.reviewScore,
+                                starRating: hotel.starRating,
                               ),
-                              const SizedBox(height: 10),
-                              Text(
-                                hotel.name.forLanguage(language),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.heading(context),
-                                  fontSize: 19,
-                                  height: 24 / 19,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.01 * 19,
-                                ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              hotel.name.forLanguage(language),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.heading(context),
+                                fontSize: 19,
+                                height: 24 / 19,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.01 * 19,
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                hotel.city.forLanguage(language),
-                                style: TextStyle(
-                                  color: AppColors.heading(context),
-                                ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              hotel.city.forLanguage(language),
+                              style: TextStyle(
+                                color: AppColors.heading(context),
                               ),
-                              Text(
-                                l10n.hotelDistanceFromCenter(
-                                  hotel.distanceFromCenterKm,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: AppColors.secondaryText(context),
-                                  fontSize: 11,
-                                ),
+                            ),
+                            Text(
+                              l10n.hotelDistanceFromCenter(
+                                hotel.distanceFromCenterKm,
                               ),
-                              const SizedBox(height: 8),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 7,
-                                children: [
-                                  for (final amenity in hotel.amenities.take(5))
-                                    Tooltip(
-                                      message: hotelAmenityLabel(l10n, amenity),
-                                      child: HotelCircleIcon(
-                                        icon: hotelAmenityIcon(amenity),
-                                        size: 29,
-                                      ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: AppColors.secondaryTextV3(context),
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 7,
+                              children: [
+                                for (final amenity in hotel.amenities.take(5))
+                                  Tooltip(
+                                    message: hotelAmenityLabel(l10n, amenity),
+                                    child: HotelCircleIcon(
+                                      icon: hotelAmenityIcon(amenity),
+                                      size: 29,
                                     ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Divider(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: .5),
-                    ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l10n.hotelGuestSummary(
-                              criteria.adults,
-                              criteria.children,
-                              criteria.rooms,
-                              criteria.beds,
+                                  ),
+                              ],
                             ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.secondaryText(context),
-                            ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n.hotelPerNight,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Divider(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withValues(alpha: .5),
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.hotelGuestSummary(
+                            criteria.adults,
+                            criteria.children,
+                            criteria.rooms,
+                            criteria.beds,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: AppColors.secondaryText(context),
-                            fontSize: 11,
+                            color: AppColors.secondaryTextV3(context),
                           ),
                         ),
-                        const SizedBox(width: 7),
-                        Text(
-                          formatHotelPrice(hotel),
-                          textDirection: TextDirection.ltr,
-                          style: TextStyle(
-                            color: AppColors.heading(context),
-                            fontSize: 25,
-                            fontWeight: FontWeight.w800,
-                          ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        l10n.hotelPerNight,
+                        style: TextStyle(
+                          color: AppColors.secondaryTextV3(context),
+                          fontSize: 11,
                         ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
+                      ),
+                      const SizedBox(width: 7),
+                      Text(
+                        formatHotelPrice(hotel),
+                        textDirection: TextDirection.ltr,
+                        style: TextStyle(
+                          color: AppColors.heading(context),
+                          fontSize: 25,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

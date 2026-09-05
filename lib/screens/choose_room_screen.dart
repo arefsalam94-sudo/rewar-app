@@ -6,9 +6,10 @@ import '../models/hotel_detail.dart';
 import '../services/hotel_booking_service.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/hotel_parts.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'hotel_checkout_screen.dart';
@@ -168,6 +169,8 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
                       alignment: Alignment.topLeft,
                       child: GlassBackButton(
                         onTap: () => Navigator.of(context).maybePop(),
+                        useAppLiquidGlass: true,
+                        useCanonicalGlass: true,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -239,8 +242,9 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: GlassPanel(
-            depth: GlassDepth.middle,
+          child: AppLiquidGlass(
+            // Standalone modal sheet — the final canonical surface.
+            useCanonicalGlass: true,
             padding: const EdgeInsets.all(22),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -258,26 +262,42 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
                   const SizedBox(height: 8),
                   Text(
                     room.description!.forLanguage(language),
-                    style: TextStyle(color: AppColors.secondaryText(context)),
+                    style: TextStyle(color: AppColors.secondaryTextV3(context)),
                   ),
                 ],
                 const SizedBox(height: 14),
-                Text(l10n.hotelMaximumGuests(room.maxOccupancy)),
+                Text(
+                  l10n.hotelMaximumGuests(room.maxOccupancy),
+                  style: TextStyle(color: AppColors.heading(context)),
+                ),
                 if (room.sizeSqm != null)
-                  Text('${room.sizeSqm!.toStringAsFixed(0)} m²'),
+                  Text(
+                    '${room.sizeSqm!.toStringAsFixed(0)} m²',
+                    style: TextStyle(color: AppColors.heading(context)),
+                  ),
                 const SizedBox(height: 10),
                 for (final bed in room.beds)
-                  Text(hotelBedConfigurationLabel(l10n, bed)),
+                  Text(
+                    hotelBedConfigurationLabel(l10n, bed),
+                    style: TextStyle(color: AppColors.heading(context)),
+                  ),
                 const SizedBox(height: 10),
                 for (final facility in room.facilities)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 3),
                     child: Row(
                       children: [
-                        Icon(hotelFacilityIcon(facility.iconKey), size: 18),
+                        Icon(
+                          hotelFacilityIcon(facility.iconKey),
+                          size: 18,
+                          color: AppColors.accent(context),
+                        ),
                         const SizedBox(width: 8),
                         Flexible(
-                          child: Text(facility.name.forLanguage(language)),
+                          child: Text(
+                            facility.name.forLanguage(language),
+                            style: TextStyle(color: AppColors.heading(context)),
+                          ),
                         ),
                       ],
                     ),
@@ -296,11 +316,13 @@ class _Header extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     padding: const EdgeInsets.all(18),
     child: Row(
       children: [
-        HotelCircleIcon(icon: Icons.king_bed_outlined),
+        const HotelCircleIcon(icon: Icons.king_bed_outlined),
         const SizedBox(width: 14),
         Expanded(
           child: Text(
@@ -322,15 +344,21 @@ class _PreviewNotice extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    depth: GlassDepth.top,
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone notice — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 16,
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
     child: Row(
       children: [
         Icon(Icons.science_outlined, color: AppColors.accent(context)),
         const SizedBox(width: 10),
-        Expanded(child: Text(text)),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(color: AppColors.secondaryTextV3(context)),
+          ),
+        ),
       ],
     ),
   );
@@ -357,7 +385,20 @@ class _RoomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final language = Localizations.localeOf(context).languageCode;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // NOT a real standalone shader surface, despite being the visible
+      // "room card" boundary: each room can carry 2-4 independent real-glass
+      // `_RateCard`s in the Wrap below, and rooms stack only 14dp apart —
+      // the exact topology (dense real-glass children nested inside another
+      // real-glass parent, closely packed) confirmed to corrupt on Android
+      // for Register's fields. `GlassLayer.embedded` keeps the same
+      // canonical tint/card presence without a second shader stacking under
+      // the rate cards' own; the rate cards themselves stay real glass
+      // (Design_system_CANONICAL.md §16 — a large selectable card's own
+      // surface), since removing shader depth from the room card is what
+      // fixes the nesting, not flattening the selectable options.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,7 +495,15 @@ class _RoomCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
-            child: Text(l10n.hotelRoomsLeft(offers.first.availableQuantity)),
+            child: Text(
+              l10n.hotelRoomsLeft(offers.first.availableQuantity),
+              // Informational/secondary availability text
+              // (Design_system_CANONICAL.md — no dedicated
+              // availability/success token exists app-wide, so this follows
+              // the same canonical secondary role every other metadata line
+              // in this flow uses).
+              style: TextStyle(color: AppColors.secondaryTextV3(context)),
+            ),
           ),
         ],
       ),
@@ -485,9 +534,18 @@ class _RateCard extends StatelessWidget {
       child: GestureDetector(
         key: chooseRoomRateKey(offer.id),
         onTap: onTap,
-        child: GlassPanel(
-          depth: GlassDepth.middle,
-          selected: selected,
+        // A rate/package option inside the room card — dense informational
+        // content (meal plan, cancellation, price), so it follows the
+        // large-selectable-card rule (Design_system_CANONICAL.md §16)
+        // rather than the compact-chip rule: its own real canonical Liquid
+        // Glass surface. The room card itself now renders as
+        // GlassLayer.embedded (no shader) specifically so this can stay a
+        // real surface without stacking shader-on-shader — see the comment
+        // on _RoomCard. Still glass when selected — a visible non-shader
+        // cue (the radio glyph) marks selection rather than a solid fill
+        // that would hide it.
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
           borderRadius: 22,
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -498,9 +556,10 @@ class _RateCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       offer.name?.forLanguage(language) ?? l10n.hotelReserve,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
+                        color: AppColors.heading(context),
                       ),
                     ),
                   ),
@@ -508,7 +567,14 @@ class _RateCard extends StatelessWidget {
                     selected
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
-                    color: AppColors.selectionAccent(context),
+                    // The legacy glyph used `AppColors.selectionAccent` —
+                    // the brand green `#00624D` in Light mode — for its
+                    // selected state; replaced with `largeSelectionAccent`
+                    // (navy in Light, mint in Dark), unselected uses
+                    // `heading`.
+                    color: selected
+                        ? AppColors.largeSelectionAccent(context)
+                        : AppColors.heading(context),
                   ),
                 ],
               ),
@@ -516,25 +582,36 @@ class _RateCard extends StatelessWidget {
               Text(
                 offer.mealPlan?.forLanguage(language) ??
                     hotelBreakfastLabel(l10n, offer.breakfast),
+                style: TextStyle(color: AppColors.secondaryTextV3(context)),
               ),
               const SizedBox(height: 5),
-              Text(hotelCancellationLabel(l10n, offer.cancellationType)),
+              Text(
+                hotelCancellationLabel(l10n, offer.cancellationType),
+                style: TextStyle(color: AppColors.secondaryTextV3(context)),
+              ),
               const SizedBox(height: 5),
-              Text(hotelPaymentTimingLabel(l10n, offer.paymentTiming)),
+              Text(
+                hotelPaymentTimingLabel(l10n, offer.paymentTiming),
+                style: TextStyle(color: AppColors.secondaryTextV3(context)),
+              ),
               const SizedBox(height: 12),
-              Text(l10n.hotelPriceForNights(nights)),
+              Text(
+                l10n.hotelPriceForNights(nights),
+                style: TextStyle(color: AppColors.secondaryTextV3(context)),
+              ),
               const SizedBox(height: 3),
               Text(
                 _money(offer.totalPrice, offer.currencyCode),
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 27,
                   fontWeight: FontWeight.w800,
+                  color: AppColors.heading(context),
                 ),
               ),
               Text(
                 l10n.hotelTaxesExcluded,
-                style: TextStyle(color: AppColors.secondaryText(context)),
+                style: TextStyle(color: AppColors.secondaryTextV3(context)),
               ),
             ],
           ),
@@ -550,8 +627,10 @@ class _InfoChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    depth: GlassDepth.top,
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Nested inside the room card's own visible glass surface.
+    useCanonicalGlass: true,
+    layer: GlassLayer.embedded,
     borderRadius: 18,
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
     // Flexible, not fixed: at a raised system font size a feature label is
@@ -559,9 +638,15 @@ class _InfoChip extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 17),
+        Icon(icon, size: 17, color: AppColors.accent(context)),
         const SizedBox(width: 6),
-        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+        Flexible(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: AppColors.heading(context)),
+          ),
+        ),
       ],
     ),
   );
@@ -573,11 +658,13 @@ class _LoadingRooms extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: List.generate(
       2,
-      (_) => const Padding(
-        padding: EdgeInsets.only(bottom: 14),
-        child: GlassPanel(
-          padding: EdgeInsets.all(24),
-          child: SizedBox(
+      (_) => Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        // Standalone loading card — the final canonical surface.
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          padding: const EdgeInsets.all(24),
+          child: const SizedBox(
             height: 220,
             child: Center(child: CircularProgressIndicator()),
           ),
@@ -604,17 +691,31 @@ class _StateCard extends StatelessWidget {
   final VoidCallback? onSecondary;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     padding: const EdgeInsets.all(24),
     child: Column(
       children: [
         Icon(icon, size: 52, color: AppColors.accent(context)),
         const SizedBox(height: 12),
-        Text(message, textAlign: TextAlign.center),
+        Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.heading(context)),
+        ),
         const SizedBox(height: 18),
         PrimaryButton(label: primaryLabel, onTap: onPrimary),
         if (secondaryLabel != null)
-          TextButton(onPressed: onSecondary, child: Text(secondaryLabel!)),
+          TextButton(
+            onPressed: onSecondary,
+            // `interactive text` (Design_system_CANONICAL.md §5): navy/mint,
+            // not the unthemed default.
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accent(context),
+            ),
+            child: Text(secondaryLabel!),
+          ),
       ],
     ),
   );

@@ -12,9 +12,10 @@ import '../services/hotel_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/hotel_parts.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'choose_room_screen.dart';
@@ -133,6 +134,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                         alignment: Alignment.topLeft,
                         child: GlassBackButton(
                           onTap: () => Navigator.of(context).pop(_criteria),
+                          useAppLiquidGlass: true,
+                          useCanonicalGlass: true,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -502,8 +505,9 @@ class _Gallery extends StatelessWidget {
                   PositionedDirectional(
                     end: 12,
                     top: 12,
-                    child: GlassPanel(
-                      depth: GlassDepth.top,
+                    child: AppLiquidGlass(
+                      // A standalone floating badge over the hero photo.
+                      useCanonicalGlass: true,
                       borderRadius: 12,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -604,8 +608,9 @@ class _SummaryCard extends StatelessWidget {
         hotel.address?.forLanguage(language) ??
         hotel.city.forLanguage(language);
 
-    return GlassPanel(
-      key: const ValueKey('hotel-stay-summary'),
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -640,7 +645,7 @@ class _SummaryCard extends StatelessWidget {
                           child: Text(
                             location,
                             style: TextStyle(
-                              color: AppColors.secondaryText(context),
+                              color: AppColors.secondaryTextV3(context),
                               fontSize: 13,
                               height: 18 / 13,
                             ),
@@ -720,7 +725,10 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (editing) ...[
-            GlassPanel(
+            AppLiquidGlass(
+              // Nested inside the Summary card's own visible glass surface.
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
               key: const ValueKey('hotel-change-guests-panel'),
               borderRadius: 26,
               padding: const EdgeInsets.all(14),
@@ -801,53 +809,56 @@ class _StayDate extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final content = Row(
-      children: [
-        const HotelCircleIcon(icon: Icons.calendar_month_outlined, size: 36),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Nested inside the Summary card's own visible glass surface — embedded,
+    // not a second shader.
+    useCanonicalGlass: true,
+    layer: GlassLayer.embedded,
+    borderRadius: 20,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey(controlKey),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
             children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.secondaryText(context),
-                  fontSize: 12,
-                ),
+              const HotelCircleIcon(
+                icon: Icons.calendar_month_outlined,
+                size: 36,
               ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: AppColors.heading(context),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: AppColors.secondaryTextV3(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        color: AppColors.heading(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
-      ],
-    );
-    return GlassPanel(
-      depth: GlassDepth.middle,
-      borderRadius: 20,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: ValueKey(controlKey),
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: content,
-          ),
-        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// A card header: circled feature icon, title, and an optional See all pill.
@@ -892,7 +903,7 @@ class _SectionHeader extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: TextStyle(
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                     fontSize: 13,
                   ),
                 ),
@@ -943,58 +954,46 @@ class _PillButton extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Center(
-            child: GlassPanel(
-              depth: GlassDepth.middle,
+            // Every caller nests this pill inside another card's own
+            // visible glass surface — embedded, not a second shader.
+            child: AppLiquidGlass(
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
               borderRadius: 22,
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(22),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 9,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          Icon(
-                            icon,
-                            size: 17,
-                            color: AppColors.accent(context),
-                          ),
-                          const SizedBox(width: 7),
-                        ],
-                        Flexible(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: AppColors.heading(context),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        if (trailingChevron) ...[
-                          const SizedBox(width: 4),
-                          // Mirrors, because it points at where the next
-                          // screen comes from (`DESIGN_SYSTEM.md` 21).
-                          Icon(
-                            rtl
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
-                            size: 20,
-                            color: AppColors.accent(context),
-                          ),
-                        ],
-                      ],
+              onTap: onTap,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: 17, color: AppColors.accent(context)),
+                    const SizedBox(width: 7),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.heading(context),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
+                  if (trailingChevron) ...[
+                    const SizedBox(width: 4),
+                    // Mirrors, because it points at where the next screen
+                    // comes from (`DESIGN_SYSTEM.md` 21).
+                    Icon(
+                      rtl
+                          ? Icons.chevron_left_rounded
+                          : Icons.chevron_right_rounded,
+                      size: 20,
+                      color: AppColors.accent(context),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -1022,7 +1021,9 @@ class _FacilitiesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final shown = facilities.take(previewCount).toList(growable: false);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1099,7 +1100,9 @@ class _ReviewScoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1109,7 +1112,11 @@ class _ReviewScoreCard extends StatelessWidget {
             icon: Icons.reviews_outlined,
             title: l10n.hotelReviews,
             subtitle: l10n.hotelReviewCount(summary.reviewCount),
-            trailing: HotelReviewBadge(score: summary.score),
+            // Nested inside this card's own visible glass surface.
+            trailing: HotelReviewBadge(
+              score: summary.score,
+              layer: GlassLayer.embedded,
+            ),
           ),
           if (summary.hasBreakdown) ...[
             const SizedBox(height: 14),
@@ -1208,7 +1215,9 @@ class _LocationCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final lat = hotel.latitude;
     final lng = hotel.longitude;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1229,7 +1238,7 @@ class _LocationCard extends StatelessWidget {
                         child: Text(
                           l10n.hotelMapUnavailable,
                           style: TextStyle(
-                            color: AppColors.secondaryText(context),
+                            color: AppColors.secondaryTextV3(context),
                           ),
                         ),
                       ),
@@ -1288,7 +1297,9 @@ class _NearbyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final shown = places.take(previewCount).toList(growable: false);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1325,7 +1336,7 @@ class _NearbyRow extends StatelessWidget {
     );
     final distance = Text(
       l10n.hotelNearbyDistance(place.distanceMeters / 1000, place.minutes),
-      style: TextStyle(color: AppColors.secondaryText(context), fontSize: 14),
+      style: TextStyle(color: AppColors.secondaryTextV3(context), fontSize: 14),
     );
 
     return Padding(
@@ -1363,7 +1374,7 @@ class _NearbyRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.clip,
                         style: TextStyle(
-                          color: AppColors.secondaryText(context),
+                          color: AppColors.secondaryTextV3(context),
                         ),
                       ),
                     ),
@@ -1400,7 +1411,9 @@ class _CommentsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1427,14 +1440,14 @@ class _CommentsCard extends StatelessWidget {
               if (snapshot.hasError) {
                 return Text(
                   l10n.reviewsLoadFailed,
-                  style: TextStyle(color: AppColors.secondaryText(context)),
+                  style: TextStyle(color: AppColors.secondaryTextV3(context)),
                 );
               }
               final items = snapshot.data ?? const <NatureReview>[];
               if (items.isEmpty) {
                 return Text(
                   l10n.noReviewsYet,
-                  style: TextStyle(color: AppColors.secondaryText(context)),
+                  style: TextStyle(color: AppColors.secondaryTextV3(context)),
                 );
               }
               return Column(
@@ -1450,25 +1463,26 @@ class _CommentsCard extends StatelessWidget {
           const SizedBox(height: 14),
           // Same wording as Explore Nature, deliberately: one review action
           // across the app rather than a hotel-only synonym.
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              key: const ValueKey('hotel-write-review'),
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(minHeight: 56),
+          SizedBox(
+            width: double.infinity,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 56),
+              // Nested inside this card's own visible glass surface —
+              // embedded, not a second shader, and no painted border
+              // (Design_system_CANONICAL.md §9/§10) — the legacy
+              // implementation painted a solid accent-color border around a
+              // tinted box, which §10 explicitly prohibits.
+              child: AppLiquidGlass(
+                useCanonicalGlass: true,
+                layer: GlassLayer.embedded,
+                borderRadius: 16,
+                onTap: onTap,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
                 ),
-                decoration: BoxDecoration(
-                  color: AppColors.accent(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent(context)),
-                ),
                 child: Row(
+                  key: const ValueKey('hotel-write-review'),
                   children: [
                     Icon(
                       Icons.rate_review_outlined,
@@ -1490,7 +1504,7 @@ class _CommentsCard extends StatelessWidget {
                             l10n.writeReviewHint,
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.secondaryText(context),
+                              color: AppColors.secondaryTextV3(context),
                             ),
                           ),
                         ],
@@ -1558,14 +1572,14 @@ class _CommentRow extends StatelessWidget {
                   MaterialLocalizations.of(context).formatMediumDate(createdAt),
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                   ),
                 ),
               const SizedBox(height: 4),
               Text(
                 review.comment,
                 style: TextStyle(
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                   height: 20 / 14,
                   fontSize: 14,
                 ),
@@ -1585,7 +1599,7 @@ class _CommentRow extends StatelessWidget {
                       textDirection: TextDirection.ltr,
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.secondaryText(context),
+                        color: AppColors.secondaryTextV3(context),
                       ),
                     ),
                   ],
@@ -1648,7 +1662,9 @@ class _PoliciesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       child: Material(
         color: Colors.transparent,
@@ -1763,7 +1779,7 @@ class _PolicyRow extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
             fontSize: 13,
             height: 19 / 13,
           ),
@@ -1777,11 +1793,13 @@ class _LoadingCard extends StatelessWidget {
   const _LoadingCard();
 
   @override
-  Widget build(BuildContext context) => const SizedBox(
+  Widget build(BuildContext context) => SizedBox(
     height: 200,
-    child: GlassPanel(
+    child: AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
-      child: Center(child: CircularProgressIndicator()),
+      child: const Center(child: CircularProgressIndicator()),
     ),
   );
 }
@@ -1800,7 +1818,9 @@ class _MessageCard extends StatelessWidget {
   final VoidCallback onAction;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(22),
     child: Column(
@@ -1841,7 +1861,9 @@ class _SheetShell extends StatelessWidget {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.86,
           ),
-          child: GlassPanel(
+          child: AppLiquidGlass(
+            // Standalone modal sheet — the final canonical surface.
+            useCanonicalGlass: true,
             borderRadius: 28,
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Column(
@@ -1865,7 +1887,10 @@ class _SheetShell extends StatelessWidget {
                       tooltip: l10n.close,
                       icon: Icon(
                         Icons.close_rounded,
-                        color: AppColors.heading(context),
+                        // Normal/interactive icon token — navy in light,
+                        // mint in dark — not the heading token (which stays
+                        // white in dark mode).
+                        color: AppColors.accent(context),
                       ),
                     ),
                   ],
@@ -1896,7 +1921,7 @@ class _FacilitiesSheet extends StatelessWidget {
       child: grouped.isEmpty
           ? Text(
               l10n.hotelNoFacilities,
-              style: TextStyle(color: AppColors.secondaryText(context)),
+              style: TextStyle(color: AppColors.secondaryTextV3(context)),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1942,7 +1967,7 @@ class _NearbySheet extends StatelessWidget {
       child: detail.nearbyPlaces.isEmpty
           ? Text(
               l10n.hotelNearbyEmpty,
-              style: TextStyle(color: AppColors.secondaryText(context)),
+              style: TextStyle(color: AppColors.secondaryTextV3(context)),
             )
           : Column(
               children: [
@@ -2030,7 +2055,9 @@ class _ChangeStayEditorState extends State<_ChangeStayEditor> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final formatter = MaterialLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone editor surface — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
       child: Column(
@@ -2060,7 +2087,10 @@ class _ChangeStayEditorState extends State<_ChangeStayEditor> {
             ],
           ),
           const SizedBox(height: 8),
-          GlassPanel(
+          AppLiquidGlass(
+            // Nested inside the editor's own visible glass surface.
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
             key: const ValueKey('hotel-change-date-panel'),
             borderRadius: 26,
             padding: const EdgeInsets.all(14),
@@ -2083,7 +2113,10 @@ class _ChangeStayEditorState extends State<_ChangeStayEditor> {
             ),
           ),
           const SizedBox(height: 12),
-          GlassPanel(
+          AppLiquidGlass(
+            // Nested inside the editor's own visible glass surface.
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
             key: const ValueKey('hotel-change-guests-panel'),
             borderRadius: 26,
             padding: const EdgeInsets.all(14),
@@ -2161,48 +2194,49 @@ class _SheetDateRow extends StatelessWidget {
     button: true,
     label: '$label $value',
     child: ExcludeSemantics(
-      child: GlassPanel(
-        depth: GlassDepth.top,
-        borderRadius: 22,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            key: ValueKey(controlKey),
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(22),
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
+      // Nested inside the sheet's own visible glass surface.
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
+        layer: GlassLayer.embedded,
+        borderRadius: 20,
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        child: Row(
+          key: ValueKey(controlKey),
+          children: [
+            const HotelCircleIcon(
+              icon: Icons.calendar_month_outlined,
+              size: 36,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const HotelCircleIcon(icon: Icons.calendar_month_outlined),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          label,
-                          style: TextStyle(
-                            color: AppColors.secondaryText(context),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.heading(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: AppColors.secondaryTextV3(context),
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: AppColors.heading(context),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
+            Icon(
+              Icons.edit_outlined,
+              size: 18,
+              color: AppColors.accent(context),
+            ),
+          ],
         ),
       ),
     ),
