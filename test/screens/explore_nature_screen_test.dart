@@ -411,9 +411,12 @@ void main() {
       await _pumpCustomize(tester, locale: const Locale('ku'));
 
       final back = find.byType(GlassBackButton);
+      // The card is the canonical surface now, not the legacy GlassPanel
+      // shell; the assertion below is unchanged — the back button still sits
+      // at the physical top-left, outside it.
       final card = find.ancestor(
         of: find.text('ڕێکخستنی پاڵاوتنەکان'),
-        matching: find.byType(GlassPanel),
+        matching: find.byType(AppLiquidGlass),
       );
       final backRect = tester.getRect(back);
       final cardRect = tester.getRect(card);

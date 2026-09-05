@@ -8,7 +8,8 @@ import 'package:kurdistan_paradise_travel_guide/screens/map_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
-import 'package:kurdistan_paradise_travel_guide/widgets/glass_panel.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/liquid_glass_surface.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
 
 /// Divan Erbil — five gallery photos, fifteen facilities, six nearby places,
@@ -215,9 +216,12 @@ void main() {
       tester.getTopLeft(apply).dy,
       greaterThan(tester.getBottomLeft(guests).dy),
     );
-    final panel = tester.widget<GlassPanel>(guests);
+    // Canonical surface now, and embedded rather than its own shader: the
+    // panel sits inside the editor's own visible glass.
+    final panel = tester.widget<AppLiquidGlass>(guests);
+    expect(panel.useCanonicalGlass, isTrue);
+    expect(panel.layer, GlassLayer.embedded);
     expect(panel.borderRadius, 26);
-    expect(panel.padding, const EdgeInsets.all(14));
     await tester.tap(find.byKey(const ValueKey('sheet-adult-increase')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('sheet-room-increase')));

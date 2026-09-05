@@ -609,6 +609,7 @@ class _SummaryCard extends StatelessWidget {
         hotel.city.forLanguage(language);
 
     return AppLiquidGlass(
+      key: const ValueKey('hotel-stay-summary'),
       // Standalone information card — the final canonical surface.
       useCanonicalGlass: true,
       borderRadius: 28,

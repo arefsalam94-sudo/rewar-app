@@ -155,6 +155,11 @@ void main() {
       300,
       scrollable: _pageScrollable(),
     );
+    // scrollUntilVisible stops as soon as the widget is attached, which can
+    // still leave it a few pixels below the viewport; settle it fully into
+    // view before tapping, as the search test above already does.
+    await tester.ensureVisible(find.text('Toyota Corolla'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Toyota Corolla'));
     await tester.pump();
 
