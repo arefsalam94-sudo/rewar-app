@@ -6,8 +6,9 @@ import '../models/nature_spot.dart';
 import '../services/device_location_service.dart';
 import '../services/nature_spots_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import 'customize_filters_screen.dart';
 import 'nature_place_detail_screen.dart';
@@ -328,7 +329,11 @@ class _BackBar extends StatelessWidget {
         textDirection: TextDirection.ltr,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+          GlassBackButton(
+            onTap: () => Navigator.of(context).maybePop(),
+            useAppLiquidGlass: true,
+            useCanonicalGlass: true,
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Directionality(
@@ -354,13 +359,12 @@ class _BackBar extends StatelessWidget {
 /// Both design files specify the organic 28px `rounded-card` silhouette.
 double _cardRadius(BuildContext context) => 28;
 
-Color _natureHeading(BuildContext context) {
-  final scheme = Theme.of(context).colorScheme;
-  return scheme.brightness == Brightness.dark ? Colors.white : scheme.onSurface;
-}
+// Delegate to the canonical shared tokens rather than re-deriving them
+// locally (`Design_system_CANONICAL.md` §11) — same values, one source.
+Color _natureHeading(BuildContext context) => AppColors.heading(context);
 
 Color _natureSecondary(BuildContext context) =>
-    AppColors.secondaryText(context);
+    AppColors.secondaryTextV3(context);
 
 // --- Highlighted carousel ---------------------------------------------------
 
@@ -449,7 +453,9 @@ class _HighlightCard extends StatelessWidget {
                             fontSize: 26,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -0.02 * 26,
-                            color: Colors.white,
+                            // `text-on-photo` — direct on the background
+                            // photo, not a hardcoded literal.
+                            color: AppColors.onPhotoBackground,
                           ),
                         ),
                       ),
@@ -459,7 +465,7 @@ class _HighlightCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,
-                          color: Colors.white,
+                          color: AppColors.onPhotoBackground,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -751,8 +757,11 @@ class _FilterBar extends StatelessWidget {
       ),
     ];
 
-    return GlassPanel(
+    // Standalone filter panel — the final canonical surface
+    // (Design_system_CANONICAL.md §9), not a page-local glass profile.
+    return AppLiquidGlass(
       borderRadius: _cardRadius(context),
+      useCanonicalGlass: true,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -795,9 +804,98 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    final content = AppColors.selectionAccent(
-      context,
-    ).withValues(alpha: enabled ? 1 : 0.4);
+    // Unselected = real Liquid Glass, selected = a solid fill
+    // (`AppColors.compactSelectedFill`/`compactSelectedContent`) — the
+    // selected state must read from the fill color itself, not a
+    // translucent tint over glass. Never the brand-link green.
+    final content = selected
+        ? AppColors.compactSelectedContent(context)
+        : AppColors.accent(context).withValues(alpha: enabled ? 1 : 0.4);
+
+    final pillBody = SizedBox(
+      height: visualHeight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 17, color: content),
+          const SizedBox(width: 6),
+          // Allowed to shrink rather than overflow — the "text next to
+          // text must be allowed to shrink" rule.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: content,
+                ),
+              ),
+            ),
+          ),
+          if (badgeCount > 0) ...[
+            const SizedBox(width: 6),
+            Container(
+              constraints: const BoxConstraints(minWidth: 18),
+              height: 18,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 5),
+              decoration: BoxDecoration(
+                color: AppColors.accent(context),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$badgeCount',
+                // A count reads the same way in every language.
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    // Unselected: its own real Liquid Glass surface — nested inside
+    // `_FilterBar`'s own visible glass on purpose (the app-wide
+    // selectable-option-inside-a-glass-panel rule), not embedded content
+    // riding on the parent's shader; the normal canonical body tint every
+    // other real-glass surface uses, so an idle chip still reads as the
+    // same material as the bar around it. Selected: a solid
+    // `compactSelectedFill` capsule — no glass — so the selected state is
+    // visually obvious from the fill itself, not a translucent tint.
+    final pill = selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.compactSelectedFill(context),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: pillBody,
+            ),
+          )
+        : CanonicalGlassShell(
+            borderRadius: 999,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: AppColors.canonicalGlassBodyTint.withValues(
+                  alpha: AppColors.canonicalGlassBodyTintOpacity(context),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Material(color: Colors.transparent, child: pillBody),
+              ),
+            ),
+          );
 
     return Semantics(
       button: true,
@@ -811,63 +909,7 @@ class _FilterChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             vertical: (48 - visualHeight) / 2,
           ),
-          child: GlassPanel(
-            borderRadius: 999,
-            depth: GlassDepth.top,
-            selected: selected,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: SizedBox(
-              height: visualHeight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 17, color: content),
-                  const SizedBox(width: 6),
-                  // Allowed to shrink rather than overflow — the "text next to
-                  // text must be allowed to shrink" rule.
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          color: content,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (badgeCount > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 18),
-                      height: 18,
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent(context),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '$badgeCount',
-                        // A count reads the same way in every language.
-                        textDirection: TextDirection.ltr,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          child: pill,
         ),
       ),
     );
@@ -910,8 +952,12 @@ class _SpotCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(radius),
-        child: GlassPanel(
+        // Standalone information card — the final canonical surface
+        // (Design_system_CANONICAL.md §9). The thumbnail/text inside are
+        // plain content, not a second glass shader.
+        child: AppLiquidGlass(
           borderRadius: radius,
+          useCanonicalGlass: true,
           padding: const EdgeInsets.all(12),
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: minHeight),
@@ -1069,8 +1115,9 @@ class _PanelShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
     borderRadius: _cardRadius(context),
+    useCanonicalGlass: true,
     padding: const EdgeInsets.all(20),
     child: Center(child: child),
   );

@@ -10,8 +10,9 @@ import '../services/device_location_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/place_weather_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import 'customize_filters_screen.dart' show exploreNatureBackgroundAsset;
 import 'map_screen.dart';
@@ -270,6 +271,8 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
             left: 20,
             child: GlassBackButton(
               onTap: () => Navigator.of(context).maybePop(),
+              useAppLiquidGlass: true,
+              useCanonicalGlass: true,
             ),
           ),
           if (widget.spot.reviewScore != null)
@@ -376,7 +379,11 @@ class _AboutCard extends StatelessWidget {
   final String? distance;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface
+    // (Design_system_CANONICAL.md §9), replacing the legacy `GlassPanel`
+    // BackdropFilter shell.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(18),
     child: LayoutBuilder(
@@ -496,7 +503,9 @@ class _NearbyStaysCard extends StatelessWidget {
   final ValueChanged<NearbyStay> onTap;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(12),
     child: SizedBox(
@@ -558,7 +567,7 @@ class _NearbyStaysCard extends StatelessWidget {
                       maxLines: 1,
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.secondaryText(context),
+                        color: AppColors.secondaryTextV3(context),
                       ),
                     ),
                 ],
@@ -592,7 +601,9 @@ class _LocationCard extends StatelessWidget {
     final latitude = spot.latitude;
     final longitude = spot.longitude;
     final openMapLabel = AppLocalizations.of(context).openPlaceMap;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       child: SizedBox(
         height: height,
@@ -648,8 +659,12 @@ class _LocationCard extends StatelessWidget {
                 locateButton: onOpenMap == null
                     ? null
                     : _MapLocateButton(label: openMapLabel, onTap: onOpenMap!),
-                plate: GlassPanel(
-                  depth: GlassDepth.middle,
+                plate: AppLiquidGlass(
+                  // A standalone floating plate over the (opaque) map
+                  // preview, not content embedded in a visible parent glass
+                  // fill — the map fully occludes the location card's own
+                  // glass, so this gets its own real surface.
+                  useCanonicalGlass: true,
                   borderRadius: 16,
                   padding: EdgeInsets.all(compact ? 9 : 12),
                   child: Row(
@@ -681,7 +696,7 @@ class _LocationCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontSize: compact ? 10 : 12,
-                                color: AppColors.secondaryText(context),
+                                color: AppColors.secondaryTextV3(context),
                               ),
                             ),
                           ],
@@ -746,9 +761,11 @@ class _MapLocateButton extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     button: true,
     label: label,
-    child: GlassPanel(
-      depth: GlassDepth.middle,
-      borderRadius: 999,
+    child: AppLiquidGlass(
+      // A standalone floating control over the (opaque) map preview — the
+      // same reasoning as the name/location plate above.
+      useCanonicalGlass: true,
+      shape: AppLiquidGlassShape.circle,
       padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
@@ -794,7 +811,9 @@ class _WeatherCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pad = compact ? 12.0 : 18.0;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: EdgeInsets.all(pad),
       // The location card's panel has no padding, so its outer height *is*
@@ -886,7 +905,7 @@ class _WeatherUnavailable extends StatelessWidget {
     child: Text(
       AppLocalizations.of(context).weatherUnavailable,
       textAlign: TextAlign.center,
-      style: TextStyle(color: AppColors.secondaryText(context)),
+      style: TextStyle(color: AppColors.secondaryTextV3(context)),
     ),
   );
 }
@@ -904,7 +923,7 @@ class _HourWeather extends StatelessWidget {
         '${hour.time.hour.toString().padLeft(2, '0')}:00',
         style: TextStyle(
           fontSize: compact ? 10 : 11,
-          color: AppColors.secondaryText(context),
+          color: AppColors.secondaryTextV3(context),
         ),
       ),
       Icon(
@@ -938,7 +957,9 @@ class _ReviewsCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     child: Material(
       color: Colors.transparent,
@@ -971,7 +992,7 @@ class _ReviewsCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   AppLocalizations.of(context).basedOnReviews(count),
-                  style: TextStyle(color: AppColors.secondaryText(context)),
+                  style: TextStyle(color: AppColors.secondaryTextV3(context)),
                 ),
               ],
               const SizedBox(height: 14),
@@ -1000,51 +1021,58 @@ class _ReviewsCard extends StatelessWidget {
                 },
               ),
               const SizedBox(height: 16),
-              Container(
+              SizedBox(
                 width: double.infinity,
-                constraints: const BoxConstraints(minHeight: 56),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.accent(context).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent(context)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.rate_review_outlined,
-                      color: AppColors.accent(context),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
+                  // Nested inside this card's own visible glass surface —
+                  // embedded, not a second shader, and no painted border
+                  // (Design_system_CANONICAL.md §9/§10) — the legacy
+                  // implementation painted a solid accent-color border
+                  // around a tinted box, which §10 explicitly prohibits.
+                  child: AppLiquidGlass(
+                    useCanonicalGlass: true,
+                    layer: GlassLayer.embedded,
+                    borderRadius: 16,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context).writeReviewPrompt,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.heading(context),
-                            ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.rate_review_outlined,
+                          color: AppColors.accent(context),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context).writeReviewPrompt,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.heading(context),
+                                ),
+                              ),
+                              Text(
+                                AppLocalizations.of(context).writeReviewHint,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.secondaryTextV3(context),
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            AppLocalizations.of(context).writeReviewHint,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.secondaryText(context),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: AppColors.accent(context),
+                        ),
+                      ],
                     ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.accent(context),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ],
@@ -1203,10 +1231,7 @@ class _Stars extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     textDirection: TextDirection.ltr,
     children: [
-      for (var index = 0; index < 5; index++) ...[
-        Icon(_iconFor(index), size: size),
-        if (index != 4) SizedBox(width: spacing),
-      ],
+      for (var index = 0; index < 5; index++) Icon(_iconFor(index), size: size),
     ],
   );
 
@@ -1224,23 +1249,33 @@ class _GalleryDots extends StatelessWidget {
   final int current;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    textDirection: TextDirection.ltr,
-    children: [
-      for (var index = 0; index < count; index++) ...[
-        Container(
-          key: ValueKey('nature-detail-gallery-dot-$index'),
-          width: index == current ? 9 : 7,
-          height: index == current ? 9 : 7,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: index == current ? 1 : 0.5),
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // A standalone floating pill over the hero photo.
+    useCanonicalGlass: true,
+    borderRadius: 999,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      textDirection: TextDirection.ltr,
+      children: [
+        for (var index = 0; index < count; index++) ...[
+          Container(
+            key: ValueKey('nature-detail-gallery-dot-$index'),
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              // The active dot now reads through color, not size, so the
+              // pill's geometry stays fixed as the gallery pages.
+              color: index == current
+                  ? AppColors.accent(context)
+                  : AppColors.secondaryTextV3(context),
+            ),
           ),
-        ),
-        if (index != count - 1) const SizedBox(width: 7),
+          if (index != count - 1) const SizedBox(width: 8),
+        ],
       ],
-    ],
+    ),
   );
 }
 
@@ -1317,13 +1352,12 @@ class _PhotoFallback extends StatelessWidget {
   );
 }
 
-TextStyle _bodyStyle(BuildContext context) => TextStyle(
-  fontSize: 14,
-  height: 20 / 14,
-  color: Theme.of(context).brightness == Brightness.dark
-      ? Colors.white
-      : Theme.of(context).colorScheme.onSurface,
-);
+// Delegates to the canonical shared token rather than deriving it locally
+// via `colorScheme.onSurface` (Design_system_CANONICAL.md §4). Same numeric
+// value as before in both themes — this only fixes color ownership, not
+// appearance.
+TextStyle _bodyStyle(BuildContext context) =>
+    TextStyle(fontSize: 14, height: 20 / 14, color: AppColors.heading(context));
 
 IconData _weatherIcon(int code) {
   if (code == 0) return Icons.wb_sunny_rounded;

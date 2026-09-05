@@ -9,8 +9,8 @@ import '../services/place_weather_service.dart';
 import '../services/tours_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
@@ -114,6 +114,8 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
                       alignment: Alignment.topLeft,
                       child: GlassBackButton(
                         onTap: () => Navigator.of(context).maybePop(),
+                        useAppLiquidGlass: true,
+                        useCanonicalGlass: true,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -299,7 +301,9 @@ class _HeroGallery extends StatelessWidget {
     final photos = tour.photos;
     return AspectRatio(
       aspectRatio: 1.7,
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        // Standalone hero — the final canonical surface.
+        useCanonicalGlass: true,
         borderRadius: 22,
         child: Stack(
           fit: StackFit.expand,
@@ -323,7 +327,10 @@ class _HeroGallery extends StatelessWidget {
               PositionedDirectional(
                 top: 14,
                 end: 14,
-                child: GlassPanel(
+                // Floats over the (opaque) photo, not the hero's own glass
+                // fill — a standalone floating badge.
+                child: AppLiquidGlass(
+                  useCanonicalGlass: true,
                   borderRadius: 18,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -361,7 +368,9 @@ class _TourInformationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final language = Localizations.localeOf(context).languageCode;
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
@@ -401,7 +410,7 @@ class _TourInformationCard extends StatelessWidget {
                       Text(
                         l10n.tourDuration(tour.durationDays),
                         style: TextStyle(
-                          color: AppColors.secondaryText(context),
+                          color: AppColors.secondaryTextV3(context),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -430,7 +439,7 @@ class _TourInformationCard extends StatelessWidget {
                                     distance!,
                                     style: TextStyle(
                                       fontSize: 12,
-                                      color: AppColors.secondaryText(context),
+                                      color: AppColors.secondaryTextV3(context),
                                     ),
                                   ),
                               ],
@@ -444,7 +453,7 @@ class _TourInformationCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           height: 20 / 14,
-                          color: AppColors.secondaryText(context),
+                          color: AppColors.secondaryTextV3(context),
                         ),
                       ),
                     ],
@@ -464,7 +473,9 @@ class _FacilitiesCard extends StatelessWidget {
   final List<TourFeature> features;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(18),
     child: Column(
@@ -473,7 +484,7 @@ class _FacilitiesCard extends StatelessWidget {
         _CardTitle(AppLocalizations.of(context).tourFacilities),
         const SizedBox(height: 14),
         if (features.isEmpty)
-          Text('—', style: TextStyle(color: AppColors.secondaryText(context)))
+          Text('—', style: TextStyle(color: AppColors.secondaryTextV3(context)))
         else
           Wrap(
             spacing: 12,
@@ -525,7 +536,9 @@ class _WeatherCard extends StatelessWidget {
   final Future<PlaceWeather>? future;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone information card — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.all(14),
     child: SizedBox(
@@ -587,7 +600,9 @@ class _WeatherCard extends StatelessWidget {
                                       '${hour.time.hour}:00',
                                       style: TextStyle(
                                         fontSize: 10,
-                                        color: AppColors.secondaryText(context),
+                                        color: AppColors.secondaryTextV3(
+                                          context,
+                                        ),
                                       ),
                                     ),
                                     Icon(
@@ -628,7 +643,9 @@ class _MapCard extends StatelessWidget {
     final lng = tour.longitude;
     final language = Localizations.localeOf(context).languageCode;
     final place = MapPlace.fromTour(tour, language);
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(14),
       child: SizedBox(
@@ -689,94 +706,85 @@ class _TourReviewsCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
-      child: GlassPanel(
+      // Standalone information card — the final canonical surface.
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 28,
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(22),
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: _CardTitle(l10n.ratingsAndReviews)),
-                      if (score != null)
-                        Text(
-                          score!.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.heading(context),
-                          ),
-                        ),
-                    ],
-                  ),
+        onTap: onTap,
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: _CardTitle(l10n.ratingsAndReviews)),
+                if (score != null)
                   Text(
-                    l10n.tourReviewCount(count),
-                    style: TextStyle(color: AppColors.secondaryText(context)),
+                    score!.toStringAsFixed(1),
+                    style: TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.heading(context),
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  FutureBuilder<List<NatureReview>>(
-                    future: reviews,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return LinearProgressIndicator(
-                          color: AppColors.accent(context),
-                          backgroundColor: Colors.transparent,
-                        );
-                      }
-                      final items = snapshot.data ?? const <NatureReview>[];
-                      if (items.isEmpty) {
-                        return Text(
-                          l10n.noReviewsYet,
-                          style: TextStyle(
-                            color: AppColors.secondaryText(context),
-                          ),
-                        );
-                      }
-                      return Column(
-                        children: [
-                          for (var i = 0; i < items.length; i++) ...[
-                            _ReviewPreview(review: items[i]),
-                            if (i != items.length - 1)
-                              const Divider(height: 16),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.rate_review_outlined,
-                        size: 18,
-                        color: AppColors.accent(context),
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          l10n.tourWriteReviewPrompt,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.heading(context),
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.accent(context),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              ],
             ),
-          ),
+            Text(
+              l10n.tourReviewCount(count),
+              style: TextStyle(color: AppColors.secondaryTextV3(context)),
+            ),
+            const SizedBox(height: 10),
+            FutureBuilder<List<NatureReview>>(
+              future: reviews,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return LinearProgressIndicator(
+                    color: AppColors.accent(context),
+                    backgroundColor: Colors.transparent,
+                  );
+                }
+                final items = snapshot.data ?? const <NatureReview>[];
+                if (items.isEmpty) {
+                  return Text(
+                    l10n.noReviewsYet,
+                    style: TextStyle(color: AppColors.secondaryTextV3(context)),
+                  );
+                }
+                return Column(
+                  children: [
+                    for (var i = 0; i < items.length; i++) ...[
+                      _ReviewPreview(review: items[i]),
+                      if (i != items.length - 1) const Divider(height: 16),
+                    ],
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(
+                  Icons.rate_review_outlined,
+                  size: 18,
+                  color: AppColors.accent(context),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    l10n.tourWriteReviewPrompt,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.heading(context),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.accent(context),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -818,7 +826,7 @@ class _ReviewPreview extends StatelessWidget {
               review.comment,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: AppColors.secondaryText(context)),
+              style: TextStyle(color: AppColors.secondaryTextV3(context)),
             ),
           ],
         ),
@@ -847,7 +855,9 @@ class _CheckoutCard extends StatelessWidget {
     // One formula, on the model — the checkout summary shows the same number.
     final total = tour.totalFor(travelers: people, transport: transportation);
     final maxPeople = tour.spotsLeft ?? 99;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone reservation panel — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -910,7 +920,7 @@ class _CheckoutCard extends StatelessWidget {
                         '${_money(tour.transportPricePerPerson!, tour.currency)} ${l10n.tourPerPerson} · ${l10n.tourOptional}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.secondaryText(context),
+                          color: AppColors.secondaryTextV3(context),
                         ),
                       )
                     else
@@ -918,7 +928,7 @@ class _CheckoutCard extends StatelessWidget {
                         l10n.tourTransportUnavailable,
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.secondaryText(context),
+                          color: AppColors.secondaryTextV3(context),
                         ),
                       ),
                   ],
@@ -929,6 +939,14 @@ class _CheckoutCard extends StatelessWidget {
                 onChanged: onTransportationChanged == null
                     ? null
                     : (value) => onTransportationChanged!(value ?? false),
+                // `Design_system_CANONICAL.md` §19: "selected uses theme
+                // active color + contrast check" — navy/mint, not the
+                // unthemed default (`colorScheme.primary`, brand green in
+                // Light mode).
+                activeColor: AppColors.accent(context),
+                checkColor: Theme.of(context).brightness == Brightness.dark
+                    ? AppColors.darkOnPrimary
+                    : Colors.white,
               ),
             ],
           ),
@@ -1018,7 +1036,7 @@ class _Unavailable extends StatelessWidget {
     child: Text(
       message,
       textAlign: TextAlign.center,
-      style: TextStyle(color: AppColors.secondaryText(context)),
+      style: TextStyle(color: AppColors.secondaryTextV3(context)),
     ),
   );
 }

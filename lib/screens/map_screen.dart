@@ -5,8 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../l10n/app_localizations.dart';
 import '../services/map_availability.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 
 /// A native, interactive Google Map shown entirely inside the app.
 class MapScreen extends StatefulWidget {
@@ -145,6 +146,8 @@ class _MapScreenState extends State<MapScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).pop(),
                   dark: isDark,
                 ),
@@ -157,7 +160,9 @@ class _MapScreenState extends State<MapScreen> {
               child: IgnorePointer(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 18),
-                  child: GlassPanel(
+                  child: AppLiquidGlass(
+                    useCanonicalGlass: true,
+                    layer: GlassLayer.surface,
                     borderRadius: 28,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,

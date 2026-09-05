@@ -12,9 +12,10 @@ import '../services/favorites_service.dart';
 import '../services/tours_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'login_screen.dart';
@@ -301,9 +302,10 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
       builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: GlassPanel(
+          child: AppLiquidGlass(
+            // Standalone modal sheet — the final canonical surface.
+            useCanonicalGlass: true,
             borderRadius: 28,
-            depth: GlassDepth.middle,
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -323,7 +325,7 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -341,6 +343,11 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
                 const SizedBox(height: 8),
                 TextButton(
                   onPressed: () => Navigator.of(sheetContext).pop(),
+                  // `interactive text` (Design_system_CANONICAL.md §5):
+                  // navy/mint, not the unthemed default.
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accent(context),
+                  ),
                   child: Text(l10n.notNow),
                 ),
               ],
@@ -494,6 +501,11 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
       hint: l10n.toursSearchHint,
       prefixIcon: Icons.search_rounded,
       compact: true,
+      // Standalone field directly on the page background — the final
+      // canonical surface (Design_system_CANONICAL.md §9/§12), not nested
+      // in another visible glass panel.
+      useV2FieldColors: true,
+      useCanonicalGlass: true,
       textInputAction: TextInputAction.search,
       onFieldSubmitted: (_) => _apply(),
       suffix: _searchController.text.isEmpty
@@ -514,6 +526,8 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
       hint: l10n.toursDateRangeHint,
       prefixIcon: Icons.calendar_month_outlined,
       compact: true,
+      useV2FieldColors: true,
+      useCanonicalGlass: true,
       // Read-only rather than a free-text date: a typed date has to be
       // parsed, and a parser that has to cover three languages is a source
       // of wrong dates, not convenience.
@@ -676,7 +690,11 @@ class _BackBar extends StatelessWidget {
         children: [
           // Left, not start: GlassBackButton stays physically top-left in every
           // language, RTL included (`DESIGN_SYSTEM.md` 11.3 and 20).
-          GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+          GlassBackButton(
+            onTap: () => Navigator.of(context).maybePop(),
+            useAppLiquidGlass: true,
+            useCanonicalGlass: true,
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Text(
@@ -798,7 +816,7 @@ class _PriceDisclosure extends StatelessWidget {
         Icon(
           Icons.info_outline_rounded,
           size: 15,
-          color: AppColors.secondaryText(context),
+          color: AppColors.secondaryTextV3(context),
         ),
         const SizedBox(width: 6),
         Expanded(
@@ -811,7 +829,7 @@ class _PriceDisclosure extends StatelessWidget {
               // `caption`
               fontSize: 12,
               height: 16 / 12,
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
             ),
           ),
         ),
@@ -1309,7 +1327,9 @@ class _TourCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(_cardRadius),
         onTap: onTap,
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          // Standalone tour card — the final canonical surface.
+          useCanonicalGlass: true,
           borderRadius: _cardRadius,
           padding: const EdgeInsets.all(_pad),
           child: Row(
@@ -1393,7 +1413,7 @@ class _TourCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 9.5,
                                 height: 12.4 / 9.5,
-                                color: AppColors.secondaryText(context),
+                                color: AppColors.secondaryTextV3(context),
                               ),
                             ),
                           ),
@@ -1449,7 +1469,7 @@ class _TourCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 9.5,
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                 ),
               ),
             ],
@@ -1457,7 +1477,12 @@ class _TourCard extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         if (tour.companyTag.isNotEmpty)
-          _CompanyTag(label: tour.companyTag, compact: true),
+          // Nested inside this card's own visible glass surface.
+          _CompanyTag(
+            label: tour.companyTag,
+            compact: true,
+            layer: GlassLayer.embedded,
+          ),
       ],
     );
   }
@@ -1491,7 +1516,7 @@ class _TourCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 8.5,
-                color: AppColors.secondaryText(context),
+                color: AppColors.secondaryTextV3(context),
               ),
             ),
           ),
@@ -1554,7 +1579,7 @@ class _TourCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 8.5,
                   height: 11 / 8.5,
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                 ),
               ),
             ),
@@ -1767,6 +1792,7 @@ class _CompanyTag extends StatelessWidget {
     required this.label,
     this.onPhoto = false,
     this.compact = false,
+    this.layer = GlassLayer.surface,
   });
 
   final String label;
@@ -1779,13 +1805,19 @@ class _CompanyTag extends StatelessWidget {
   /// ([_TourCard.baseWidth]), which the full-size padding cannot share.
   final bool compact;
 
+  /// [GlassLayer.surface] (default) for standalone use, e.g. floating over
+  /// the carousel photo. [GlassLayer.embedded] when nested inside another
+  /// visible canonical glass surface (the list card).
+  final GlassLayer layer;
+
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: compact ? 90 : 110),
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
+        layer: layer,
         borderRadius: 999,
-        depth: GlassDepth.top,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 8 : 12,
           vertical: compact ? 4 : 6,
@@ -1896,9 +1928,11 @@ class _PriceBox extends StatelessWidget {
       label: pricing.isConverted(currency)
           ? '$perPerson (${formatMoney(price, currency)})'
           : perPerson,
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        // Always nested inside the tour card's own visible glass surface.
+        useCanonicalGlass: true,
+        layer: GlassLayer.embedded,
         borderRadius: 12,
-        depth: GlassDepth.top,
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 7 : 10,
           vertical: compact ? 5 : 8,
@@ -1945,7 +1979,7 @@ class _PriceBox extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             height: 12 / 10,
-                            color: AppColors.secondaryText(context),
+                            color: AppColors.secondaryTextV3(context),
                           ),
                         ),
                       ),
@@ -2019,7 +2053,7 @@ class _PriceBox extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 8,
                   height: 10 / 8,
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                 ),
               ),
             ),
@@ -2054,7 +2088,9 @@ class _PanelShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    // Standalone loading/error/empty panel — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: _cardRadius,
     padding: const EdgeInsets.all(20),
     child: Center(child: child),
@@ -2096,7 +2132,7 @@ class _PanelMessage extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 15,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         if (label != null && action != null) ...[

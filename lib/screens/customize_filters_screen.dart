@@ -4,8 +4,9 @@ import '../l10n/app_localizations.dart';
 import '../models/nature_filters.dart';
 import '../models/nature_spot.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 
 /// Phase 3 — the Customize Filters sheet, opened from the Explore Nature
@@ -79,8 +80,12 @@ class _CustomizeFiltersScreenState extends State<CustomizeFiltersScreen> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 720),
-                      child: GlassPanel(
-                        // L1 of the canonical three-deep glass stack.
+                      child: AppLiquidGlass(
+                        // Standalone modal panel — the final canonical
+                        // surface (Design_system_CANONICAL.md §9),
+                        // replacing the legacy GlassPanel BackdropFilter
+                        // shell.
+                        useCanonicalGlass: true,
                         borderRadius: _panelRadius(context),
                         padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
                         child: Column(
@@ -152,6 +157,8 @@ class _CustomizeFiltersScreenState extends State<CustomizeFiltersScreen> {
                 top: 8,
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).maybePop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
             ],
@@ -183,10 +190,12 @@ Color _hairline(BuildContext context) =>
     ? Colors.white.withValues(alpha: AppColors.darkBorderOpacity)
     : Colors.white.withValues(alpha: 0.20);
 
-Color _natureHeading(BuildContext context) {
-  final scheme = Theme.of(context).colorScheme;
-  return scheme.brightness == Brightness.dark ? Colors.white : scheme.onSurface;
-}
+// Delegates to the canonical shared token rather than re-deriving it locally
+// via `colorScheme.onSurface` (Design_system_CANONICAL.md §4: a widget must
+// not use a generic palette shortcut when a dedicated semantic token
+// exists). Same numeric value as before (`onSurface` is navy in Light,
+// white in Dark) — this only fixes color ownership, not appearance.
+Color _natureHeading(BuildContext context) => AppColors.heading(context);
 
 Color _natureIcon(BuildContext context) =>
     Theme.of(context).brightness == Brightness.dark
@@ -252,7 +261,7 @@ class _Header extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   height: 18 / 14,
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                 ),
               ),
             ],
@@ -285,9 +294,13 @@ class _CounterRow extends StatelessWidget {
     return Row(
       children: [
         Flexible(
-          child: GlassPanel(
+          child: AppLiquidGlass(
+            // Nested inside the modal's own visible glass surface —
+            // embedded, not a second shader (Design_system_CANONICAL.md
+            // §9/§10).
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
             borderRadius: 999,
-            depth: GlassDepth.top,
             padding: const EdgeInsetsDirectional.fromSTEB(6, 6, 14, 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -393,10 +406,12 @@ class _FilterGroupCard extends StatelessWidget {
     final heading = _natureHeading(context);
     final iconColor = _natureIcon(context);
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Nested inside the modal's own visible glass surface — embedded,
+      // not a second shader (Design_system_CANONICAL.md §9/§10).
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: _groupRadius(context),
-      // L2: the fill stays identical to L1; only blur/depth steps up.
-      depth: GlassDepth.middle,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,7 +477,81 @@ class _FilterChoiceChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = AppColors.selectionAccent(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Unselected = real Liquid Glass, content is the existing
+    // `compact-unselected-content` token (white in dark, navy in light —
+    // never the brand green `AppColors.selectionAccent`). Selected = a
+    // solid `compactSelectedFill` capsule with `compactSelectedContent` —
+    // the selected state must read from the fill color itself, not a
+    // translucent tint over glass.
+    final content = selected
+        ? AppColors.compactSelectedContent(context)
+        : (isDark ? Colors.white : AppColors.actionNavy);
+
+    final chipBody = SizedBox(
+      height: visualHeight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: content),
+          const SizedBox(width: 5),
+          // Allowed to shrink rather than overflow: "Lodging nearby" and
+          // its Kurdish/Arabic translations are long.
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  color: content,
+                ),
+              ),
+            ),
+          ),
+          if (selected) ...[
+            const SizedBox(width: 5),
+            Icon(Icons.check_circle_rounded, size: 14, color: content),
+          ],
+        ],
+      ),
+    );
+
+    // Unselected: its own real Liquid Glass surface — nested inside the
+    // group card's embedded tint and the modal's own real glass (the
+    // app-wide selectable-option-inside-a-glass-panel rule), not bare
+    // content with no glass of its own; the normal canonical body tint
+    // every other real-glass surface uses. Selected: a solid
+    // `compactSelectedFill` capsule — no glass — so the selected state is
+    // visually obvious from the fill itself, not a translucent tint.
+    final chip = selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.compactSelectedFill(context),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: chipBody,
+            ),
+          )
+        : CanonicalGlassShell(
+            borderRadius: 999,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                color: AppColors.canonicalGlassBodyTint.withValues(
+                  alpha: AppColors.canonicalGlassBodyTintOpacity(context),
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Material(color: Colors.transparent, child: chipBody),
+              ),
+            ),
+          );
 
     return Semantics(
       button: true,
@@ -475,44 +564,7 @@ class _FilterChoiceChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(
             vertical: (48 - visualHeight) / 2,
           ),
-          child: GlassPanel(
-            borderRadius: 999,
-            depth: GlassDepth.top,
-            selected: selected,
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: SizedBox(
-              height: visualHeight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 15, color: content),
-                  const SizedBox(width: 5),
-                  // Allowed to shrink rather than overflow: "Lodging nearby" and
-                  // its Kurdish/Arabic translations are long.
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          color: content,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (selected) ...[
-                    const SizedBox(width: 5),
-                    Icon(Icons.check_circle_rounded, size: 14, color: content),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          child: chip,
         ),
       ),
     );

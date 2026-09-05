@@ -6,8 +6,9 @@ import '../models/nature_spot.dart';
 import '../services/nature_spots_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/recessed_liquid_glass_field.dart';
@@ -435,7 +436,11 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
             end: 16,
             child: Row(
               children: [
-                GlassBackButton(onTap: () => Navigator.of(context).maybePop()),
+                GlassBackButton(
+                  onTap: () => Navigator.of(context).maybePop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -506,7 +511,9 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
 
   Widget _reviewList(AppLocalizations l10n) {
     if (_loading) {
-      return GlassPanel(
+      return AppLiquidGlass(
+        // Standalone information panel — the final canonical surface.
+        useCanonicalGlass: true,
         borderRadius: 28,
         padding: const EdgeInsets.symmetric(vertical: 48),
         child: Center(
@@ -515,7 +522,8 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
       );
     }
     if (_error != null) {
-      return GlassPanel(
+      return AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 28,
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -526,26 +534,34 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
               style: TextStyle(color: AppColors.heading(context)),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: _load, child: Text(l10n.tryAgain)),
+            TextButton(
+              onPressed: _load,
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.accent(context),
+              ),
+              child: Text(l10n.tryAgain),
+            ),
           ],
         ),
       );
     }
     if (_reviews.isEmpty) {
-      return GlassPanel(
+      return AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 28,
         padding: const EdgeInsets.all(28),
         child: Center(
           child: Text(
             widget.isTourReview ? l10n.tourNoReviewsYet : l10n.noReviewsYet,
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.secondaryText(context)),
+            style: TextStyle(color: AppColors.secondaryTextV3(context)),
           ),
         ),
       );
     }
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: Column(
@@ -559,13 +575,13 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
             if (index != _reviews.length - 1)
               Divider(
                 height: 1,
-                color: AppColors.secondaryText(context).withValues(alpha: 0.22),
+                color: AppColors.secondaryTextV3(context).withValues(alpha: 0.22),
               ),
           ],
           if (_hasMore) ...[
             Divider(
               height: 1,
-              color: AppColors.secondaryText(context).withValues(alpha: 0.22),
+              color: AppColors.secondaryTextV3(context).withValues(alpha: 0.22),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 6),
@@ -583,6 +599,9 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
                   : TextButton(
                       key: const ValueKey('reviews-load-more'),
                       onPressed: _loadMore,
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.accent(context),
+                      ),
                       child: Text(l10n.loadMoreReviews),
                     ),
             ),
@@ -597,7 +616,9 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
     // fails on submit, and never given a local draft that has nowhere to go
     // (`SECURITY.md` 6.1f: no anonymous mirror of signed-in data).
     if (!_service.isSignedIn) {
-      return GlassPanel(
+      return AppLiquidGlass(
+        // Standalone composer card — the final canonical surface.
+        useCanonicalGlass: true,
         borderRadius: 28,
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
         child: Column(
@@ -624,7 +645,7 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
                     widget.isTourReview
                         ? l10n.tourReviewSignInBody
                         : l10n.reviewSignInBody,
-                    style: TextStyle(color: AppColors.secondaryText(context)),
+                    style: TextStyle(color: AppColors.secondaryTextV3(context)),
                   ),
                 ),
               ],
@@ -641,7 +662,9 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
     }
 
     final editing = _ownReview != null;
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone composer card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
       child: Column(
@@ -664,7 +687,7 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 15,
-                  color: AppColors.secondaryText(context),
+                  color: AppColors.secondaryTextV3(context),
                 ),
               );
               final input = _StarRatingInput(
@@ -723,6 +746,10 @@ class _NatureReviewsScreenState extends State<NatureReviewsScreen> {
             maxLines: 5,
             maxLength: NatureSpotsService.maxCommentLength,
             textCapitalization: TextCapitalization.sentences,
+            // Nested inside this card's own visible glass surface.
+            useV2FieldColors: true,
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
             onChanged: (_) {
               if (_draftError != null) setState(() => _draftError = null);
             },
@@ -779,7 +806,7 @@ class _AverageCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
             ),
           )
         else ...[
@@ -805,13 +832,15 @@ class _AverageCard extends StatelessWidget {
           l10n.reviewCountLabel(spot.ratingCount),
           style: TextStyle(
             fontSize: 14,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
       ],
     );
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone information card — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.all(18),
       child: LayoutBuilder(
@@ -833,7 +862,7 @@ class _AverageCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 VerticalDivider(
                   width: 1,
-                  color: AppColors.secondaryText(
+                  color: AppColors.secondaryTextV3(
                     context,
                   ).withValues(alpha: 0.28),
                 ),
@@ -857,7 +886,7 @@ class _RatingBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accent(context);
-    final track = AppColors.secondaryText(context).withValues(alpha: 0.24);
+    final track = AppColors.secondaryTextV3(context).withValues(alpha: 0.24);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -904,7 +933,7 @@ class _RatingBars extends StatelessWidget {
                     textAlign: TextAlign.end,
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.secondaryText(context),
+                      color: AppColors.secondaryTextV3(context),
                     ),
                   ),
                 ),
@@ -980,7 +1009,7 @@ class _ReviewTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.secondaryText(context),
+                            color: AppColors.secondaryTextV3(context),
                           ),
                         ),
                       ),
@@ -1013,12 +1042,14 @@ class _ReviewTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   review.comment,
+                  // Delegates to the canonical shared token rather than
+                  // deriving it locally via `colorScheme.onSurface`
+                  // (Design_system_CANONICAL.md §4). Same numeric value in
+                  // both themes — this only fixes color ownership.
                   style: TextStyle(
                     fontSize: 14,
                     height: 20 / 14,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Theme.of(context).colorScheme.onSurface,
+                    color: AppColors.heading(context),
                   ),
                 ),
               ],
@@ -1079,7 +1110,7 @@ class _HelpfulButton extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.secondaryText(context),
+                      color: AppColors.secondaryTextV3(context),
                     ),
                   ),
                 ],
@@ -1106,7 +1137,13 @@ class _SortControl extends StatelessWidget {
       button: true,
       label: '${l10n.sortReviewsBy}: ${l10n.reviewSortLabel(current)}',
       excludeSemantics: true,
-      child: GlassPanel(
+      // Standalone trigger pill — the final canonical surface. The popup
+      // menu itself is a native `PopupMenuButton` overlay route, not a
+      // widget in this tree we can wrap in `AppLiquidGlass` — its own
+      // `color`/`shape` are left exactly as they were; see the migration
+      // report for this architectural gap.
+      child: AppLiquidGlass(
+        useCanonicalGlass: true,
         borderRadius: 999,
         padding: EdgeInsets.zero,
         child: PopupMenuButton<ReviewSort>(
@@ -1159,9 +1196,12 @@ class _SortControl extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 4),
+                  // `icon-accent` / dropdown icon
+                  // (Design_system_CANONICAL.md §6/§13) — navy/mint, not the
+                  // value's `heading` color.
                   Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.heading(context),
+                    color: AppColors.accent(context),
                   ),
                 ],
               ),
@@ -1336,7 +1376,7 @@ class _ScoreOutOfTen extends StatelessWidget {
           style: TextStyle(
             fontSize: large ? 18 : (compact ? 12 : 14),
             fontWeight: FontWeight.w600,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
       ],
