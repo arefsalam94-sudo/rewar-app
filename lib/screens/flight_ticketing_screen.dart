@@ -8,15 +8,15 @@ import '../services/airport_search_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/flight_airport_field.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'flight_search_results_screen.dart';
 
-const String flightTicketingBackgroundAsset =
-    'assets/images/flight ticketing - background.webp';
+const String flightTicketingBackgroundAsset = 'assets/images/plane new.jpg';
 
 class FlightTicketingScreen extends StatefulWidget {
   const FlightTicketingScreen({
@@ -117,12 +117,11 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
       return StatefulBuilder(
         builder: (context, setSheetState) {
           final l10n = AppLocalizations.of(context);
-          final theme = Theme.of(context);
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: GlassPanel(
-              depth: GlassDepth.middle,
+            child: AppLiquidGlass(
               borderRadius: 28,
+              useCanonicalGlass: true,
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
               child: SingleChildScrollView(
                 child: Column(
@@ -139,21 +138,12 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Theme(
-                      data: theme.copyWith(
-                        datePickerTheme: const DatePickerThemeData(
-                          backgroundColor: Colors.transparent,
-                          surfaceTintColor: Colors.transparent,
-                          headerBackgroundColor: Colors.transparent,
-                        ),
-                      ),
-                      child: CalendarDatePicker(
-                        initialDate: selectedDate,
-                        firstDate: firstDate,
-                        lastDate: lastDate,
-                        onDateChanged: (value) =>
-                            setSheetState(() => selectedDate = value),
-                      ),
+                    CanonicalCalendarDatePicker(
+                      initialDate: selectedDate,
+                      firstDate: firstDate,
+                      lastDate: lastDate,
+                      onDateChanged: (value) =>
+                          setSheetState(() => selectedDate = value),
                     ),
                     const SizedBox(height: 8),
                     PrimaryButton(
@@ -212,9 +202,9 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
               right: 16,
               bottom: MediaQuery.viewInsetsOf(context).bottom + 16,
             ),
-            child: GlassPanel(
-              depth: GlassDepth.middle,
+            child: AppLiquidGlass(
               borderRadius: 28,
+              useCanonicalGlass: true,
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 680),
@@ -410,8 +400,15 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        GlassPanel(
+                        // Standalone booking-form panel — the final canonical
+                        // surface (Design_system_CANONICAL.md §9), replacing
+                        // the legacy `GlassPanel` BackdropFilter shell. Every
+                        // field/control below sits inside it, so each one
+                        // renders as `GlassLayer.embedded` rather than
+                        // stacking a second shader.
+                        AppLiquidGlass(
                           borderRadius: 28,
+                          useCanonicalGlass: true,
                           padding: const EdgeInsets.all(20),
                           child: Form(
                             key: _formKey,
@@ -438,6 +435,9 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                                   service: _airportSearchService,
                                   open: _openAirportField == 'from',
                                   onToggle: () => _toggleAirportField('from'),
+                                  useV2FieldColors: true,
+                                  useCanonicalGlass: true,
+                                  layer: GlassLayer.embedded,
                                   onChanged: (airport) => setState(() {
                                     _origin = airport;
                                     if (airport != null) {
@@ -457,6 +457,9 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                                   service: _airportSearchService,
                                   open: _openAirportField == 'to',
                                   onToggle: () => _toggleAirportField('to'),
+                                  useV2FieldColors: true,
+                                  useCanonicalGlass: true,
+                                  layer: GlassLayer.embedded,
                                   onChanged: (airport) => setState(() {
                                     _destination = airport;
                                     if (airport != null) {
@@ -521,74 +524,81 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                                     ],
                                   ),
                                 const SizedBox(height: 12),
-                                _FlightGlass(
-                                  depth: GlassDepth.middle,
+                                AppLiquidGlass(
                                   borderRadius: 14,
+                                  useCanonicalGlass: true,
+                                  // Nested inside the booking form's own
+                                  // visible surface — embedded, not a second
+                                  // shader (Design_system_CANONICAL.md
+                                  // §9/§10).
+                                  layer: GlassLayer.embedded,
                                   onTap: _showPassengerAndCabinPicker,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                  ),
                                   child: SizedBox(
                                     height: 64,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.people_outline,
-                                            color: AppColors.accent(context),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: Text(
-                                              l10n.flightPassengerSummary(
-                                                _adults,
-                                                _children,
-                                                _infants,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: heading,
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.people_outline,
+                                          color: AppColors.accent(context),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            l10n.flightPassengerSummary(
+                                              _adults,
+                                              _children,
+                                              _infants,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: heading,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          Container(
-                                            width: 1,
-                                            height: 34,
-                                            color: Colors.white.withValues(
-                                              alpha: 0.65,
+                                        ),
+                                        Container(
+                                          width: 1,
+                                          height: 34,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.65,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Flexible(
+                                          child: Text(
+                                            l10n.flightSearchCabinClassLabel(
+                                              _cabinClass,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: heading,
+                                              fontWeight: FontWeight.w600,
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
-                                          Flexible(
-                                            child: Text(
-                                              l10n.flightSearchCabinClassLabel(
-                                                _cabinClass,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: heading,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Icon(
-                                            Icons.keyboard_arrow_down,
-                                            color: heading,
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        // `icon-accent` / dropdown icon
+                                        // (Design_system_CANONICAL.md §6/§13)
+                                        // — navy/mint, not the value's
+                                        // `heading` color.
+                                        Icon(
+                                          Icons.keyboard_arrow_down,
+                                          color: AppColors.accent(context),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                _FlightGlass(
-                                  depth: GlassDepth.middle,
+                                AppLiquidGlass(
                                   borderRadius: 14,
-                                  selected: _directOnly,
+                                  useCanonicalGlass: true,
+                                  layer: GlassLayer.embedded,
                                   child: SwitchListTile.adaptive(
                                     value: _directOnly,
                                     onChanged: (value) =>
@@ -628,6 +638,8 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
                 top: 8,
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).pop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
             ],
@@ -638,9 +650,17 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
   }
 }
 
-/// One-way / Round trip, drawn as the same sliding pill the Language screen's
-/// [ThemeModeToggle] uses: one glass pill with a thumb that animates under the
-/// selected half, rather than two separate glass buttons.
+/// One Way / Round Trip — a compact selectable control
+/// (`Design_system_CANONICAL.md` §15/§18), the same canonical
+/// compact-selected rule already proven on Register's Gender sheet and
+/// Explore Nature's filter chips: unselected content is plain
+/// `compact-unselected-content`, selected is a solid
+/// `compact-selected-fill` capsule with contrasting content — no outline,
+/// no selection stroke. The whole control sits inside the booking form's
+/// own visible glass surface, so the outer track renders as
+/// `GlassLayer.embedded` (a shared tint, not a second shader) and the
+/// unselected option itself carries no further glass — only the selected
+/// capsule is drawn.
 class _TripTypeSelector extends StatelessWidget {
   const _TripTypeSelector({
     required this.value,
@@ -654,96 +674,59 @@ class _TripTypeSelector extends StatelessWidget {
   final String roundTripLabel;
   final ValueChanged<FlightTripType> onChanged;
 
-  /// Same gap the theme toggle leaves between thumb and pill edge.
-  static const double _thumbInset = 4;
-  static const double _height = 56;
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // The toggle's own tokens, so the two controls read as one component
-    // family in both themes.
-    final thumbColor = isDark
-        ? AppColors.luminousMint
-        : Colors.white.withValues(alpha: 0.95);
-    final activeLabel = isDark ? AppColors.darkOnPrimary : AppColors.actionNavy;
-    final inactiveLabel = isDark
-        ? Colors.white.withValues(alpha: 0.55)
-        : AppColors.actionNavy.withValues(alpha: 0.45);
+    // `compact-selected-fill` / `compact-selected-content`
+    // (Light_mode_CANONICAL.md / Dark_mode_CANONICAL.md §7).
+    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final selectedContent = isDark ? AppColors.darkOnPrimary : Colors.white;
+    // `compact-unselected-content` (Light §7) /
+    // `compact-unselected-content-primary` (Dark §7).
+    final unselectedContent = isDark ? Colors.white : AppColors.actionNavy;
 
     return AppLiquidGlass(
-      shape: AppLiquidGlassShape.pill,
-      dark: isDark,
-      quality: AppLiquidGlassQuality.standard,
-      child: SizedBox(
-        height: _height,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final thumbWidth = (constraints.maxWidth - _thumbInset * 2) / 2;
-            return Stack(
-              children: [
-                AnimatedAlign(
-                  duration: const Duration(milliseconds: 220),
-                  curve: Curves.easeOutCubic,
-                  // Directional, so the thumb still tracks the selected label
-                  // when the app is laid out right-to-left.
-                  alignment: value == FlightTripType.oneWay
-                      ? AlignmentDirectional.centerStart
-                      : AlignmentDirectional.centerEnd,
-                  child: Padding(
-                    padding: const EdgeInsets.all(_thumbInset),
-                    child: Container(
-                      width: thumbWidth,
-                      height: _height - (_thumbInset * 2),
-                      decoration: BoxDecoration(
-                        color: thumbColor,
-                        borderRadius: BorderRadius.circular(1000),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.18),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+      borderRadius: 1000,
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          for (final type in FlightTripType.values)
+            Expanded(
+              child: Material(
+                color: Colors.transparent,
+                shape: const StadiumBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => onChanged(type),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: value == type ? selectedFill : Colors.transparent,
+                      borderRadius: BorderRadius.circular(1000),
+                    ),
+                    child: SizedBox(
+                      height: 48,
+                      child: Center(
+                        child: Text(
+                          type == FlightTripType.oneWay
+                              ? oneWayLabel
+                              : roundTripLabel,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: value == type
+                                ? selectedContent
+                                : unselectedContent,
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-                Positioned.fill(
-                  child: Row(
-                    children: [
-                      for (final type in FlightTripType.values)
-                        Expanded(
-                          child: Semantics(
-                            button: true,
-                            selected: value == type,
-                            child: GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: () => onChanged(type),
-                              child: Center(
-                                child: Text(
-                                  type == FlightTripType.oneWay
-                                      ? oneWayLabel
-                                      : roundTripLabel,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: value == type
-                                        ? activeLabel
-                                        : inactiveLabel,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -799,6 +782,9 @@ class _DateFieldState extends State<_DateField> {
       prefixIcon: Icons.calendar_month_outlined,
       readOnly: true,
       compact: widget.compact,
+      useV2FieldColors: true,
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       onTap: widget.onTap,
       validator: widget.validator,
     );
@@ -821,44 +807,49 @@ class _PassengerStepper extends StatelessWidget {
   final VoidCallback? onPlus;
 
   @override
-  Widget build(BuildContext context) => _FlightGlass(
-    depth: GlassDepth.top,
+  Widget build(BuildContext context) => AppLiquidGlass(
     borderRadius: 14,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.accent(context)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: AppColors.heading(context),
-                fontWeight: FontWeight.w600,
-              ),
+    useCanonicalGlass: true,
+    // Nested inside the passenger sheet's own visible glass surface.
+    layer: GlassLayer.embedded,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    child: Row(
+      children: [
+        Icon(icon, color: AppColors.accent(context)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: AppColors.heading(context),
+              fontWeight: FontWeight.w600,
             ),
           ),
-          _RoundIconButton(icon: Icons.remove, onTap: onMinus),
-          SizedBox(
-            width: 42,
-            child: Text(
-              '$value',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.heading(context),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+        ),
+        _RoundIconButton(icon: Icons.remove, onTap: onMinus),
+        SizedBox(
+          width: 42,
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.heading(context),
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          _RoundIconButton(icon: Icons.add, onTap: onPlus),
-        ],
-      ),
+        ),
+        _RoundIconButton(icon: Icons.add, onTap: onPlus),
+      ],
     ),
   );
 }
 
+/// Stroke-only circular plus/minus counter control
+/// (`Design_system_CANONICAL.md` §20): same family in both states, disabled
+/// at the canonical `counter-disabled` opacity (`0.35`, Light & Dark
+/// CANONICAL §14) rather than the ad hoc 0.40/0.28 the legacy
+/// implementation used.
 class _RoundIconButton extends StatelessWidget {
   const _RoundIconButton({required this.icon, this.onTap});
 
@@ -872,10 +863,10 @@ class _RoundIconButton extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(icon),
       color: accent,
-      disabledColor: accent.withValues(alpha: 0.40),
+      disabledColor: accent.withValues(alpha: 0.35),
       style: IconButton.styleFrom(
         side: BorderSide(
-          color: (onTap == null ? accent.withValues(alpha: 0.28) : accent),
+          color: (onTap == null ? accent.withValues(alpha: 0.35) : accent),
         ),
       ),
       constraints: const BoxConstraints.tightFor(width: 44, height: 44),
@@ -883,6 +874,13 @@ class _RoundIconButton extends StatelessWidget {
   }
 }
 
+/// A cabin-class option row — a compact selectable control, the same family
+/// as [_TripTypeSelector] and Register's Gender sheet options
+/// (`Design_system_CANONICAL.md` §15). The legacy implementation coloured
+/// the selected radio glyph with `AppColors.selectionAccent`, the brand
+/// green `#00624D` in Light mode — exactly the "random green" this
+/// migration removes; selected content is now the canonical
+/// `compact-selected-content` (white in Light, deep emerald in Dark).
 class _CabinOption extends StatelessWidget {
   const _CabinOption({
     required this.label,
@@ -894,37 +892,63 @@ class _CabinOption extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  static const double _height = 58;
+  static const double _radius = 14;
+
   @override
-  Widget build(BuildContext context) => _FlightGlass(
-    depth: GlassDepth.top,
-    borderRadius: 14,
-    selected: selected,
-    onTap: onTap,
-    child: SizedBox(
-      height: 58,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedFill = isDark ? AppColors.luminousMint : AppColors.actionNavy;
+    final selectedContent = isDark ? AppColors.darkOnPrimary : Colors.white;
+    final unselectedContent = isDark ? Colors.white : AppColors.actionNavy;
+    final content = selected ? selectedContent : unselectedContent;
+
+    final row = SizedBox(
+      height: _height,
       child: Row(
         children: [
           const SizedBox(width: 14),
           Icon(
             selected ? Icons.radio_button_checked : Icons.radio_button_off,
-            color: selected
-                ? AppColors.selectionAccent(context)
-                : AppColors.heading(context),
+            color: content,
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               label,
-              style: TextStyle(
-                color: AppColors.heading(context),
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(color: content, fontWeight: FontWeight.w600),
             ),
           ),
         ],
       ),
-    ),
-  );
+    );
+
+    final body = Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_radius),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(onTap: onTap, child: row),
+    );
+
+    return selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: selectedFill,
+              borderRadius: BorderRadius.circular(_radius),
+            ),
+            child: body,
+          )
+        : AppLiquidGlass(
+            borderRadius: _radius,
+            useCanonicalGlass: true,
+            // Nested inside the passenger sheet's own visible glass
+            // surface — embedded, not a second shader.
+            layer: GlassLayer.embedded,
+            child: body,
+          );
+  }
 }
 
 class _PassengerCabinSelection {
@@ -939,43 +963,4 @@ class _PassengerCabinSelection {
   final int children;
   final int infants;
   final CabinClass cabinClass;
-}
-
-/// Flight-local interactive glass wrapper. The page deliberately specifies
-/// depth at every nested surface so L1 → L2 → L3 never collapses into one
-/// flat blur recipe.
-class _FlightGlass extends StatelessWidget {
-  const _FlightGlass({
-    required this.child,
-    required this.depth,
-    this.borderRadius = 28,
-    this.selected = false,
-    this.onTap,
-  });
-
-  final Widget child;
-  final GlassDepth depth;
-  final double borderRadius;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
-    );
-    final glass = GlassPanel(
-      depth: depth,
-      borderRadius: borderRadius,
-      selected: selected,
-      child: child,
-    );
-    if (onTap == null) return glass;
-    return Material(
-      color: Colors.transparent,
-      shape: shape,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, customBorder: shape, child: glass),
-    );
-  }
 }

@@ -6,8 +6,10 @@ import '../l10n/app_localizations.dart';
 import '../models/airport.dart';
 import '../services/airport_search_service.dart';
 import '../theme/app_colors.dart';
+import 'app_liquid_glass.dart';
 import 'app_recessed_glass_field.dart';
 import 'glass_panel.dart';
+import 'liquid_glass_surface.dart';
 
 /// A read-only airport field whose picker expands in place beneath it.
 ///
@@ -28,6 +30,9 @@ class FlightAirportField extends StatefulWidget {
     required this.onToggle,
     required this.onChanged,
     required this.validator,
+    this.useV2FieldColors = false,
+    this.useCanonicalGlass = false,
+    this.layer = GlassLayer.surface,
   });
 
   /// Holds the display text of the chosen airport, so the surrounding [Form]
@@ -45,6 +50,26 @@ class FlightAirportField extends StatefulWidget {
 
   final ValueChanged<Airport?> onChanged;
   final String? Function(String?) validator;
+
+  /// See [AppRecessedGlassField.useV2FieldColors]. Also drives the
+  /// suggestions popup's primary/secondary text roles
+  /// (`Design_system_CANONICAL.md` §28) when [useCanonicalGlass] is set.
+  ///
+  /// Opt-in and defaulting to `false` so every existing caller of this
+  /// field keeps its current, already-approved look; only the Flight
+  /// Ticketing screen sets this to `true`, per the canonical visual
+  /// migration.
+  final bool useV2FieldColors;
+
+  /// See [AppRecessedGlassField.useCanonicalGlass]. Also renders the
+  /// suggestions popup through the real `oc_liquid_glass` shader instead of
+  /// the legacy [GlassPanel] `BackdropFilter` shell.
+  final bool useCanonicalGlass;
+
+  /// See [AppRecessedGlassField.layer]. Forwarded to the field only — the
+  /// suggestions popup floats above the page as its own standalone overlay,
+  /// so it always renders as [GlassLayer.surface] regardless of this value.
+  final GlassLayer layer;
 
   @override
   State<FlightAirportField> createState() => _FlightAirportFieldState();
@@ -124,6 +149,9 @@ class _FlightAirportFieldState extends State<FlightAirportField> {
           validator: widget.validator,
           readOnly: true,
           onTap: widget.onToggle,
+          useV2FieldColors: widget.useV2FieldColors,
+          useCanonicalGlass: widget.useCanonicalGlass,
+          layer: widget.layer,
           suffix: widget.airport == null
               ? const Icon(Icons.search)
               : IconButton(
@@ -145,8 +173,13 @@ class _FlightAirportFieldState extends State<FlightAirportField> {
               ? const SizedBox.shrink()
               : Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: GlassPanel(
-                    depth: GlassDepth.middle,
+                  child: AppLiquidGlass(
+                    // The panel expands inside the booking form's own visible
+                    // canonical surface, so it rides that shader as embedded
+                    // content instead of stacking a second one
+                    // (06_MIGRATION_RULES.md §7).
+                    useCanonicalGlass: widget.useCanonicalGlass,
+                    layer: GlassLayer.embedded,
                     borderRadius: 20,
                     padding: const EdgeInsets.all(12),
                     child: Column(
@@ -159,6 +192,9 @@ class _FlightAirportFieldState extends State<FlightAirportField> {
                           prefixIcon: Icons.search,
                           autofocus: true,
                           onChanged: _changed,
+                          useV2FieldColors: widget.useV2FieldColors,
+                          useCanonicalGlass: widget.useCanonicalGlass,
+                          layer: GlassLayer.embedded,
                         ),
                         const SizedBox(height: 10),
                         // The panel lives inside the page scroll view, so the
@@ -167,6 +203,7 @@ class _FlightAirportFieldState extends State<FlightAirportField> {
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxHeight: 260),
                           child: _AirportResults(
+                            useCanonicalGlass: widget.useCanonicalGlass,
                             loading: _loading,
                             failed: _failed,
                             queryReady: _queryReady,
@@ -188,6 +225,7 @@ class _FlightAirportFieldState extends State<FlightAirportField> {
 
 class _AirportResults extends StatelessWidget {
   const _AirportResults({
+    required this.useCanonicalGlass,
     required this.loading,
     required this.failed,
     required this.queryReady,
@@ -197,6 +235,11 @@ class _AirportResults extends StatelessWidget {
     required this.l10n,
   });
 
+  /// Rows render as [GlassLayer.embedded] content, never their own shader:
+  /// this is an unbounded repeated list inside the panel's own glass, which
+  /// is the nested-glass condition confirmed to corrupt on Android
+  /// (07_DESIGN_EXCEPTIONS.md §9, 06_MIGRATION_RULES.md §7).
+  final bool useCanonicalGlass;
   final bool loading;
   final bool failed;
   final bool queryReady;
@@ -235,8 +278,9 @@ class _AirportResults extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final airport = results[index];
-        return GlassPanel(
-          depth: GlassDepth.top,
+        return AppLiquidGlass(
+          useCanonicalGlass: useCanonicalGlass,
+          layer: GlassLayer.embedded,
           borderRadius: 14,
           child: ListTile(
             onTap: () => onSelected(airport),

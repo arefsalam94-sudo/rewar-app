@@ -6,8 +6,9 @@ import '../models/flight_search_criteria.dart';
 import '../services/currency_rates_service.dart';
 import '../services/flight_results_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 
 const String flightResultsBackgroundAsset =
@@ -84,8 +85,9 @@ class _FlightSearchResultsScreenState extends State<FlightSearchResultsScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: GlassPanel(
-          depth: GlassDepth.middle,
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           padding: const EdgeInsets.all(20),
           child: Row(
@@ -169,6 +171,8 @@ class _FlightSearchResultsScreenState extends State<FlightSearchResultsScreen> {
                 left: 16,
                 top: 8,
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).pop(),
                 ),
               ),
@@ -202,7 +206,9 @@ class _SearchSummary extends StatelessWidget {
     final date = MaterialLocalizations.of(
       context,
     ).formatMediumDate(criteria.departureDate);
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
       child: Column(
@@ -470,7 +476,9 @@ class _FlightOfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
       child: Column(
@@ -747,20 +755,32 @@ class _InteractiveGlass extends StatelessWidget {
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(radius),
     );
-    return Material(
+    final body = Material(
       color: Colors.transparent,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         customBorder: shape,
-        child: GlassPanel(
-          depth: GlassDepth.middle,
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: radius,
-          selected: selected,
           child: child,
         ),
       ),
+    );
+
+    // Large selectable card (Design_system_CANONICAL.md §15), the same
+    // family as Forget Password's contact-method cards: stays real Liquid
+    // Glass in both states; selection reads through a border highlight.
+    if (!selected) return body;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.accent(context), width: 2),
+      ),
+      child: body,
     );
   }
 }
@@ -776,7 +796,9 @@ class _LoadingResults extends StatelessWidget {
         child: CircularProgressIndicator(color: AppColors.accent(context)),
       ),
       for (var index = 0; index < 3; index++) ...[
-        GlassPanel(
+        AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           padding: const EdgeInsets.all(20),
           child: SizedBox(
@@ -811,7 +833,9 @@ class _MessageState extends StatelessWidget {
   final VoidCallback onAction;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
+  Widget build(BuildContext context) => AppLiquidGlass(
+    useCanonicalGlass: true,
+    layer: GlassLayer.surface,
     borderRadius: 28,
     padding: const EdgeInsets.all(24),
     child: Column(
