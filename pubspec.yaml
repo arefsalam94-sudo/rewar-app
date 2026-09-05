@@ -64,6 +64,11 @@ dependencies:
   # Dart, no native code. The barcode encodes the real booking reference —
   # a decorative one on a boarding pass would be misleading.
   barcode_widget: ^2.0.4
+  # The canonical Liquid Glass renderer. Exact pin, not a range: the
+  # canonical shader values and the two Android workarounds (unclipped
+  # BackdropFilterLayer, 4-surfaces-per-group cap) were tuned against
+  # this exact build. Do not upgrade without re-validating on hardware.
+  oc_liquid_glass: 0.3.0
 
 dev_dependencies:
   flutter_test:

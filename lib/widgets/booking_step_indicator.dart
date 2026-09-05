@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
 
 /// The multi-step flow indicator, per `DESIGN_SYSTEM.md` section 14.
 ///
@@ -49,8 +49,14 @@ class BookingStepIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = dark ?? Theme.of(context).brightness == Brightness.dark;
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone component — the final canonical surface
+      // (Design_system_CANONICAL.md §9), replacing the legacy `GlassPanel`
+      // BackdropFilter shell. The step/connector color logic below is
+      // already the canonical three-step-stepper pattern (§21) and is
+      // untouched — only the glass material changes.
       dark: dark,
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(

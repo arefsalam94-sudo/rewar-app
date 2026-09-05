@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:oc_liquid_glass/oc_liquid_glass.dart';
 
 import 'l10n/app_localizations.dart';
 import 'l10n/locale_controller.dart';
@@ -11,6 +12,11 @@ import 'theme/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Compile the Liquid Glass shader once, before the first frame, so it is
+  // already cached by the time the Language Selection screen (or any later
+  // screen using LiquidGlassSurface) first paints. Fire-and-forget:
+  // nothing here should block or repeat on rebuilds.
+  OCLiquidGlassGroup.precacheShader().ignore();
   // Non-fatal: until the Firebase project config files are added, this
   // records the failure and the app still runs (backend features report a
   // real error instead of pretending to work). See FIREBASE_SETUP.md.

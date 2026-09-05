@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
 import 'glass_panel.dart';
+import 'liquid_glass_surface.dart';
 
 enum AppLiquidGlassShape { roundedRectangle, pill, circle }
 
@@ -25,6 +27,9 @@ class AppLiquidGlass extends StatelessWidget {
     this.quality = AppLiquidGlassQuality.standard,
     this.interactive = false,
     this.onTap,
+    this.useCanonicalGlass = false,
+    this.optics = GlassOptics.standard,
+    this.layer = GlassLayer.surface,
   });
 
   final Widget child;
@@ -42,6 +47,32 @@ class AppLiquidGlass extends StatelessWidget {
   final bool interactive;
   final VoidCallback? onTap;
 
+  /// Renders through the real `oc_liquid_glass` shader (its own dedicated
+  /// glass group, well under the package's 4-surfaces-per-group cap) instead
+  /// of [GlassPanel]'s `BackdropFilter` shell (`Design_system_CANONICAL.md`
+  /// §9/§10: no stacked BackdropFilter, no painted border on real glass).
+  /// Opt-in and defaulting to `false` — every existing caller (bottom nav,
+  /// Home, Hotel, Car Rental, and the rest of the app) keeps its current,
+  /// already-approved look; only Language/Login/Register call sites set this
+  /// to `true`, per the canonical visual migration.
+  final bool useCanonicalGlass;
+
+  /// Which canonical calibration this surface renders with when
+  /// [useCanonicalGlass] is `true`. Defaults to [GlassOptics.standard] so
+  /// every existing card/panel call site is unaffected; small controls
+  /// (fields, buttons, back button, toolbar/nav) pass
+  /// [GlassOptics.compact] instead. Ignored when [useCanonicalGlass] is
+  /// `false`.
+  final GlassOptics optics;
+
+  /// Nesting role when [useCanonicalGlass] is `true`. Defaults to
+  /// [GlassLayer.surface] (a standalone real shader) so every existing
+  /// call site is unaffected; pass [GlassLayer.embedded] for content that
+  /// already sits inside another visible canonical glass surface, so the
+  /// two don't stack into a second shader/blur/specular rim. Ignored when
+  /// [useCanonicalGlass] is `false`.
+  final GlassLayer layer;
+
   double get _effectiveRadius => switch (shape) {
     AppLiquidGlassShape.roundedRectangle => borderRadius,
     AppLiquidGlassShape.pill || AppLiquidGlassShape.circle => 1000,
@@ -57,13 +88,26 @@ class AppLiquidGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = GlassPanel(
-      borderRadius: _effectiveRadius,
-      padding: padding,
-      dark: dark,
-      selected: selected,
-      child: child,
-    );
+    Widget content = useCanonicalGlass
+        ? (layer == GlassLayer.embedded
+              ? _EmbeddedGlass(
+                  borderRadius: _effectiveRadius,
+                  padding: padding,
+                  child: child,
+                )
+              : _CanonicalGlass(
+                  borderRadius: _effectiveRadius,
+                  padding: padding,
+                  optics: optics,
+                  child: child,
+                ))
+        : GlassPanel(
+            borderRadius: _effectiveRadius,
+            padding: padding,
+            dark: dark,
+            selected: selected,
+            child: child,
+          );
 
     if (onTap != null) {
       content = Material(
@@ -79,5 +123,82 @@ class AppLiquidGlass extends StatelessWidget {
     }
 
     return content;
+  }
+}
+
+/// The canonical real-glass shell for [AppLiquidGlass.useCanonicalGlass]:
+/// one real `OCLiquidGlass` surface in its own dedicated group, tinted with
+/// the canonical ambient `glass-tint` wash, no painted border, no stacked
+/// `BackdropFilter`.
+class _CanonicalGlass extends StatelessWidget {
+  const _CanonicalGlass({
+    required this.borderRadius,
+    required this.padding,
+    required this.child,
+    this.optics = GlassOptics.standard,
+  });
+
+  final double borderRadius;
+  final EdgeInsetsGeometry padding;
+  final Widget? child;
+  final GlassOptics optics;
+
+  @override
+  Widget build(BuildContext context) {
+    // [glassSettingsForOptics] always resolves to
+    // [kLiquidGlassSettingsCanonical] — [CanonicalGlassShell] is the one
+    // place that constructs the shader group, so [optics] no longer needs
+    // threading through to it.
+    return CanonicalGlassShell(
+      borderRadius: borderRadius,
+      shadow: canonicalGlassShadow(context),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(borderRadius),
+          color: AppColors.canonicalGlassBodyTint.withValues(
+            alpha: AppColors.canonicalGlassBodyTintOpacity(context),
+          ),
+        ),
+        child: Padding(
+          padding: padding,
+          child: Material(color: Colors.transparent, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+/// Content embedded inside an existing visible canonical glass [surface]
+/// ([GlassLayer.embedded]): no second `OCLiquidGlass` shader, no second
+/// refraction, no specular rim, no second blur — only the same
+/// [AppColors.canonicalGlassBodyTint] white at the lighter
+/// [AppColors.canonicalGlassEmbeddedTintOpacity] as a subtle material
+/// separation. This is not a second glass style; it is how content avoids
+/// stacking a visible glass surface directly on top of another one.
+class _EmbeddedGlass extends StatelessWidget {
+  const _EmbeddedGlass({
+    required this.borderRadius,
+    required this.padding,
+    required this.child,
+  });
+
+  final double borderRadius;
+  final EdgeInsetsGeometry padding;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(borderRadius),
+        color: AppColors.canonicalGlassBodyTint.withValues(
+          alpha: AppColors.canonicalGlassEmbeddedTintOpacity(context),
+        ),
+      ),
+      child: Padding(
+        padding: padding,
+        child: Material(color: Colors.transparent, child: child),
+      ),
+    );
   }
 }

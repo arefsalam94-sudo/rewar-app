@@ -164,22 +164,28 @@ class _ReviewWarning extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE08A).withValues(alpha: 0.92),
+        color: AppColors.warningBannerFill.withValues(
+          alpha: AppColors.warningBannerFillOpacity,
+        ),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF8A6D00), width: 1.2),
+        border: Border.all(color: AppColors.warningBannerBorder, width: 1.2),
       ),
       child: Row(
         children: [
-          const Icon(Icons.gavel_outlined, size: 18, color: Color(0xFF6B5400)),
+          Icon(
+            Icons.gavel_outlined,
+            size: 18,
+            color: AppColors.warningBannerIcon,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 height: 1.3,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF4A3A00),
+                color: AppColors.warningBannerText,
               ),
             ),
           ),

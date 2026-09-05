@@ -9,7 +9,7 @@ import '../theme/app_colors.dart';
 ///
 /// Per `DESIGN_SYSTEM.md` section 4, the layer order is:
 /// 1. background photo (blurred)
-/// 2. theme gradient overlay (45% opacity)
+/// 2. theme gradient overlay (55% opacity)
 /// 3. page content and liquid-glass surfaces
 ///
 /// This order is identical in Light and Dark modes.
@@ -73,7 +73,7 @@ class HomeBackground extends StatelessWidget {
           // Layer 1 (bottom): Background photo, blurred
           photo,
 
-          // Layer 2 (middle): Theme gradient overlay at 45% opacity
+          // Layer 2 (middle): Theme gradient overlay at 55% opacity
           // Per DESIGN_SYSTEM.md 4.2: same layer order in Light and Dark
           DecoratedBox(
             decoration: BoxDecoration(
@@ -82,12 +82,20 @@ class HomeBackground extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: isDark
                     ? [
-                        Color(0xFF0C1F1F).withValues(alpha: gradientOpacity),
-                        Color(0xFF062C32).withValues(alpha: gradientOpacity),
+                        AppColors.darkGlassTop.withValues(
+                          alpha: gradientOpacity,
+                        ),
+                        AppColors.darkGlassBottom.withValues(
+                          alpha: gradientOpacity,
+                        ),
                       ]
                     : [
-                        Color(0xFFE1F4E5).withValues(alpha: gradientOpacity),
-                        Color(0xFF187C64).withValues(alpha: gradientOpacity),
+                        AppColors.pageGradientTop.withValues(
+                          alpha: gradientOpacity,
+                        ),
+                        AppColors.pageGradientBottom.withValues(
+                          alpha: gradientOpacity,
+                        ),
                       ],
               ),
             ),

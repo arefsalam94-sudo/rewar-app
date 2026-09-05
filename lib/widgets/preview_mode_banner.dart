@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/password_reset_service.dart';
+import '../theme/app_colors.dart';
 
 /// Loud, debug-only marker shown on screens whose backend calls are being
 /// faked because Firebase isn't configured yet.
@@ -22,26 +23,28 @@ class PreviewModeBanner extends StatelessWidget {
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFE08A).withValues(alpha: 0.92),
+        color: AppColors.warningBannerFill.withValues(
+          alpha: AppColors.warningBannerFillOpacity,
+        ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF8A6D00), width: 1.2),
+        border: Border.all(color: AppColors.warningBannerBorder, width: 1.2),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.warning_amber_rounded,
             size: 20,
-            color: Color(0xFF6B5400),
+            color: AppColors.warningBannerIcon,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 height: 1.3,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF4A3A00),
+                color: AppColors.warningBannerText,
               ),
             ),
           ),

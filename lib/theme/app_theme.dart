@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_colors.dart';
+
 /// App-wide Light and Dark themes from the authoritative F design files.
 class AppTheme {
   AppTheme._();
@@ -24,7 +26,7 @@ class AppTheme {
     errorContainer: Color(0xFFFFDAD6),
     onErrorContainer: Color(0xFF93000A),
     surface: Color(0xFFF9F9F9),
-    onSurface: Color(0xFF1B1B1B),
+    onSurface: Color(0xFF0E2A44),
     onSurfaceVariant: Color(0xFF3E4945),
     surfaceDim: Color(0xFFDADADA),
     surfaceBright: Color(0xFFF9F9F9),
@@ -44,8 +46,6 @@ class AppTheme {
   /// Dark color scheme, mapped from the token table in `DESIGN dark.md`
   /// ("Lush Horizon: Moonlit").
   ///
-  /// Currently applied only to the Login screen, via its light/dark toggle —
-  /// the app's `MaterialApp` is still locked to `ThemeMode.light`.
   static const ColorScheme darkColorScheme = ColorScheme(
     brightness: Brightness.dark,
     primary: Color(0xFFD0FFDC),
@@ -100,6 +100,22 @@ class AppTheme {
     fontFamily: fontFamily,
     colorScheme: darkColorScheme,
     scaffoldBackgroundColor: darkColorScheme.surface,
+    // Without this, an unstyled TextButton (e.g. a dialog's "Cancel"
+    // action) falls back to Material's default colorScheme.primary — the
+    // legacy brand green other approved screens have already migrated
+    // away from — instead of the canonical dark interactive color.
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: AppColors.luminousMint),
+    ),
+    // Same issue, same fix, for an unstyled CircularProgressIndicator —
+    // several loading states (Car Rental, Choose Room, Hotel Detail, Hotel,
+    // My Bookings, Nature Place Detail) construct one with no color at all.
+    // Matches the AppColors.accent(context) value the screens that already
+    // colored their own spinner explicitly (Flight Search Results, Nature
+    // Reviews, Policy Document) already use.
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.luminousMint,
+    ),
   );
 
   /// Font family per language: English → Corbel, Kurdish → Rudaw,
@@ -130,5 +146,17 @@ class AppTheme {
     fontFamily: fontFamily,
     colorScheme: lightColorScheme,
     scaffoldBackgroundColor: lightColorScheme.surface,
+    // Without this, an unstyled TextButton (e.g. a dialog's "Cancel"
+    // action) falls back to Material's default colorScheme.primary — the
+    // legacy brand green other approved screens have already migrated
+    // away from — instead of the canonical light interactive color.
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: AppColors.actionNavy),
+    ),
+    // Same issue, same fix, for an unstyled CircularProgressIndicator — see
+    // the matching comment in _buildDark.
+    progressIndicatorTheme: const ProgressIndicatorThemeData(
+      color: AppColors.actionNavy,
+    ),
   );
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'app_liquid_glass.dart';
+import 'liquid_glass_surface.dart';
 
 /// Two-position sliding switch between light and dark mode.
 class ThemeModeToggle extends StatelessWidget {
@@ -43,6 +44,14 @@ class ThemeModeToggle extends StatelessWidget {
             dark: isDark,
             quality: AppLiquidGlassQuality.standard,
             interactive: true,
+            // Only Language Selection uses this control, so switching its
+            // glass to the canonical real-shader family is scoped by
+            // construction — `Design_system_CANONICAL.md` §9/§39.
+            useCanonicalGlass: true,
+            // Theme toggle is a compact control
+            // (Design_system_CANONICAL.md §9) — calm profile, never
+            // per-screen.
+            optics: GlassOptics.compact,
             onTap: () => onChanged(!isDark),
             child: SizedBox(
               width: width,

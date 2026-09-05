@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'app_liquid_glass.dart';
 import 'glass_panel.dart';
+import 'liquid_glass_surface.dart';
 
 /// Circular frosted back button, shared across screens.
 ///
@@ -15,6 +16,7 @@ class GlassBackButton extends StatelessWidget {
     required this.onTap,
     this.dark,
     this.useAppLiquidGlass = false,
+    this.useCanonicalGlass = false,
   });
 
   final VoidCallback onTap;
@@ -22,6 +24,10 @@ class GlassBackButton extends StatelessWidget {
   /// Uses the Moonlit glass + a light chevron. Only Login passes true today.
   final bool? dark;
   final bool useAppLiquidGlass;
+
+  /// Forwarded to [AppLiquidGlass.useCanonicalGlass] when
+  /// [useAppLiquidGlass] is also `true`. See that flag's doc for scope.
+  final bool useCanonicalGlass;
 
   /// The visible circle, unchanged from the approved designs.
   static const double visualSize = 36;
@@ -58,6 +64,11 @@ class GlassBackButton extends StatelessWidget {
                           dark: isDark,
                           quality: AppLiquidGlassQuality.standard,
                           interactive: true,
+                          useCanonicalGlass: useCanonicalGlass,
+                          // The back button is a compact control
+                          // (Design_system_CANONICAL.md §9) — always the
+                          // calmer profile, never per-screen.
+                          optics: GlassOptics.compact,
                           child: Center(
                             child: Icon(
                               Icons.chevron_left,

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/login_screen.dart';
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
+import 'liquid_glass_surface.dart';
 import 'primary_button.dart';
 
 /// The shared "you need an account for this" state.
@@ -123,7 +124,9 @@ class SignInRequiredSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
           child: Column(

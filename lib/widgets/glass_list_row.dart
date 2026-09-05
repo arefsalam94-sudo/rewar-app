@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'app_liquid_glass.dart';
 import 'glass_panel.dart';
 
 /// Which control sits at the trailing edge of a [GlassListRow].
@@ -34,6 +35,7 @@ class GlassListRow extends StatelessWidget {
     this.trailing = GlassListRowTrailing.chevron,
     this.expanded = false,
     this.expandedChild,
+    this.useCanonicalGlass = false,
   });
 
   final IconData icon;
@@ -41,6 +43,17 @@ class GlassListRow extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
   final GlassListRowTrailing trailing;
+
+  /// Renders through the final shared canonical Liquid Glass surface
+  /// (`Design_system_CANONICAL.md` §9) instead of the legacy [GlassPanel]
+  /// `BackdropFilter` shell, and switches the subtitle to the canonical V3
+  /// secondary-text token ([AppColors.secondaryTextV3]). Both callers (the
+  /// Policy hub and Help & Support) now set this to `true`; the flag stays
+  /// opt-in only so a future non-migrated caller doesn't regress silently.
+  /// Each row is a standalone card, not nested inside another glass
+  /// surface, so it renders as [GlassLayer.surface] — real canonical
+  /// shader, not embedded.
+  final bool useCanonicalGlass;
 
   /// Whether [expandedChild] is currently revealed below the fixed header.
   final bool expanded;
@@ -63,16 +76,13 @@ class GlassListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accent(context);
+    // Canonical V3 secondary-text token for migrated callers; legacy
+    // callers (Policy) keep their current, already-approved color.
+    final subtitleColor = useCanonicalGlass
+        ? AppColors.secondaryTextV3(context)
+        : AppColors.secondaryText(context);
 
-    return Semantics(
-      button: true,
-      label: '$title. $subtitle',
-      child: GlassPanel(
-        borderRadius: radius,
-        // The design files define one card treatment app-wide: the translucent
-        // white sheen. The brand gradient belongs to the full-page background
-        // only; using it here makes the rows look like dark backing cards.
-        child: Material(
+    final cardContent = Material(
           color: Colors.transparent,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -120,7 +130,7 @@ class GlassListRow extends StatelessWidget {
                                   // body-sm
                                   fontSize: 14,
                                   height: 20 / 14,
-                                  color: AppColors.secondaryText(context),
+                                  color: subtitleColor,
                                 ),
                               ),
                             ],
@@ -161,8 +171,25 @@ class GlassListRow extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
+        );
+
+    return Semantics(
+      button: true,
+      label: '$title. $subtitle',
+      child: useCanonicalGlass
+          ? AppLiquidGlass(
+              borderRadius: radius,
+              useCanonicalGlass: true,
+              child: cardContent,
+            )
+          : GlassPanel(
+              borderRadius: radius,
+              // The design files define one card treatment app-wide: the
+              // translucent white sheen. The brand gradient belongs to the
+              // full-page background only; using it here makes the rows
+              // look like dark backing cards.
+              child: cardContent,
+            ),
     );
   }
 

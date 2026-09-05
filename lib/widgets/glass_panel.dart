@@ -46,7 +46,6 @@ class GlassPanel extends StatelessWidget {
         : (isDark
               ? AppColors.darkGlassTintOpacity
               : AppColors.lightGlassTintOpacity);
-    const rimOpacity = 0.55;
     final shadowColor = isDark
         ? AppColors.darkGlassShadowColor
         : AppColors.lightGlassShadowColor;
@@ -91,20 +90,16 @@ class GlassPanel extends StatelessWidget {
                     ),
                   ],
                 ),
-                border: Border.all(
-                  color:
-                      borderColor ??
-                      (selected
-                          ? AppColors.selectionAccent(context).withValues(
+                border: borderWidth == 0 ||
+                        (borderWidth == null && borderColor == null)
+                    ? null
+                    : Border.all(
+                        color: borderColor ??
+                            AppColors.selectionAccent(context).withValues(
                               alpha: AppColors.selectionStrokeOpacity,
-                            )
-                          : Colors.white.withValues(alpha: rimOpacity)),
-                  width:
-                      borderWidth ??
-                      (selected
-                          ? AppColors.selectionStrokeWidth
-                          : AppColors.glassEdgeThickness),
-                ),
+                            ),
+                        width: borderWidth ?? AppColors.selectionStrokeWidth,
+                      ),
               ),
               child: Material(color: Colors.transparent, child: child),
             ),

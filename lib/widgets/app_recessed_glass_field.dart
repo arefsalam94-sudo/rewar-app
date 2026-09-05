@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'liquid_glass_surface.dart';
 import 'recessed_liquid_glass_field.dart';
 
 /// Backward-compatible name for the app's single recessed input component.
@@ -25,6 +26,11 @@ class AppRecessedGlassField extends StatelessWidget {
     this.prefix,
     this.dark,
     this.compact = false,
+    this.useV2FieldColors = false,
+    this.useCanonicalGlass = false,
+    this.layer = GlassLayer.surface,
+    this.insetDepth = false,
+    this.dropShadow = true,
   });
 
   final TextEditingController controller;
@@ -49,6 +55,21 @@ class AppRecessedGlassField extends StatelessWidget {
   /// only — see [RecessedLiquidGlassField.compact].
   final bool compact;
 
+  /// See [RecessedLiquidGlassField.useV2FieldColors].
+  final bool useV2FieldColors;
+
+  /// See [RecessedLiquidGlassField.useCanonicalGlass].
+  final bool useCanonicalGlass;
+
+  /// See [RecessedLiquidGlassField.layer].
+  final GlassLayer layer;
+
+  /// See [RecessedLiquidGlassField.insetDepth].
+  final bool insetDepth;
+
+  /// See [RecessedLiquidGlassField.dropShadow].
+  final bool dropShadow;
+
   static const double radius = RecessedLiquidGlassField.radius;
 
   @override
@@ -71,5 +92,10 @@ class AppRecessedGlassField extends StatelessWidget {
     prefix: prefix,
     dark: dark,
     compact: compact,
+    useV2FieldColors: useV2FieldColors,
+    useCanonicalGlass: useCanonicalGlass,
+    layer: layer,
+    insetDepth: insetDepth,
+    dropShadow: dropShadow,
   );
 }
