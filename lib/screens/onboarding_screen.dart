@@ -190,11 +190,43 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             // very back and pans with the live page position.
             RepaintBoundary(
               key: const ValueKey('onboarding-layer-1-background'),
-              child: AnimatedBuilder(
-                animation: _pageController,
-                builder: (context, _) => _PanoramaBackground(
-                  progress: _scrollProgress,
-                  slideCount: _pageCount,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(
+                  sigmaX: AppColors.backgroundPhotoBlurSigma,
+                  sigmaY: AppColors.backgroundPhotoBlurSigma,
+                  tileMode: TileMode.clamp,
+                ),
+                child: AnimatedBuilder(
+                  animation: _pageController,
+                  builder: (context, _) => _PanoramaBackground(
+                    progress: _scrollProgress,
+                    slideCount: _pageCount,
+                  ),
+                ),
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: Theme.of(context).brightness == Brightness.dark
+                      ? [
+                          AppColors.darkGlassTop.withValues(
+                            alpha: AppColors.backgroundGradientOpacity,
+                          ),
+                          AppColors.darkGlassBottom.withValues(
+                            alpha: AppColors.backgroundGradientOpacity,
+                          ),
+                        ]
+                      : [
+                          AppColors.pageGradientTop.withValues(
+                            alpha: AppColors.backgroundGradientOpacity,
+                          ),
+                          AppColors.pageGradientBottom.withValues(
+                            alpha: AppColors.backgroundGradientOpacity,
+                          ),
+                        ],
                 ),
               ),
             ),

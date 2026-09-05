@@ -10,8 +10,10 @@ import '../services/favorites_service.dart';
 import '../services/profile_setup_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/adaptive_glass_foreground.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/home_background.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/home_bottom_nav.dart';
 import '../widgets/home_drawer.dart';
 import 'explore_nature_screen.dart';
@@ -94,6 +96,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   HomeNavTab _currentTab = HomeNavTab.home;
 
+  // Adaptive bottom-nav foreground (Design_system_CANONICAL.md-adjacent —
+  // foreground contrast, not a glass material change): `_backdropKey` marks
+  // everything that can appear behind the bar (background photo + gradient
+  // + scrolling content), `_navAnchorKey` marks the bar's own bounds, and
+  // `_scrollActivity` throttles sampling to while the list is actually
+  // moving.
+  final GlobalKey _backdropKey = GlobalKey(debugLabel: 'homeAdaptiveBackdrop');
+  final GlobalKey _navAnchorKey = GlobalKey(debugLabel: 'homeBottomNavAnchor');
+  final ValueNotifier<int> _scrollActivity = ValueNotifier<int>(0);
+
   @override
   void initState() {
     super.initState();
@@ -104,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _carouselController.dispose();
+    _scrollActivity.dispose();
     super.dispose();
   }
 
@@ -385,65 +398,92 @@ class _HomeScreenState extends State<HomeScreen> {
       // solid-coloured slot.
       extendBody: true,
       backgroundColor: Colors.transparent,
-      body: HomeBackground(
-        child: Stack(
-          children: [
-            SafeArea(
-              bottom: false,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(
-                  8,
-                  8,
-                  8,
-                  // Clear the floating bar plus its own bottom margin.
-                  HomeBottomNav.barHeight + bottomInset + 40,
-                ),
-                children: [
-                  _TopBar(onMenu: _openDrawer, onLanguage: _showLanguageSheet),
-                  const SizedBox(height: 16),
-                  Text(
-                    _greeting(l10n),
-                    style: TextStyle(
-                      // headline-lg-mobile, DESIGN light.md
-                      fontSize: 26,
-                      height: 32 / 26,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.02 * 26,
-                      color: _headingColor(context),
+      // The bar sits in its own outer Stack layer, above (not inside) the
+      // sampled backdrop below — otherwise the bar's own glass would be
+      // part of what it samples. Geometry/paint order is unchanged: the
+      // backdrop still fills the whole body and the bar still floats over
+      // it at the exact same position.
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AdaptiveGlassBackdrop(
+            boundaryKey: _backdropKey,
+            child: HomeBackground(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  // Bumping the value (rather than just notifying)
+                  // guarantees a change even if two notifications land in
+                  // the same throttle window.
+                  _scrollActivity.value++;
+                  return false;
+                },
+                child: SafeArea(
+                  bottom: false,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      8,
+                      8,
+                      8,
+                      // Clear the floating bar plus its own bottom margin.
+                      HomeBottomNav.barHeight + bottomInset + 40,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Transform.translate(
-                    offset: const Offset(0, -5),
-                    child: Text(
-                      l10n.whereWouldYouLikeToGo,
-                      style: TextStyle(
-                        fontSize: 16,
-                        height: 24 / 16,
-                        color: AppColors.secondaryText(context),
+                    children: [
+                      _TopBar(
+                        onMenu: _openDrawer,
+                        onLanguage: _showLanguageSheet,
                       ),
-                    ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _greeting(l10n),
+                        style: TextStyle(
+                          // headline-lg-mobile, DESIGN light.md
+                          fontSize: 26,
+                          height: 32 / 26,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                          color: _headingColor(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Transform.translate(
+                        offset: const Offset(0, -5),
+                        child: Text(
+                          l10n.whereWouldYouLikeToGo,
+                          style: TextStyle(
+                            fontSize: 16,
+                            height: 24 / 16,
+                            color: AppColors.secondaryText(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      _buildCarousel(),
+                      const SizedBox(height: 8),
+                      Transform.translate(
+                        offset: const Offset(0, 10),
+                        child: _SectionHeader(label: l10n.planYourJourney),
+                      ),
+                      const SizedBox(height: 14),
+                      _buildJourneyGrid(l10n),
+                    ],
                   ),
-                  const SizedBox(height: 18),
-                  _buildCarousel(),
-                  const SizedBox(height: 8),
-                  Transform.translate(
-                    offset: const Offset(0, 10),
-                    child: _SectionHeader(label: l10n.planYourJourney),
-                  ),
-                  const SizedBox(height: 14),
-                  _buildJourneyGrid(l10n),
-                ],
+                ),
               ),
             ),
-            HomeBottomNav.floating(
-              context: context,
-              current: _currentTab,
-              onSelect: _onNavSelected,
-              dark: isDark,
-            ),
-          ],
-        ),
+          ),
+          // Placed through the shared helper so the pill lands on exactly
+          // the same pixels here and on every other screen that keeps the
+          // bar visible.
+          HomeBottomNav.floating(
+            context: context,
+            current: _currentTab,
+            onSelect: _onNavSelected,
+            dark: isDark,
+            adaptiveBackdropKey: _backdropKey,
+            adaptiveAnchorKey: _navAnchorKey,
+            adaptiveActivity: _scrollActivity,
+          ),
+        ],
       ),
     );
   }
@@ -785,7 +825,7 @@ class _FeaturedCard extends StatelessWidget {
                             // headline-lg
                             fontSize: 24,
                             fontWeight: FontWeight.w700,
-                            letterSpacing: -0.02 * 24,
+                            letterSpacing: 0,
                             color: Colors.white,
                           ),
                         ),
@@ -822,21 +862,7 @@ class _FeaturedCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(radius),
-                      border: Border.all(
-                        color: Colors.white.withValues(
-                          alpha: Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.darkBorderOpacity
-                              : 0.62,
-                        ),
-                        width: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
+                const IgnorePointer(child: SizedBox.expand()),
               ],
             ),
           ),
@@ -1023,11 +1049,32 @@ class _CarouselShell extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    borderRadius: _FeaturedCard.radiusFor(context),
-    padding: const EdgeInsets.all(20),
-    child: Center(child: child),
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final shadowColor = isDark
+        ? AppColors.darkGlassShadowColor
+        : AppColors.lightGlassShadowColor;
+    final shadowOpacity = isDark
+        ? AppColors.darkGlassShadowOpacity
+        : AppColors.lightGlassShadowOpacity;
+
+    // Same canonical renderer every other real-glass surface in the app
+    // uses (`Design_system_CANONICAL.md` §9) — retires the old V2 default
+    // this call site used to fall back to. Shadow/padding/radius unchanged.
+    return CanonicalGlassShell(
+      borderRadius: _FeaturedCard.radiusFor(context),
+      shadow: BoxShadow(
+        color: shadowColor.withValues(alpha: shadowOpacity),
+        offset: const Offset(0, AppColors.glassFloatingShadowOffsetY),
+        blurRadius: AppColors.glassFloatingShadowBlurRadius,
+        spreadRadius: AppColors.glassFloatingShadowSpreadRadius,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Center(child: child),
+      ),
+    );
+  }
 }
 
 class _CarouselLoading extends StatelessWidget {
@@ -1278,27 +1325,14 @@ class _JourneyCard extends StatelessWidget {
                   ),
                 if (!onPhoto)
                   Positioned.fill(
-                    child: GlassPanel(
+                    child: AppLiquidGlass(
+                      useCanonicalGlass: true,
+                      layer: GlassLayer.surface,
                       borderRadius: radius,
                       child: const SizedBox.expand(),
                     ),
                   ),
                 Padding(padding: const EdgeInsets.all(16), child: content),
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(radius),
-                        border: Border.all(
-                          color: Colors.white.withValues(
-                            alpha: isDark ? AppColors.darkBorderOpacity : 0.62,
-                          ),
-                          width: 1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -1485,7 +1519,9 @@ class _GlassSheet extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           dark: dark,
           borderRadius: 28,
           padding: const EdgeInsets.all(20),
@@ -1523,8 +1559,10 @@ class _LanguagePopover extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: GlassPanel(
+            child: AppLiquidGlass(
               key: const ValueKey('home-language-popover'),
+              useCanonicalGlass: true,
+              layer: GlassLayer.surface,
               dark: dark,
               borderRadius: 28,
               padding: const EdgeInsets.all(6),

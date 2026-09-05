@@ -20,7 +20,8 @@ import '../services/auth_service.dart';
 import '../services/profile_setup_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
-import 'glass_panel.dart';
+import 'app_liquid_glass.dart';
+import 'liquid_glass_surface.dart';
 import 'sign_in_required.dart';
 
 /// The hamburger side drawer opened from the Home screen's top bar.
@@ -1175,7 +1176,9 @@ class _CurrencySheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           dark: dark,
           child: Column(
@@ -1232,7 +1235,9 @@ class _ImageSourceSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           dark: dark,
           child: Column(

@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'policy_screen.dart';
@@ -127,6 +128,8 @@ class _NewCardScreenState extends State<NewCardScreen> {
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -166,7 +169,9 @@ class _NewCardScreenState extends State<NewCardScreen> {
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 680),
-                  child: GlassPanel(
+                  child: AppLiquidGlass(
+                    useCanonicalGlass: true,
+                    layer: GlassLayer.surface,
                     borderRadius: 28,
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                     child: Form(

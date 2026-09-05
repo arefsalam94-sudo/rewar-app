@@ -6,10 +6,11 @@ import '../models/saved_payment_method.dart';
 import '../models/tour.dart';
 import '../models/traveler_details.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/booking_step_indicator.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'booking_review_screen.dart';
@@ -172,6 +173,8 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                       alignment: Alignment.centerLeft,
                       child: GlassBackButton(
                         onTap: () => Navigator.of(context).maybePop(),
+                        useAppLiquidGlass: true,
+                        useCanonicalGlass: true,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -210,7 +213,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     );
   }
 
-  Widget _detailsCard(AppLocalizations l10n) => GlassPanel(
+  Widget _detailsCard(AppLocalizations l10n) => AppLiquidGlass(
+    // Standalone form panel — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
     child: Column(
@@ -231,7 +236,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
           style: TextStyle(
             fontSize: 15,
             height: 22 / 15,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         const SizedBox(height: 16),
@@ -263,8 +268,10 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
     final languageCode = Localizations.localeOf(context).languageCode;
     final total = _total;
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    return AppLiquidGlass(
+      // Nested inside the details card's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -377,7 +384,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
           style: TextStyle(
             fontSize: 14,
             height: 20 / 14,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         if (start != null) ...[
@@ -415,7 +422,7 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
         style: TextStyle(
           fontSize: 14,
           height: 20 / 14,
-          color: AppColors.secondaryText(context),
+          color: AppColors.secondaryTextV3(context),
         ),
       ),
     ],
@@ -424,8 +431,10 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
   Widget _methodCard(AppLocalizations l10n) {
     final card = _defaultCard;
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    return AppLiquidGlass(
+      // Nested inside the details card's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -501,6 +510,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
           LengthLimitingTextInputFormatter(19),
           _CardNumberSpacer(),
         ],
+        useV2FieldColors: true,
+        useCanonicalGlass: true,
+        layer: GlassLayer.embedded,
       ),
       const SizedBox(height: 10),
       Row(
@@ -517,6 +529,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                 LengthLimitingTextInputFormatter(4),
                 _ExpirySlasher(),
               ],
+              useV2FieldColors: true,
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
             ),
           ),
           const SizedBox(width: 10),
@@ -532,6 +547,9 @@ class _BookingPaymentScreenState extends State<BookingPaymentScreen> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(4),
               ],
+              useV2FieldColors: true,
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
             ),
           ),
         ],
@@ -612,7 +630,7 @@ class _IconLine extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 17, color: AppColors.secondaryText(context)),
+      Icon(icon, size: 17, color: AppColors.secondaryTextV3(context)),
       const SizedBox(width: 7),
       Expanded(
         child: Text(
@@ -651,7 +669,7 @@ class _OrDivider extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
             ),
           ),
         ),
@@ -847,7 +865,7 @@ class _CardDetails extends StatelessWidget {
           card.kindLabel(l10n),
           style: TextStyle(
             fontSize: 14,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         const SizedBox(height: 4),
@@ -950,7 +968,7 @@ class _RailRow extends StatelessWidget {
                     ? Icons.radio_button_checked_rounded
                     : Icons.radio_button_unchecked_rounded,
                 size: 22,
-                color: selected ? accent : AppColors.secondaryText(context),
+                color: selected ? accent : AppColors.secondaryTextV3(context),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -985,7 +1003,7 @@ class _RailMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = AppColors.secondaryText(context);
+    final muted = AppColors.secondaryTextV3(context);
     return switch (rail) {
       PaymentRail.card => Row(
         mainAxisSize: MainAxisSize.min,

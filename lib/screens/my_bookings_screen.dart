@@ -5,9 +5,10 @@ import '../l10n/app_localizations.dart';
 import '../models/booking.dart';
 import '../services/bookings_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
 import '../widgets/home_bottom_nav.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
@@ -127,6 +128,8 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                           // the physical left in every language.
                           alignment: Alignment.centerLeft,
                           child: GlassBackButton(
+                            useAppLiquidGlass: true,
+                            useCanonicalGlass: true,
                             onTap: () => Navigator.of(context).maybePop(),
                           ),
                         ),
@@ -371,7 +374,9 @@ class _SegmentControl extends StatelessWidget {
     final accent = AppColors.accent(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GlassPanel(
+    return AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.surface,
       borderRadius: 999,
       padding: const EdgeInsets.all(4),
       child: Row(
@@ -471,10 +476,57 @@ class _TypeChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  // Compact selectable option (Design_system_CANONICAL.md §15), the same
+  // family as Explore Nature's filter chips: unselected is its own real
+  // Liquid Glass surface; selected is the solid compactSelectedFill capsule
+  // with contrasting content — never the legacy selectionAccent green.
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final content = AppColors.selectionAccent(context);
+    final content = selected
+        ? AppColors.compactSelectedContent(context)
+        : AppColors.accent(context);
+
+    final chipBody = SizedBox(
+      height: 38,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(width: 14),
+          Icon(_icon(filter), size: 18, color: content),
+          const SizedBox(width: 7),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                l10n.bookingTypeFilterLabel(filter),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: content,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+        ],
+      ),
+    );
+
+    final chip = selected
+        ? DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.compactSelectedFill(context),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: chipBody,
+          )
+        : AppLiquidGlass(
+            useCanonicalGlass: true,
+            layer: GlassLayer.surface,
+            borderRadius: 999,
+            child: chipBody,
+          );
 
     return Semantics(
       selected: selected,
@@ -483,37 +535,7 @@ class _TypeChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         // 38dp visual inside a 48dp tap target, per the shape rules.
-        child: Center(
-          child: GlassPanel(
-            borderRadius: 999,
-            depth: GlassDepth.top,
-            selected: selected,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: SizedBox(
-              height: 38,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(_icon(filter), size: 18, color: content),
-                  const SizedBox(width: 7),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        l10n.bookingTypeFilterLabel(filter),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: content,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        child: Center(child: chip),
       ),
     );
   }

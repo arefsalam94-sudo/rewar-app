@@ -6,10 +6,11 @@ import '../models/tour.dart';
 import '../models/traveler_details.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/booking_step_indicator.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'booking_payment_screen.dart';
@@ -302,6 +303,8 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
                       alignment: Alignment.centerLeft,
                       child: GlassBackButton(
                         onTap: () => Navigator.of(context).maybePop(),
+                        useAppLiquidGlass: true,
+                        useCanonicalGlass: true,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -342,7 +345,9 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
   }
 
   Widget _formCard(AppLocalizations l10n) {
-    return GlassPanel(
+    return AppLiquidGlass(
+      // Standalone form panel — the final canonical surface.
+      useCanonicalGlass: true,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
       child: Column(
@@ -363,7 +368,7 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
             style: TextStyle(
               fontSize: 15,
               height: 22 / 15,
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
             ),
           ),
           const SizedBox(height: 16),
@@ -385,6 +390,10 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
             hint: l10n.fullName,
             prefixIcon: Icons.person_outline_rounded,
             textInputAction: TextInputAction.next,
+            // Nested inside this card's own visible glass surface.
+            useV2FieldColors: true,
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
           ),
           const SizedBox(height: 12),
           AppRecessedGlassField(
@@ -394,6 +403,9 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
             prefixIcon: Icons.mail_outline_rounded,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
+            useV2FieldColors: true,
+            useCanonicalGlass: true,
+            layer: GlassLayer.embedded,
           ),
           const SizedBox(height: 12),
           _phoneRow(l10n),
@@ -438,6 +450,9 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
               inputFormatters: [
                 FilteringTextInputFormatter.allow(RegExp(r'[\d\s-]')),
               ],
+              useV2FieldColors: true,
+              useCanonicalGlass: true,
+              layer: GlassLayer.embedded,
             ),
           ),
         ],
@@ -505,7 +520,7 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
             style: TextStyle(
               fontSize: 13,
               height: 18 / 13,
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
             ),
           ),
         ],
@@ -518,11 +533,18 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
     final birth = traveler.dateOfBirth;
     final missing = _submitted && !traveler.isComplete;
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    // Nested inside the form card's own visible glass surface — embedded,
+    // not a second shader. Canonical embedded glass has no border
+    // parameter, so the incomplete-traveler validation cue is preserved via
+    // an outer decoration using the canonical semantic error color rather
+    // than dropped outright — see the migration report for this
+    // architectural gap (a whole-card validation border versus the
+    // canonical per-field "no red border" rule).
+    final card = AppLiquidGlass(
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      borderColor: missing ? Theme.of(context).colorScheme.error : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -582,6 +604,9 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
                 hint: l10n.fullName,
                 prefixIcon: Icons.person_outline_rounded,
                 textInputAction: TextInputAction.next,
+                useV2FieldColors: true,
+                useCanonicalGlass: true,
+                layer: GlassLayer.embedded,
               );
               final dob = AppRecessedGlassField(
                 controller: TextEditingController(
@@ -591,6 +616,9 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
                 prefixIcon: Icons.calendar_today_outlined,
                 readOnly: true,
                 onTap: () => _pickBirthDate(index),
+                useV2FieldColors: true,
+                useCanonicalGlass: true,
+                layer: GlassLayer.embedded,
               );
               if (constraints.maxWidth < 340) {
                 return Column(
@@ -608,6 +636,15 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
           ),
         ],
       ),
+    );
+
+    if (!missing) return card;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Theme.of(context).colorScheme.error),
+      ),
+      child: card,
     );
   }
 
@@ -632,7 +669,7 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
           style: TextStyle(
             fontSize: 14,
             height: 20 / 14,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
       ),
@@ -753,7 +790,12 @@ class _LeadChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accent(context);
-    final content = selected ? accent : AppColors.secondaryText(context);
+    // Single-choice-among-siblings toggle — the canonical radio family
+    // (Design_system_CANONICAL.md §19: "ring + selected center dot... do
+    // not fill entire parent solely because radio is selected"), not a
+    // compact filter chip — the existing ring/no-fill treatment already
+    // matches, only the color token needed the canonical swap.
+    final content = selected ? accent : AppColors.secondaryTextV3(context);
 
     return Semantics(
       button: true,
@@ -860,7 +902,9 @@ class _DialCodePicker extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => SafeArea(
-        child: GlassPanel(
+        // Standalone modal sheet — the final canonical surface.
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
           borderRadius: 28,
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: ListView(

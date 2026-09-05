@@ -5,9 +5,10 @@ import '../models/policy_topic.dart';
 import '../models/tour.dart';
 import '../models/traveler_details.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/booking_step_indicator.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import 'explore_tours_screen.dart' show formatMoney;
@@ -148,6 +149,8 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
                 alignment: Alignment.centerLeft,
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).maybePop(),
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
               const SizedBox(height: 16),
@@ -169,7 +172,9 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
     );
   }
 
-  Widget _reviewCard(AppLocalizations l10n) => GlassPanel(
+  Widget _reviewCard(AppLocalizations l10n) => AppLiquidGlass(
+    // Standalone review panel — the final canonical surface.
+    useCanonicalGlass: true,
     borderRadius: 28,
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
     child: Column(
@@ -190,7 +195,7 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
           style: TextStyle(
             fontSize: 15,
             height: 22 / 15,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         const SizedBox(height: 16),
@@ -236,8 +241,10 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
     final languageCode = Localizations.localeOf(context).languageCode;
     final total = _total;
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    return AppLiquidGlass(
+      // Nested inside the review card's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -326,7 +333,7 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
           style: TextStyle(
             fontSize: 14,
             height: 20 / 14,
-            color: AppColors.secondaryText(context),
+            color: AppColors.secondaryTextV3(context),
           ),
         ),
         if (start != null) ...[
@@ -364,7 +371,7 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
         style: TextStyle(
           fontSize: 14,
           height: 20 / 14,
-          color: AppColors.secondaryText(context),
+          color: AppColors.secondaryTextV3(context),
         ),
       ),
     ],
@@ -403,8 +410,10 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
       ),
     ];
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    return AppLiquidGlass(
+      // Nested inside the review card's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
@@ -466,8 +475,10 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
     final busEach = widget.tour.transportPricePerPerson;
     final total = _total;
 
-    return GlassPanel(
-      depth: GlassDepth.middle,
+    return AppLiquidGlass(
+      // Nested inside the review card's own visible glass surface.
+      useCanonicalGlass: true,
+      layer: GlassLayer.embedded,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -536,7 +547,7 @@ class _BookingReviewScreenState extends State<BookingReviewScreen> {
             onChanged: (value) => setState(() => _agreed = value ?? false),
             activeColor: accent,
             side: BorderSide(
-              color: AppColors.secondaryText(context),
+              color: AppColors.secondaryTextV3(context),
               width: 1.8,
             ),
           ),
@@ -703,7 +714,7 @@ class _IconLine extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 17, color: AppColors.secondaryText(context)),
+        Icon(icon, size: 17, color: AppColors.secondaryTextV3(context)),
         const SizedBox(width: 7),
         Expanded(child: label),
       ],
@@ -797,7 +808,7 @@ class _BreakdownRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     height: 16 / 12,
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                   ),
                 ),
             ],

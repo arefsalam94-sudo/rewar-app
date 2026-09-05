@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/saved_payment_method.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
@@ -233,6 +234,8 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: GlassBackButton(
+                          useAppLiquidGlass: true,
+                          useCanonicalGlass: true,
                           onTap: () => Navigator.of(context).maybePop(),
                         ),
                       ),
@@ -275,6 +278,8 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: GlassBackButton(
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                   onTap: () => Navigator.of(context).maybePop(),
                 ),
               ),
@@ -308,7 +313,9 @@ class _BillingPaymentScreenState extends State<BillingPaymentScreen> {
                 Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 680),
-                    child: GlassPanel(
+                    child: AppLiquidGlass(
+                      useCanonicalGlass: true,
+                      layer: GlassLayer.surface,
                       borderRadius: 28,
                       padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
                       child: Column(
@@ -468,7 +475,9 @@ class _SavedBillingContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            GlassPanel(
+            AppLiquidGlass(
+              useCanonicalGlass: true,
+              layer: GlassLayer.surface,
               borderRadius: 28,
               padding: const EdgeInsets.fromLTRB(18, 22, 18, 0),
               child: Column(
@@ -535,7 +544,9 @@ class _SavedBillingContent extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 14),
-            GlassPanel(
+            AppLiquidGlass(
+              useCanonicalGlass: true,
+              layer: GlassLayer.surface,
               borderRadius: 28,
               padding: EdgeInsets.zero,
               child: Column(
@@ -858,7 +869,9 @@ class _DefaultCardSheet extends StatelessWidget {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: GlassPanel(
+        child: AppLiquidGlass(
+          useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 28,
           child: Column(
             mainAxisSize: MainAxisSize.min,
