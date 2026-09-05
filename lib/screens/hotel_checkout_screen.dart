@@ -128,7 +128,8 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
         },
         imageAsset: widget.selection.hotel.imageAsset,
         guestCount:
-            widget.selection.criteria.adults + widget.selection.criteria.children,
+            widget.selection.criteria.adults +
+            widget.selection.criteria.children,
         roomName: widget.selection.room.name.forLanguage(language),
       ),
     );
@@ -193,7 +194,9 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
         minimum: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         child: PrimaryButton(
           key: hotelCheckoutConfirmKey,
-          label: _processing ? l10n.hotelRechecking : l10n.hotelConfirmMockBooking,
+          label: _processing
+              ? l10n.hotelRechecking
+              : l10n.hotelConfirmMockBooking,
           onTap: _processing ? null : _confirm,
         ),
       ),
@@ -233,6 +236,12 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
           controller: _name,
           hint: l10n.fullName,
           prefixIcon: Icons.person_outline,
+          // Embedded field family: these sit inside _Section's own visible
+          // canonical surface, so they share its shader instead of each
+          // adding one (04_COMPONENT_CATALOG.md, 06_MIGRATION_RULES.md §7).
+          useV2FieldColors: true,
+          useCanonicalGlass: true,
+          layer: GlassLayer.embedded,
         ),
         const SizedBox(height: 10),
         AppRecessedGlassField(
@@ -240,6 +249,9 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
           hint: l10n.emailAddress,
           prefixIcon: Icons.email_outlined,
           keyboardType: TextInputType.emailAddress,
+          useV2FieldColors: true,
+          useCanonicalGlass: true,
+          layer: GlassLayer.embedded,
         ),
         const SizedBox(height: 10),
         AppRecessedGlassField(
@@ -247,12 +259,18 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
           hint: l10n.phoneNumber,
           prefixIcon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
+          useV2FieldColors: true,
+          useCanonicalGlass: true,
+          layer: GlassLayer.embedded,
         ),
         const SizedBox(height: 10),
         AppRecessedGlassField(
           controller: _requests,
           hint: l10n.hotelSpecialRequestsHint,
           prefixIcon: Icons.chat_bubble_outline,
+          useV2FieldColors: true,
+          useCanonicalGlass: true,
+          layer: GlassLayer.embedded,
         ),
       ],
     ),
@@ -347,7 +365,11 @@ class _TitleCard extends StatelessWidget {
     padding: const EdgeInsets.all(20),
     child: Row(
       children: [
-        Icon(Icons.fact_check_outlined, color: AppColors.accent(context), size: 30),
+        Icon(
+          Icons.fact_check_outlined,
+          color: AppColors.accent(context),
+          size: 30,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -444,7 +466,9 @@ class _PaymentOption extends StatelessWidget {
         children: [
           Icon(icon, color: content),
           const SizedBox(width: 10),
-          Expanded(child: Text(label, style: TextStyle(color: content))),
+          Expanded(
+            child: Text(label, style: TextStyle(color: content)),
+          ),
           Icon(
             selected ? Icons.radio_button_checked : Icons.radio_button_off,
             color: content,
@@ -480,7 +504,11 @@ class _PaymentOption extends StatelessWidget {
 }
 
 class _PriceRow extends StatelessWidget {
-  const _PriceRow({required this.label, required this.value, this.strong = false});
+  const _PriceRow({
+    required this.label,
+    required this.value,
+    this.strong = false,
+  });
   final String label;
   final String value;
   final bool strong;
@@ -493,7 +521,9 @@ class _PriceRow extends StatelessWidget {
         Text(
           value,
           textDirection: TextDirection.ltr,
-          style: TextStyle(fontWeight: strong ? FontWeight.w800 : FontWeight.w500),
+          style: TextStyle(
+            fontWeight: strong ? FontWeight.w800 : FontWeight.w500,
+          ),
         ),
       ],
     ),

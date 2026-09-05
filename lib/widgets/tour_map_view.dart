@@ -195,7 +195,7 @@ class _TourMapViewState extends State<TourMapView> {
                 Text(
                   l10n.tourMapUnavailable,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.secondaryText(context)),
+                  style: TextStyle(color: AppColors.secondaryTextV3(context)),
                 ),
                 if (tourMapSupported) ...[
                   const SizedBox(height: 6),

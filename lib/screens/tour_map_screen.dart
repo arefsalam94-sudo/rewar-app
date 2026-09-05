@@ -7,8 +7,9 @@ import '../models/tour.dart';
 import '../services/tour_map_location_service.dart';
 import '../services/tours_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
-import '../widgets/glass_panel.dart';
+import '../widgets/liquid_glass_surface.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/tour_map_view.dart';
 
@@ -149,6 +150,8 @@ class _TourMapScreenState extends State<TourMapScreen> {
                 child: GlassBackButton(
                   onTap: () => Navigator.of(context).pop(),
                   dark: Theme.of(context).brightness == Brightness.dark,
+                  useAppLiquidGlass: true,
+                  useCanonicalGlass: true,
                 ),
               ),
             ),
@@ -159,7 +162,12 @@ class _TourMapScreenState extends State<TourMapScreen> {
               child: IgnorePointer(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 18),
-                  child: GlassPanel(
+                  child: AppLiquidGlass(
+                    // A standalone floating plate over the opaque map, not
+                    // content embedded in a parent glass fill — so it gets
+                    // its own real surface.
+                    useCanonicalGlass: true,
+                    layer: GlassLayer.surface,
                     borderRadius: 28,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -243,7 +251,11 @@ class _TourMapPlaceCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
-      child: GlassPanel(
+      child: AppLiquidGlass(
+        // Standalone floating sheet over the opaque map — the same
+        // reasoning as the title plate above.
+        useCanonicalGlass: true,
+        layer: GlassLayer.surface,
         borderRadius: 26,
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -299,7 +311,7 @@ class _TourMapPlaceCard extends StatelessWidget {
                   Icon(
                     Icons.location_on_outlined,
                     size: 16,
-                    color: AppColors.secondaryText(context),
+                    color: AppColors.secondaryTextV3(context),
                   ),
                   const SizedBox(width: 5),
                   Expanded(
@@ -309,7 +321,7 @@ class _TourMapPlaceCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.secondaryText(context),
+                        color: AppColors.secondaryTextV3(context),
                       ),
                     ),
                   ),
