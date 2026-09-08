@@ -1044,12 +1044,55 @@ the `userId` field, so a forged id gains nothing.
 | field | type | notes |
 |---|---|---|
 | userId | string | must equal `request.auth.uid`; enforced in rules |
-| itemType | string | `"nature_spot"` \| `"hotel"` \| `"car"` \| `"tour"` \| `"flight"` — `flight` added for the Home screen, whose carousel can feature one |
-| itemId | string | |
+| itemType | string | `"nature_spot"` \| `"hotel"` — **narrowed from five**, see below |
+| itemId | string | id in the type's own collection |
+| title | map | locale map `{en, ku, ar}`; `en` required. Denormalized snapshot |
+| locationLabel | map | locale map `{en, ku, ar}`; optional. Denormalized snapshot |
+| imageRef | string | optional; a Storage download URL **or** a bundled `assets/…` path |
+| createdAt / updatedAt | timestamp | server timestamps |
+| source | string | `"manual"` |
+
+### Only two things can be favorited
+
+`itemType` accepted `car`, `tour` and `flight` while the heart lived on the
+Home carousel (which mixes all five types) and on tour cards. The heart was
+then consolidated onto **Where to Stay** and **Explore Nature** only, because
+those are the two sections the Favorites screen has — a saved flight had
+nowhere to be listed.
+
+The rules were narrowed to match: `create` accepts only `nature_spot` and
+`hotel`. `delete` still checks ownership alone, so a legacy `car`/`tour`/
+`flight` row a user saved before the change stays removable; it simply cannot
+be recreated. The Favorites screen skips any row whose type it has no section
+for, rather than dropping the whole list.
+
+### The denormalized snapshot (`title`, `locationLabel`, `imageRef`)
+
+These three fields are a **copy** of the saved place, written at the moment the
+heart is tapped. Without them the Favorites screen would need one document read
+per saved item just to draw a name and a thumbnail — 24 reads to open a tab.
+Booking.com and Agoda both denormalize their saved lists for the same reason.
+
+The trade-off is staleness: a place renamed after it was saved keeps its old
+name in the list until it is re-favorited. That is contained deliberately — the
+arrow on each row **re-reads the live document** before opening a detail
+screen, so the stale copy never travels past the row itself, and a place that
+no longer exists reports that instead of opening an empty page.
+
+`imageRef` is one field rather than a URL/asset pair because the row only ever
+draws one of them and the writer knows which it has; the row picks its loader
+by inspecting the string. Hotels write a bundled asset path today — `hotels` is
+not seeded and Where to Stay reads `PreviewHotelService` (`SEED_DATA.md`) — and
+will write a Storage URL once real hotel photography lands, with no schema
+change needed.
+
+Both snapshot maps are size-bounded in the rules (200 chars per locale string,
+1000 for `imageRef`) so a client cannot park arbitrary payload on its own
+favourites: this is a name and a place line, not free storage.
 
 There is no such thing as a guest favorite: the rules require an auth uid, so
-the Home screen prompts an unsigned-in user to log in rather than writing
-anything locally.
+Where to Stay and Explore Nature show an unsigned-in user the shared sign-in
+sheet rather than writing anything locally.
 
 ---
 

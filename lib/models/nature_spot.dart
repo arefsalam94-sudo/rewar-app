@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'favorite_item.dart';
 import 'nature_detail.dart';
 
 /// The filter categories drawn as chips on the Explore Nature screen.
@@ -256,4 +257,20 @@ class NatureSpot {
     if (raw is! List) return const [];
     return raw.map(NearbyStay.fromMap).whereType<NearbyStay>().toList();
   }
+}
+
+/// What a saved nature spot stores on its `favorites` row.
+///
+/// Lives here rather than in each screen so the Explore Nature card and the
+/// detail page cannot write two different-shaped snapshots for the same
+/// place — which is exactly how the old duplicated heart code drifted.
+extension NatureSpotFavorite on NatureSpot {
+  FavoriteSnapshot get favoriteSnapshot => FavoriteSnapshot(
+    titles: names,
+    locationLabels: locationLabels,
+    // `photos` is the bundled-asset list in preview mode and the Storage URL
+    // list otherwise; the Favorites row picks its loader by inspecting the
+    // string, so either is valid here.
+    imageRef: photos.isEmpty ? null : photos.first,
+  );
 }

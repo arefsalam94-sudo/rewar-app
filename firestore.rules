@@ -15,7 +15,8 @@ rules_version = '2';
 //   tours/*/reviews       — tour ratings (public read of published; one
 //                           owner-written doc per user)
 //   currency_rates        — indicative FX rates (public read, admin write)
-//   favorites             — Home screen heart (owner-only)
+//   favorites             — Where to Stay / Explore Nature heart, listed by
+//                           the Favorites screen (owner-only)
 //   bookings              — My Bookings screen (owner-only READ; no client write)
 //   nature_spots/*/reviews       — Reviews & Ratings screen (public read of
 //                                  published; one owner-written doc per user)
@@ -494,16 +495,47 @@ service cloud.firestore {
         return isSignedIn() && resource.data.userId == request.auth.uid;
       }
 
+      // A locale map — {en, ku, ar} — with at least an English entry, so a
+      // row can always be drawn in some language. Bounded so a client
+      // cannot park arbitrary payload on its own favourites: the snapshot
+      // is a name and a place line, not free storage.
+      function validLocaleMap(field) {
+        return field is map
+          && field.keys().hasOnly(['en', 'ku', 'ar'])
+          && 'en' in field
+          && field.en is string
+          && field.en.size() > 0
+          && field.en.size() <= 200;
+      }
+
       function validShape() {
         return request.resource.data.keys().hasOnly([
             'userId', 'itemType', 'itemId',
+            'title', 'locationLabel', 'imageRef',
             'createdAt', 'updatedAt', 'source'
           ])
-          && request.resource.data.itemType in
-              ['nature_spot', 'hotel', 'car', 'tour', 'flight']
+          // Narrowed from five types to two when the heart was consolidated
+          // onto Where to Stay and Explore Nature. Existing car/tour/flight
+          // rows stay deletable (delete checks ownership only, not shape),
+          // so an old favourite can still be cleared — it just cannot be
+          // recreated.
+          && request.resource.data.itemType in ['nature_spot', 'hotel']
           && request.resource.data.itemId is string
           && request.resource.data.itemId.size() > 0
-          && request.resource.data.itemId.size() <= 200;
+          && request.resource.data.itemId.size() <= 200
+          // The denormalized snapshot the Favorites screen draws each row
+          // from (DATA_MODEL.md -> favorites). The title is required —
+          // a row with no name cannot be rendered and would look like data
+          // loss. The place line is optional so a catalogue entry that has
+          // not been given one yet can still be saved: the row then omits
+          // that line instead of the save failing in the user's face.
+          && validLocaleMap(request.resource.data.title)
+          && (!('locationLabel' in request.resource.data.keys())
+              || validLocaleMap(request.resource.data.locationLabel))
+          // Optional: a Storage download URL or a bundled asset path.
+          && (!('imageRef' in request.resource.data.keys())
+              || (request.resource.data.imageRef is string
+                  && request.resource.data.imageRef.size() <= 1000));
       }
 
       allow get, list: if ownsExisting();

@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
-import '../services/map_availability.dart';
+import '../config/tour_map_config.dart';
+import '../models/map_place.dart';
+import '../widgets/tour_map_view.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
+import '../models/favorite_item.dart';
 import '../models/hotel_detail.dart';
 import '../models/nature_detail.dart';
 import '../services/hotel_reviews_service.dart';
+import '../services/favorites_service.dart';
 import '../services/hotel_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/favorite_heart_button.dart';
+import '../widgets/favorite_toggle_mixin.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/hotel_parts.dart';
 import '../widgets/liquid_glass_surface.dart';
@@ -36,6 +42,7 @@ class HotelDetailScreen extends StatefulWidget {
     required this.hotel,
     required this.criteria,
     this.service = const PreviewHotelService(),
+    this.favoritesService,
     this.reviewService,
     this.userProfileService,
     this.onSelectRoom,
@@ -44,6 +51,11 @@ class HotelDetailScreen extends StatefulWidget {
   final Hotel hotel;
   final HotelSearchCriteria criteria;
   final HotelService service;
+
+  /// Backs the hero's heart. A stay is one of only two things that can be
+  /// saved — see [FavoritesService].
+  final FavoritesService? favoritesService;
+
   final NatureSpotsService? reviewService;
   final UserProfileService? userProfileService;
 
@@ -60,7 +72,15 @@ class HotelDetailScreen extends StatefulWidget {
   State<HotelDetailScreen> createState() => _HotelDetailScreenState();
 }
 
-class _HotelDetailScreenState extends State<HotelDetailScreen> {
+class _HotelDetailScreenState extends State<HotelDetailScreen>
+    with FavoriteToggleMixin<HotelDetailScreen> {
+  @override
+  late final FavoritesService favoritesService =
+      widget.favoritesService ?? FavoritesService();
+
+  @override
+  FavoriteCategory get favoriteCategory => FavoriteCategory.stay;
+
   late HotelSearchCriteria _criteria = widget.criteria;
   late final NatureSpotsService _reviewService =
       widget.reviewService ??
@@ -143,6 +163,12 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
                         images: widget.hotel.galleryImages,
                         controller: _gallery,
                         current: _photoIndex,
+                        isFavorite: isFavorite(widget.hotel.id),
+                        favoritePending: favoritePending(widget.hotel.id),
+                        onFavorite: () => toggleFavorite(
+                          itemId: widget.hotel.id,
+                          snapshot: () => widget.hotel.favoriteSnapshot,
+                        ),
                         onChanged: (index) =>
                             setState(() => _photoIndex = index),
                       ),
@@ -344,6 +370,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen> {
       MaterialPageRoute<void>(
         builder: (_) => MapScreen(
           target: LatLng(lat, lng),
+          category: MapPlaceCategory.hotel,
           title: widget.hotel.name.forLanguage(language),
         ),
       ),
@@ -468,12 +495,18 @@ class _Gallery extends StatelessWidget {
     required this.controller,
     required this.current,
     required this.onChanged,
+    required this.isFavorite,
+    required this.favoritePending,
+    required this.onFavorite,
   });
 
   final List<String> images;
   final PageController controller;
   final int current;
   final ValueChanged<int> onChanged;
+  final bool isFavorite;
+  final bool favoritePending;
+  final VoidCallback onFavorite;
 
   /// Above this many photos the dots stop being readable, so only the counter
   /// is shown.
@@ -482,6 +515,28 @@ class _Gallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    return Stack(
+      children: [
+        _photos(context, l10n),
+        // Outside the gallery's `ExcludeSemantics`, which exists so the
+        // swipeable photos announce as a single image — it would otherwise
+        // swallow the heart's button semantics along with them. Leading
+        // corner, with the photo counter on the trailing one: the same split
+        // the Where to Stay featured slide uses.
+        PositionedDirectional(
+          start: 8,
+          top: 8,
+          child: FavoriteHeartButton(
+            isFavorite: isFavorite,
+            pending: favoritePending,
+            onTap: onFavorite,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _photos(BuildContext context, AppLocalizations l10n) {
     return Semantics(
       image: true,
       label: l10n.hotelGalleryImage(current + 1, images.length),
@@ -1230,7 +1285,7 @@ class _LocationCard extends StatelessWidget {
             height: 170,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: lat == null || lng == null || !googleMapsAvailable
+              child: lat == null || lng == null
                   ? ColoredBox(
                       color: AppColors.glassBaseTint(
                         context,
@@ -1248,20 +1303,22 @@ class _LocationCard extends StatelessWidget {
                       fit: StackFit.expand,
                       children: [
                         IgnorePointer(
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: LatLng(lat, lng),
-                              zoom: 13.5,
-                            ),
-                            markers: {
-                              Marker(
-                                markerId: const MarkerId('hotel'),
-                                position: LatLng(lat, lng),
+                          child: TourMapView(
+                            places: [
+                              MapPlace(
+                                id: hotel.id,
+                                name: hotel.name.forLanguage(
+                                  Localizations.localeOf(context).languageCode,
+                                ),
+                                latitude: lat,
+                                longitude: lng,
+                                category: MapPlaceCategory.hotel,
                               ),
-                            },
-                            zoomControlsEnabled: false,
-                            mapToolbarEnabled: false,
-                            myLocationButtonEnabled: false,
+                            ],
+                            initialLatitude: lat,
+                            initialLongitude: lng,
+                            initialZoom: TourMapConfig.placeZoom,
+                            interactive: false,
                           ),
                         ),
                         Material(

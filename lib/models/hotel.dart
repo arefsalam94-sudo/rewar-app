@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'favorite_item.dart';
+
 @immutable
 class HotelText {
   const HotelText({required this.en, required this.ku, required this.ar});
@@ -149,5 +151,20 @@ class HotelSearchCriteria {
     amenities: Set<HotelAmenity>.unmodifiable(amenities ?? this.amenities),
     currencyCode: currencyCode ?? this.currencyCode,
     localeCode: localeCode ?? this.localeCode,
+  );
+}
+
+/// What a saved stay stores on its `favorites` row.
+///
+/// See [NatureSpotFavorite] for why this lives on the model rather than in
+/// the screens that draw a heart.
+extension HotelFavorite on Hotel {
+  FavoriteSnapshot get favoriteSnapshot => FavoriteSnapshot(
+    titles: {'en': name.en, 'ku': name.ku, 'ar': name.ar},
+    locationLabels: {'en': city.en, 'ku': city.ku, 'ar': city.ar},
+    // A bundled asset path today: `hotels` is not seeded and Where to Stay
+    // reads `PreviewHotelService` (`SEED_DATA.md`). It becomes a Storage URL
+    // when real hotel photography lands, with no change needed here.
+    imageRef: imageAsset,
   );
 }

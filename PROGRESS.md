@@ -2169,3 +2169,93 @@ They are historical for UI purposes.
   so nothing was diffed against an approved image.
 - **No Firestore, security-rule or seeding change** was made or needed — this
   migration is presentation-only and touched no service, model or rule file.
+
+---
+
+## Phase 8 — Favorites (2026-09-07) — AWAITING APPROVAL
+
+Built from the `favorits.png` reference. This is the bottom bar's fourth
+destination, and the first change to touch six screens at once — because the
+screen could not work without moving the heart first.
+
+### The screen
+
+Back button, a 32px **Favorites** title (identical treatment to My Bookings, so
+the two bar destinations share one heading), then a count line — a stroke-only
+circled heart plus "24 Favorites". Below it, one section card per savable
+category:
+
+- header: stroke-circled icon (`king_bed_outlined` / `park_outlined`, the same
+  icons Home's journey cards use), the category name, and "12 options" on the
+  trailing edge;
+- up to **four** rows — photo, name, a pin-prefixed place line, the heart, and
+  a circular arrow that opens the place;
+- a full-width **View all** row, drawn only when there is more than the preview
+  shows, opening `FavoritesCategoryScreen` — the same rows as standalone cards.
+
+A **Keep exploring** card closes the page. It is always drawn, as in the
+reference, and taps back to browsing rather than sitting inert.
+
+### The heart moved — six screens
+
+The reference asks for favorites in Where to Stay and Explore Nature only. The
+heart did not exist on either; it existed on the Home featured carousel and on
+Explore Tours cards. So:
+
+- **Removed** from Home's `_FeaturedCard` (and with it `_onFavoriteTapped`,
+  `_showSignInPrompt` and the now-orphaned `_GlassSheet`) and from Explore
+  Tours' `_TourCard`. The carousel mixes five entity types and could save a car
+  or a flight — which Favorites has no section for.
+- **Added** to Where to Stay (`_FeaturedHotelCard`, `_TrendingHotelCard`),
+  Hotel Details (gallery hero), Explore Nature (`_SpotCard`) and Nature Place
+  Details (hero).
+
+Two private `_FavoriteButton` copies that had already drifted apart were
+replaced by one shared `FavoriteHeartButton`, and the forty lines of toggle
+logic each screen used to carry are now `FavoriteToggleMixin`. A guest gets the
+existing shared `SignInRequiredSheet` instead of two hand-rolled sheets.
+
+Heart placement is consistent: on the photo, on the **leading** corner, so it
+mirrors in Kurdish and Arabic. On Hotel Details it sits outside the gallery's
+`ExcludeSemantics`, which would otherwise have swallowed its button semantics
+along with the swipeable photos.
+
+### Schema and rules
+
+`favorites` gained a denormalized snapshot — `title`, `locationLabel`,
+`imageRef` — written when the heart is tapped, so opening the tab costs **one
+query** instead of one read per saved place (the Booking.com/Agoda pattern).
+`itemType` was narrowed from five values to `nature_spot | hotel` on create;
+`delete` still checks ownership alone, so legacy car/tour/flight rows stay
+removable. Both locale maps and `imageRef` are size-bounded so a client cannot
+park payload on its own favourites. Full rationale in `DATA_MODEL.md`.
+
+`favoriteSnapshot` lives as an extension on `Hotel` and `NatureSpot` rather
+than in the screens, so a list card and its detail page cannot write two
+different-shaped snapshots for the same place.
+
+### Glass nesting
+
+Section card = real canonical surface, rows inside it = `GlassLayer.embedded`
+— one shader per section rather than one per row, which is the condition
+`07_DESIGN_EXCEPTIONS.md` §9 draws the line at. On the View-all screen the rows
+become standalone `GlassLayer.surface` cards, exactly like an Explore Nature or
+trending-hotel card.
+
+### Still open
+
+1. **Not verified against a live Firebase project.** No row has been written,
+   listed or denial-tested against the new `validShape`. Required before
+   approval, per the definition of done.
+2. **A saved stay resolves against `PreviewHotelService`**, not Firestore —
+   `hotels` is still not seeded (`SEED_DATA.md`). A stay favorited today opens
+   Hotel Details from typed mock data.
+3. **Hotel Details needs a `HotelSearchCriteria`** and Favorites is not a
+   search, so it supplies the same defaults Where to Stay opens with
+   (tomorrow → +2 nights, 2 adults, 1 room). The user can change them there.
+4. **The reference's tent-and-mountains illustration is not drawn** on the
+   Keep exploring card — no such asset exists and inventing one is not this
+   screen's call.
+5. **Not seen on Android hardware**, like the rest of the canonical migration.
+6. The reference draws the back button and the title on separate lines, which
+   is what was built (matching My Bookings); the written brief said "same row".

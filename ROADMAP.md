@@ -193,7 +193,23 @@ Order matters here — build and approve in this exact sequence:
       rendering, the rules denial-tested, and the card photographs.
       **Note:** nothing in the app can *create* a booking until Phases 4–7
       exist, so `tool/seed_bookings.js` is the only writer for now.
-- [ ] Favorites
+- [ ] Favorites — IN PROGRESS. Built from the `favorits.png` reference: back
+      button, title, a saved-count line, then one section card per savable
+      category (Where to Stay, Explore Nature) previewing four rows above a
+      "View all" that opens a full per-category list, and a "Keep exploring"
+      footer that returns to browsing. Wired to the bottom bar's **Saved**
+      tab from both Home and My Bookings. Loading/error/empty/guest states all
+      handled; light + dark, all three languages.
+      **The heart was consolidated in the same change:** removed from the Home
+      featured carousel and from Explore Tours cards, added to Where to Stay
+      (featured + trending cards, Hotel Details hero) and Explore Nature
+      (cards, Nature Place Details hero) — those two are the only sections
+      Favorites has, so a saved car/tour/flight had nowhere to be listed.
+      `favorites` gained a denormalized snapshot and its rules were narrowed to
+      the two types (`DATA_MODEL.md`). Awaiting review/approval; still needs a
+      live Firebase project, the rules denial-tested, and a saved row confirmed
+      rendering on the real screen. **Note:** a saved stay still resolves
+      against `PreviewHotelService`, since `hotels` is not seeded.
 - [ ] Settings (Billing/Payment, Policy, Help/Support, About Us,
       Contact Way — build out one at a time)
   - [x] **Settings hub** — Profile, Account, Preferences, and Security & legal

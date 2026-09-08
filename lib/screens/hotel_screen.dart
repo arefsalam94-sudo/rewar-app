@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/favorite_item.dart';
 import '../models/hotel.dart';
+import '../services/favorites_service.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/favorite_heart_button.dart';
+import '../widgets/favorite_toggle_mixin.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/hotel_parts.dart';
 import '../widgets/liquid_glass_surface.dart';
@@ -14,16 +18,31 @@ import 'hotel_detail_screen.dart';
 enum _HotelFilter { location, date, guests, options }
 
 class HotelScreen extends StatefulWidget {
-  const HotelScreen({super.key, this.service = const PreviewHotelService()});
+  const HotelScreen({
+    super.key,
+    this.service = const PreviewHotelService(),
+    this.favoritesService,
+  });
 
   final HotelService service;
+
+  /// Backs the heart on the featured and trending cards. Where to Stay is one
+  /// of the only two screens that can save anything — see [FavoritesService].
+  final FavoritesService? favoritesService;
 
   @override
   State<HotelScreen> createState() => _HotelScreenState();
 }
 
 class _HotelScreenState extends State<HotelScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, FavoriteToggleMixin<HotelScreen> {
+  @override
+  late final FavoritesService favoritesService =
+      widget.favoritesService ?? FavoritesService();
+
+  @override
+  FavoriteCategory get favoriteCategory => FavoriteCategory.stay;
+
   late HotelSearchCriteria _criteria;
   late Future<List<Hotel>> _hotels;
   _HotelFilter? _openFilter;
@@ -39,7 +58,13 @@ class _HotelScreenState extends State<HotelScreen>
       checkOut: today.add(const Duration(days: 3)),
     );
     _hotels = widget.service.trendingHotels();
+    loadFavoriteIds();
   }
+
+  /// One callback shared by both card types, so the featured slide and the
+  /// trending row cannot disagree about what a saved stay looks like.
+  void _onFavorite(Hotel hotel) =>
+      toggleFavorite(itemId: hotel.id, snapshot: () => hotel.favoriteSnapshot);
 
   void _toggle(_HotelFilter filter) =>
       setState(() => _openFilter = _openFilter == filter ? null : filter);
@@ -174,6 +199,9 @@ class _HotelScreenState extends State<HotelScreen>
                                 onPageChanged: (value) =>
                                     setState(() => _featuredPage = value),
                                 onTap: _openDetail,
+                                isFavorite: isFavorite,
+                                favoritePending: favoritePending,
+                                onFavorite: _onFavorite,
                               );
                             },
                           ),
@@ -233,6 +261,11 @@ class _HotelScreenState extends State<HotelScreen>
                                       criteria: _criteria,
                                       language: language,
                                       onTap: () => _openDetail(hotel),
+                                      isFavorite: isFavorite(hotel.id),
+                                      favoritePending: favoritePending(
+                                        hotel.id,
+                                      ),
+                                      onFavorite: () => _onFavorite(hotel),
                                     ),
                                   ),
                               ],
@@ -329,6 +362,9 @@ class _FeaturedCarousel extends StatelessWidget {
     required this.page,
     required this.onPageChanged,
     required this.onTap,
+    required this.isFavorite,
+    required this.favoritePending,
+    required this.onFavorite,
   });
 
   final List<Hotel> hotels;
@@ -339,6 +375,12 @@ class _FeaturedCarousel extends StatelessWidget {
   /// Carries the tapped hotel, so the carousel opens the slide the user is
   /// actually looking at rather than whichever one the page index implies.
   final ValueChanged<Hotel> onTap;
+
+  /// Queried per slide rather than passed as a set, so the carousel does not
+  /// have to know how favourites are stored.
+  final bool Function(String hotelId) isFavorite;
+  final bool Function(String hotelId) favoritePending;
+  final ValueChanged<Hotel> onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -362,6 +404,9 @@ class _FeaturedCarousel extends StatelessWidget {
               dots: hotels.length,
               activeDot: page,
               onTap: () => onTap(hotels[index]),
+              isFavorite: isFavorite(hotels[index].id),
+              favoritePending: favoritePending(hotels[index].id),
+              onFavorite: () => onFavorite(hotels[index]),
             ),
           ),
         ),
@@ -377,6 +422,9 @@ class _FeaturedHotelCard extends StatelessWidget {
     required this.dots,
     required this.activeDot,
     required this.onTap,
+    required this.isFavorite,
+    required this.favoritePending,
+    required this.onFavorite,
   });
 
   final Hotel hotel;
@@ -384,6 +432,9 @@ class _FeaturedHotelCard extends StatelessWidget {
   final int dots;
   final int activeDot;
   final VoidCallback onTap;
+  final bool isFavorite;
+  final bool favoritePending;
+  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -411,6 +462,18 @@ class _FeaturedHotelCard extends StatelessWidget {
                   ),
                   border: Border.all(color: Colors.white.withValues(alpha: .8)),
                   borderRadius: BorderRadius.circular(30),
+                ),
+              ),
+              // The heart sits on the leading corner and the rating on the
+              // trailing one, so the two top controls never compete for the
+              // same space as the slide's title grows.
+              PositionedDirectional(
+                top: 10,
+                start: 10,
+                child: FavoriteHeartButton(
+                  isFavorite: isFavorite,
+                  pending: favoritePending,
+                  onTap: onFavorite,
                 ),
               ),
               PositionedDirectional(
@@ -1101,12 +1164,18 @@ class _TrendingHotelCard extends StatelessWidget {
     required this.criteria,
     required this.language,
     required this.onTap,
+    required this.isFavorite,
+    required this.favoritePending,
+    required this.onFavorite,
   });
 
   final Hotel hotel;
   final HotelSearchCriteria criteria;
   final String language;
   final VoidCallback onTap;
+  final bool isFavorite;
+  final bool favoritePending;
+  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -1134,15 +1203,36 @@ class _TrendingHotelCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: imageWidth,
-                          height: 145,
-                          child: HotelImage(
-                            asset: hotel.imageAsset,
-                            cacheWidth: 420,
-                          ),
+                      SizedBox(
+                        width: imageWidth,
+                        height: 145,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: HotelImage(
+                                  asset: hotel.imageAsset,
+                                  cacheWidth: 420,
+                                ),
+                              ),
+                            ),
+                            // On the photo, on the leading corner — the same
+                            // placement Explore Nature's card uses, so the two
+                            // list screens carry one heart in one spot.
+                            PositionedDirectional(
+                              top: 2,
+                              start: 2,
+                              child: FavoriteHeartButton(
+                                isFavorite: isFavorite,
+                                pending: favoritePending,
+                                onTap: onFavorite,
+                                targetSize: 38,
+                                circleSize: 28,
+                                iconSize: 16,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 13),

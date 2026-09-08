@@ -3,12 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
-import '../models/featured_item.dart' show FeaturedType;
 import '../models/tour.dart';
 import '../models/tour_filters.dart';
 import '../services/currency_rates_service.dart';
 import '../services/device_location_service.dart';
-import '../services/favorites_service.dart';
 import '../services/tours_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
@@ -18,7 +16,6 @@ import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
-import 'login_screen.dart';
 import 'tour_detail_screen.dart';
 import 'tour_assets.dart' as tour_assets;
 
@@ -43,14 +40,15 @@ const String exploreToursBackgroundAsset =
 /// sharing one row.
 ///
 /// Catalog data is public read, so a guest sees exactly what a signed-in user
-/// sees (`SECURITY.md` section 1, `firestore.rules` → `tours`). Only the
-/// favourite heart needs an account.
+/// sees (`SECURITY.md` section 1, `firestore.rules` → `tours`). Nothing on
+/// this screen needs an account: the favourite heart was removed when saving
+/// was consolidated onto Where to Stay and Explore Nature, which are the only
+/// two categories the Favorites screen has sections for.
 class ExploreToursScreen extends StatefulWidget {
   const ExploreToursScreen({
     super.key,
     this.toursService,
     this.locationService,
-    this.favoritesService,
     this.currencyRatesService,
     this.userProfileService,
   });
@@ -63,7 +61,6 @@ class ExploreToursScreen extends StatefulWidget {
   /// rather than failing.
   final DeviceLocationService? locationService;
 
-  final FavoritesService? favoritesService;
   final CurrencyRatesService? currencyRatesService;
   final UserProfileService? userProfileService;
 
@@ -75,8 +72,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
   late final ToursService _service = widget.toursService ?? ToursService();
   late final DeviceLocationService _locationService =
       widget.locationService ?? const DeviceLocationService();
-  late final FavoritesService _favoritesService =
-      widget.favoritesService ?? FavoritesService();
   late final CurrencyRatesService _ratesService =
       widget.currencyRatesService ?? CurrencyRatesService();
   late final UserProfileService _profileService =
@@ -119,11 +114,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
   /// which is always correct.
   CurrencyRates _rates = CurrencyRates.empty;
   AppCurrency _displayCurrency = AppCurrency.usd;
-
-  /// Tour ids the signed-in user has saved, and the ones mid-write so a
-  /// double-tap cannot fire twice.
-  Set<String> _favoriteIds = <String>{};
-  final Set<String> _pendingFavorites = <String>{};
 
   final PageController _carouselController = PageController();
   int _currentSlide = 0;
@@ -185,12 +175,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
       }
     } catch (error) {
       debugPrint('Could not load the currency preference: $error');
-    }
-    try {
-      final ids = await _favoritesService.fetchFavoriteItemIds();
-      if (mounted) setState(() => _favoriteIds = ids);
-    } catch (error) {
-      debugPrint('Could not load favorites: $error');
     }
   }
 
@@ -256,112 +240,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
       lastDate: DateTime(today.year + 2, today.month, today.day),
     );
     if (picked != null && mounted) setState(() => _pendingRange = picked);
-  }
-
-  Future<void> _onFavoriteTapped(Tour tour) async {
-    final l10n = AppLocalizations.of(context);
-
-    if (!_service.isSignedIn) {
-      await _showSignInPrompt();
-      return;
-    }
-    if (_pendingFavorites.contains(tour.id)) return;
-
-    final wasFavorite = _favoriteIds.contains(tour.id);
-    setState(() => _pendingFavorites.add(tour.id));
-    try {
-      final nowFavorite = await _favoritesService.toggle(
-        itemType: FeaturedType.tour,
-        itemId: tour.id,
-        currentlyFavorite: wasFavorite,
-      );
-      if (!mounted) return;
-      setState(() {
-        if (nowFavorite) {
-          _favoriteIds.add(tour.id);
-        } else {
-          _favoriteIds.remove(tour.id);
-        }
-      });
-      _snack(nowFavorite ? l10n.addedToFavorites : l10n.removedFromFavorites);
-    } catch (error) {
-      debugPrint('Favorite toggle failed: $error');
-      if (mounted) _snack(l10n.favoriteFailed);
-    } finally {
-      if (mounted) setState(() => _pendingFavorites.remove(tour.id));
-    }
-  }
-
-  /// The same prompt the Home screen shows: a favourite is tied to an account,
-  /// so there is no such thing as an anonymous one.
-  Future<void> _showSignInPrompt() async {
-    final l10n = AppLocalizations.of(context);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: AppLiquidGlass(
-            // Standalone modal sheet — the final canonical surface.
-            useCanonicalGlass: true,
-            borderRadius: 28,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.signInToSave,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.heading(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.signInToSaveBody,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.secondaryTextV3(context),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                PrimaryButton(
-                  label: l10n.logIn,
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const LoginScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                  // `interactive text` (Design_system_CANONICAL.md §5):
-                  // navy/mint, not the unthemed default.
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.accent(context),
-                  ),
-                  child: Text(l10n.notNow),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _snack(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// The list actually drawn: filtered and ordered by [_filters].
@@ -639,9 +517,6 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
             languageCode: languageCode,
             deviceLocation: _deviceLocation,
             pricing: pricing,
-            isFavorite: _favoriteIds.contains(tour.id),
-            favoritePending: _pendingFavorites.contains(tour.id),
-            onFavorite: () => _onFavoriteTapped(tour),
             onTap: () => _openTour(tour),
           ),
           if (tour != tours.last) const SizedBox(height: 14),
@@ -1225,9 +1100,6 @@ class _TourCard extends StatelessWidget {
     required this.languageCode,
     required this.deviceLocation,
     required this.pricing,
-    required this.isFavorite,
-    required this.favoritePending,
-    required this.onFavorite,
     required this.onTap,
   });
 
@@ -1235,9 +1107,6 @@ class _TourCard extends StatelessWidget {
   final String languageCode;
   final DeviceLocation? deviceLocation;
   final TourPricing pricing;
-  final bool isFavorite;
-  final bool favoritePending;
-  final VoidCallback onFavorite;
   final VoidCallback onTap;
 
   // --- Base geometry --------------------------------------------------------
@@ -1347,18 +1216,6 @@ class _TourCard extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
                         child: _TourPhoto(tour: tour, index: 0),
-                      ),
-                    ),
-                    PositionedDirectional(
-                      top: 2,
-                      start: 2,
-                      child: _FavoriteButton(
-                        isFavorite: isFavorite,
-                        pending: favoritePending,
-                        onTap: onFavorite,
-                        targetSize: 30,
-                        circleSize: 24,
-                        iconSize: 14,
                       ),
                     ),
                   ],
@@ -1709,77 +1566,6 @@ String formatTourDistance(double meters) {
   if (meters < 1000) return '${meters.round()} m';
   final km = meters / 1000;
   return km < 10 ? '${km.toStringAsFixed(1)} km' : '${km.round()} km';
-}
-
-/// The heart drawn on a tour photo.
-///
-/// Mirrors the Home screen's featured-card control exactly — a favourite is
-/// one concept, so it must not look like two.
-class _FavoriteButton extends StatelessWidget {
-  const _FavoriteButton({
-    required this.isFavorite,
-    required this.pending,
-    required this.onTap,
-    this.targetSize = 48,
-    this.circleSize = 34,
-    this.iconSize = 19,
-  });
-
-  final bool isFavorite;
-
-  /// True while the write is in flight, so a double-tap cannot fire twice.
-  final bool pending;
-
-  final VoidCallback onTap;
-
-  /// The three sizes shrink together on the list card, whose photo is drawn at
-  /// the card's own scale rather than at device pixels — see
-  /// [_TourCard.baseWidth]. The carousel keeps the full-size defaults.
-  final double targetSize;
-  final double circleSize;
-  final double iconSize;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-
-    return Semantics(
-      button: true,
-      selected: isFavorite,
-      enabled: !pending,
-      label: AppLocalizations.of(context).navSaved,
-      child: SizedBox(
-        // 34dp circle inside a 48dp target — the GlassBackButton pattern,
-        // trimmed to sit on a 140dp thumbnail.
-        width: targetSize,
-        height: targetSize,
-        child: InkWell(
-          onTap: pending ? null : onTap,
-          customBorder: const CircleBorder(),
-          child: Center(
-            child: Container(
-              width: circleSize,
-              height: circleSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? AppColors.darkGlassTop.withValues(alpha: 0.55)
-                    : Colors.white.withValues(alpha: 0.9),
-              ),
-              child: Icon(
-                isFavorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                size: iconSize,
-                color: accent.withValues(alpha: pending ? 0.4 : 1),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 /// The operator badge — "AB group".

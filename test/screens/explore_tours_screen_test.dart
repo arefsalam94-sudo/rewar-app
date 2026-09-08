@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
-import 'package:kurdistan_paradise_travel_guide/models/featured_item.dart';
 import 'package:kurdistan_paradise_travel_guide/models/tour.dart';
 import 'package:kurdistan_paradise_travel_guide/models/tour_filters.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/explore_tours_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/currency_rates_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/device_location_service.dart';
-import 'package:kurdistan_paradise_travel_guide/services/favorites_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/tours_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
@@ -567,82 +565,75 @@ void main() {
       expect(tag.top, greaterThan(score.bottom - 1));
     });
 
-    testWidgets(
-      'the card puts the heart on the photo and the operator on top',
-      (tester) async {
-        // No rating at all on a list card now — neither the number nor the
-        // stars. The favourite took the stars' place over the photo, and the
-        // operator tag took the corner the favourite used to hold.
-        await _pumpScreen(tester, service: _FakeToursService());
+    testWidgets('the card draws no rating and no heart, operator on top', (
+      tester,
+    ) async {
+      // No rating at all on a list card — neither the number nor the stars.
+      // The heart is gone too: saving was consolidated onto Where to Stay and
+      // Explore Nature, which are the only two sections the Favorites screen
+      // has. The operator tag keeps the corner it took.
+      await _pumpScreen(tester, service: _FakeToursService());
 
-        final photo = tester.getRect(
-          find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-        );
-        final card = tester.getRect(
-          find
-              .ancestor(
-                of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-                matching: find.byType(AppLiquidGlass),
-              )
-              .first,
-        );
+      final photo = tester.getRect(
+        find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+      );
+      final card = tester.getRect(
+        find
+            .ancestor(
+              of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+              matching: find.byType(AppLiquidGlass),
+            )
+            .first,
+      );
 
-        // No score anywhere on a card — 8.5 belongs to Gali Sherana, which has
-        // no carousel slide, so finding it at all would mean a card drew it.
-        expect(find.text('8.5'), findsNothing);
-        // And no stars either: the only ones on screen belong to the carousel.
-        expect(
-          find.descendant(
-            of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-            matching: find.byWidgetPredicate(
-              (widget) =>
-                  widget is Icon &&
-                  (widget.icon == Icons.star_rounded ||
-                      widget.icon == Icons.star_outline_rounded),
-            ),
+      // No score anywhere on a card — 8.5 belongs to Gali Sherana, which has
+      // no carousel slide, so finding it at all would mean a card drew it.
+      expect(find.text('8.5'), findsNothing);
+      // And no stars either: the only ones on screen belong to the carousel.
+      expect(
+        find.descendant(
+          of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Icon &&
+                (widget.icon == Icons.star_rounded ||
+                    widget.icon == Icons.star_outline_rounded),
           ),
-          findsNothing,
-        );
+        ),
+        findsNothing,
+      );
 
-        final heart = tester.getRect(
-          find
-              .descendant(
-                of: find.byKey(tourCardThumbnailKey('gali-alibag-waterfall')),
-                matching: find.byWidgetPredicate(
-                  (widget) =>
-                      widget is Icon &&
-                      (widget.icon == Icons.favorite_rounded ||
-                          widget.icon == Icons.favorite_border_rounded),
-                ),
-              )
-              .first,
-        );
-        // Over the photo, near its top, where the stars used to be.
-        expect(heart.left, greaterThan(photo.left));
-        expect(heart.right, lessThan(photo.right));
-        expect(heart.top, lessThan(photo.top + photo.height / 4));
+      // No heart anywhere on this screen any more.
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Icon &&
+              (widget.icon == Icons.favorite_rounded ||
+                  widget.icon == Icons.favorite_border_rounded),
+        ),
+        findsNothing,
+      );
 
-        final operator = tester.getRect(
-          find
-              .descendant(
-                of: find
-                    .ancestor(
-                      of: find.byKey(
-                        tourCardThumbnailKey('gali-alibag-waterfall'),
-                      ),
-                      matching: find.byType(AppLiquidGlass),
-                    )
-                    .first,
-                matching: find.text('AB group'),
-              )
-              .first,
-        );
-        // Top trailing corner of the card, clear of the photo entirely.
-        expect(operator.left, greaterThan(photo.right));
-        expect(operator.right, lessThan(card.right));
-        expect(operator.top, lessThan(card.top + card.height / 4));
-      },
-    );
+      final operator = tester.getRect(
+        find
+            .descendant(
+              of: find
+                  .ancestor(
+                    of: find.byKey(
+                      tourCardThumbnailKey('gali-alibag-waterfall'),
+                    ),
+                    matching: find.byType(AppLiquidGlass),
+                  )
+                  .first,
+              matching: find.text('AB group'),
+            )
+            .first,
+      );
+      // Top trailing corner of the card, clear of the photo entirely.
+      expect(operator.left, greaterThan(photo.right));
+      expect(operator.right, lessThan(card.right));
+      expect(operator.top, lessThan(card.top + card.height / 4));
+    });
 
     testWidgets('the carousel stands 308dp tall at the default font size', (
       tester,
@@ -985,40 +976,6 @@ void main() {
       expect(find.textContaining('indicative rate'), findsNothing);
     });
 
-    testWidgets('a guest tapping the heart is asked to sign in', (
-      tester,
-    ) async {
-      final favorites = _FakeFavoritesService();
-      await _pumpScreen(
-        tester,
-        service: _FakeToursService(signedIn: false),
-        favorites: favorites,
-      );
-
-      await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sign in to save favourites'), findsOneWidget);
-      // Nothing was written — a favourite is tied to an account.
-      expect(favorites.toggles, 0);
-    });
-
-    testWidgets('a signed-in user can save a tour', (tester) async {
-      final favorites = _FakeFavoritesService();
-      await _pumpScreen(
-        tester,
-        service: _FakeToursService(signedIn: true),
-        favorites: favorites,
-      );
-
-      await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
-      await tester.pumpAndSettle();
-
-      expect(favorites.toggles, 1);
-      expect(favorites.lastType, FeaturedType.tour);
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
-    });
-
     testWidgets('hides the distance line when location is unavailable', (
       tester,
     ) async {
@@ -1146,7 +1103,6 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required ToursService service,
   DeviceLocationService location = const _FakeLocationService(null),
-  FavoritesService? favorites,
   UserProfileService? profile,
   CurrencyRatesService? rates,
   Locale locale = const Locale('en'),
@@ -1177,7 +1133,6 @@ Future<void> _pumpScreen(
       home: ExploreToursScreen(
         toursService: service,
         locationService: location,
-        favoritesService: favorites ?? _FakeFavoritesService(),
         userProfileService: profile ?? _FakeUserProfileService(AppCurrency.usd),
         currencyRatesService:
             rates ??
@@ -1195,19 +1150,17 @@ class _FakeToursService extends ToursService {
     this.failFirstList = false,
     this.emptyList = false,
     this.noHighlights = false,
-    this.signedIn = false,
   });
 
   /// Fails the first catalog read only, so a retry can be shown to succeed.
   bool failFirstList;
   final bool emptyList;
   final bool noHighlights;
-  final bool signedIn;
 
   int catalogReads = 0;
 
   @override
-  bool get isSignedIn => signedIn;
+  bool get isSignedIn => false;
 
   @override
   Future<List<Tour>> fetchHighlighted() async {
@@ -1236,33 +1189,6 @@ class _FakeLocationService extends DeviceLocationService {
 
   @override
   Future<DeviceLocation?> currentLocation() async => location;
-}
-
-class _FakeFavoritesService extends FavoritesService {
-  _FakeFavoritesService();
-
-  int toggles = 0;
-  FeaturedType? lastType;
-  final Set<String> saved = <String>{};
-
-  @override
-  Future<Set<String>> fetchFavoriteItemIds() async => saved;
-
-  @override
-  Future<bool> toggle({
-    required FeaturedType itemType,
-    required String itemId,
-    required bool currentlyFavorite,
-  }) async {
-    toggles++;
-    lastType = itemType;
-    if (currentlyFavorite) {
-      saved.remove(itemId);
-      return false;
-    }
-    saved.add(itemId);
-    return true;
-  }
 }
 
 class _FakeUserProfileService extends UserProfileService {

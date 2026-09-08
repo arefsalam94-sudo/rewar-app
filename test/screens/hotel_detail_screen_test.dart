@@ -227,10 +227,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sheet-room-increase')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('hotel-change-apply')));
-    await tester.pumpAndSettle();
+    // Check the snackbar before waiting for the native map loading timeout.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('3 adults, 0 children, 2 rooms, 1 bed'), findsOneWidget);
     expect(find.text('Your stay has been updated'), findsOneWidget);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('the adult counter cannot pass the published occupancy limit', (

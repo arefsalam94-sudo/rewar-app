@@ -19,20 +19,29 @@ bool get tourMapSupported {
 /// A small public camera handle that keeps MapLibre types out of callers.
 class TourMapViewController {
   MapLibreMapController? _controller;
+  CameraPosition? _pendingCamera;
 
   Future<void> animateTo({
     required double latitude,
     required double longitude,
     required double zoom,
   }) async {
-    await _controller?.animateCamera(
-      CameraUpdate.newLatLngZoom(LatLng(latitude, longitude), zoom),
+    final camera = CameraPosition(
+      target: LatLng(latitude, longitude),
+      zoom: zoom,
+    );
+    if (_controller == null) {
+      _pendingCamera = camera;
+      return;
+    }
+    await _controller!.animateCamera(
+      CameraUpdate.newCameraPosition(camera),
       duration: const Duration(milliseconds: 700),
     );
   }
 }
 
-/// Shared MapLibre renderer for the Explore Tours preview card and full map.
+/// Shared MapLibre renderer for all location previews and full maps.
 class TourMapView extends StatefulWidget {
   const TourMapView({
     super.key,
@@ -125,6 +134,13 @@ class _TourMapViewState extends State<TourMapView> {
     widget.controller?._controller = controller;
     try {
       await _syncMarkers();
+      final pendingCamera = widget.controller?._pendingCamera;
+      if (pendingCamera != null) {
+        widget.controller?._pendingCamera = null;
+        await controller.animateCamera(
+          CameraUpdate.newCameraPosition(pendingCamera),
+        );
+      }
       if (mounted) {
         setState(() {
           _styleLoaded = true;
@@ -187,7 +203,7 @@ class _TourMapViewState extends State<TourMapView> {
         key: const ValueKey('tour-map-unavailable'),
         color: AppColors.glassBaseTint(context).withValues(alpha: .22),
         child: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(12),
             child: Column(
               mainAxisSize: MainAxisSize.min,

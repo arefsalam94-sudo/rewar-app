@@ -894,6 +894,25 @@ class AppLocalizations {
       'bookingsSignInBody':
           'Your bookings are tied to your account, so we need you signed in to show them.',
       'bookingsStartExploring': 'Start exploring',
+
+      // --- Favorites screen ---
+      'favoritesTitle': 'Favorites',
+      'favoritesCountOne': '{count} Favorite',
+      'favoritesCountOther': '{count} Favorites',
+      'favoritesOptionOne': '{count} option',
+      'favoritesOptionOther': '{count} options',
+      'favoritesViewAll': 'View all',
+      'favoritesLoadFailed': "Couldn't load your favourites",
+      'favoritesEmptyTitle': 'Nothing saved yet',
+      'favoritesEmptyBody':
+          'Tap the heart on a stay or a nature spot to keep it here.',
+      'favoritesSignInTitle': 'Sign in to see your favourites',
+      'favoritesSignInBody':
+          'Your saved places are tied to your account, so we need you signed in to show them.',
+      'favoritesKeepExploring': 'Keep exploring',
+      'favoritesKeepExploringBody': 'Your next adventure is waiting.',
+      'favoritesUndo': 'Undo',
+      'favoritesPlaceUnavailable': "That place isn't available any more",
       // Month names and meridiems, for the booking date/time rows. Written out
       // here rather than taken from `intl`, which has no Kurdish (`ku`) locale.
       'month1': 'January',
@@ -1919,6 +1938,25 @@ class AppLocalizations {
       'bookingsSignInBody':
           'حیجزەکانت بە هەژمارەکەتەوە بەستراون، بۆیە پێویستە بچیتە ژوورەوە بۆ پیشاندانیان.',
       'bookingsStartExploring': 'دەست بە گەڕان بکە',
+
+      // --- Favorites screen ---
+      'favoritesTitle': 'دڵخوازەکان',
+      'favoritesCountOne': '{count} دڵخواز',
+      'favoritesCountOther': '{count} دڵخواز',
+      'favoritesOptionOne': '{count} بژاردە',
+      'favoritesOptionOther': '{count} بژاردە',
+      'favoritesViewAll': 'بینینی هەموو',
+      'favoritesLoadFailed': 'نەتوانرا دڵخوازەکانت باربکرێن',
+      'favoritesEmptyTitle': 'هێشتا هیچ شتێک پاشەکەوت نەکراوە',
+      'favoritesEmptyBody':
+          'دڵەکە دابگرە لەسەر شوێنی مانەوە یان شوێنێکی سروشتی بۆ هێشتنەوەی لێرە.',
+      'favoritesSignInTitle': 'بچۆ ژوورەوە بۆ بینینی دڵخوازەکانت',
+      'favoritesSignInBody':
+          'شوێنە پاشەکەوتکراوەکانت بە هەژمارەکەتەوە بەستراون، بۆیە پێویستە بچیتە ژوورەوە بۆ پیشاندانیان.',
+      'favoritesKeepExploring': 'بەردەوام بە لە گەڕان',
+      'favoritesKeepExploringBody': 'سەرکێشی داهاتووت چاوەڕێت دەکات.',
+      'favoritesUndo': 'گەڕاندنەوە',
+      'favoritesPlaceUnavailable': 'ئەم شوێنە چیتر بەردەست نییە',
       'month1': 'کانوونی دووەم',
       'month2': 'شوبات',
       'month3': 'ئازار',
@@ -2887,6 +2925,25 @@ class AppLocalizations {
       'bookingsSignInBody':
           'حجوزاتك مرتبطة بحسابك، لذا نحتاج إلى تسجيل دخولك لعرضها.',
       'bookingsStartExploring': 'ابدأ الاستكشاف',
+
+      // --- Favorites screen ---
+      'favoritesTitle': 'المفضّلة',
+      'favoritesCountOne': '{count} مفضّلة',
+      'favoritesCountOther': '{count} مفضّلة',
+      'favoritesOptionOne': '{count} خيار',
+      'favoritesOptionOther': '{count} خيارات',
+      'favoritesViewAll': 'عرض الكل',
+      'favoritesLoadFailed': 'تعذر تحميل مفضّلتك',
+      'favoritesEmptyTitle': 'لا شيء محفوظ بعد',
+      'favoritesEmptyBody':
+          'اضغط على القلب في مكان إقامة أو موقع طبيعي للاحتفاظ به هنا.',
+      'favoritesSignInTitle': 'سجّل الدخول لعرض مفضّلتك',
+      'favoritesSignInBody':
+          'أماكنك المحفوظة مرتبطة بحسابك، لذا نحتاج إلى تسجيل دخولك لعرضها.',
+      'favoritesKeepExploring': 'واصل الاستكشاف',
+      'favoritesKeepExploringBody': 'مغامرتك القادمة في انتظارك.',
+      'favoritesUndo': 'تراجع',
+      'favoritesPlaceUnavailable': 'هذا المكان لم يعد متاحًا',
       'month1': 'يناير',
       'month2': 'فبراير',
       'month3': 'مارس',
@@ -3970,6 +4027,30 @@ class AppLocalizations {
   String get bookingsSignInTitle => _t('bookingsSignInTitle');
   String get bookingsSignInBody => _t('bookingsSignInBody');
   String get bookingsStartExploring => _t('bookingsStartExploring');
+
+  // --- Favorites screen ---
+  String get favoritesTitle => _t('favoritesTitle');
+
+  /// "24 Favorites" — the count under the title.
+  String favoritesCount(int count) => _t(
+    count == 1 ? 'favoritesCountOne' : 'favoritesCountOther',
+  ).replaceAll('{count}', '$count');
+
+  /// "12 options" — the count on a section header.
+  String favoritesOptionCount(int count) => _t(
+    count == 1 ? 'favoritesOptionOne' : 'favoritesOptionOther',
+  ).replaceAll('{count}', '$count');
+
+  String get favoritesViewAll => _t('favoritesViewAll');
+  String get favoritesLoadFailed => _t('favoritesLoadFailed');
+  String get favoritesEmptyTitle => _t('favoritesEmptyTitle');
+  String get favoritesEmptyBody => _t('favoritesEmptyBody');
+  String get favoritesSignInTitle => _t('favoritesSignInTitle');
+  String get favoritesSignInBody => _t('favoritesSignInBody');
+  String get favoritesKeepExploring => _t('favoritesKeepExploring');
+  String get favoritesKeepExploringBody => _t('favoritesKeepExploringBody');
+  String get favoritesUndo => _t('favoritesUndo');
+  String get favoritesPlaceUnavailable => _t('favoritesPlaceUnavailable');
   String get bookingCheckIn => _t('bookingCheckIn');
   String get bookingCheckOut => _t('bookingCheckOut');
   String get bookingSeat => _t('bookingSeat');

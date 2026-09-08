@@ -545,8 +545,24 @@ Added when the Home screen was built. This is the first screen a
   removed; allowing update would only add a way to repoint an existing row at
   another user.
 - **There is no anonymous favorite.** Rather than storing guest favorites
-  locally and merging them later, the screen prompts the guest to sign in.
-  One source of truth, and no second store to keep in sync or leak.
+  locally and merging them later, Where to Stay and Explore Nature prompt the
+  guest to sign in (the shared `SignInRequiredSheet`). One source of truth, and
+  no second store to keep in sync or leak.
+- **`favorites` carries a denormalized snapshot**, and every field of it is
+  validated and *size-bounded* in the rules: `title` and `locationLabel` are
+  locale maps restricted to `{en, ku, ar}` with ≤200 characters per string, and
+  `imageRef` is ≤1000. Without those bounds the collection would be writable
+  free storage — a user can create unlimited rows under their own uid, so an
+  unbounded string field is an invitation to park payload there. `title` is
+  required (a row that cannot be drawn looks like data loss); `locationLabel`
+  and `imageRef` are optional so a catalogue entry missing one can still be
+  saved.
+- **`itemType` was narrowed from five values to two** (`nature_spot`, `hotel`)
+  when the heart was consolidated onto Where to Stay and Explore Nature. Note
+  that `delete` deliberately checks **ownership only, not shape**, so a legacy
+  `car`/`tour`/`flight` row a user saved before the change stays removable — a
+  tightening that trapped rows in a user's account would be a worse outcome
+  than the loose type it replaced.
 - Guest mode is **not** Firebase anonymous auth — it is simply "no user". If
   anonymous auth is introduced later, revisit this: an anonymous uid *would*
   satisfy the favorites rules, which may or may not be intended.

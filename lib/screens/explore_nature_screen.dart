@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/nature_filters.dart';
 import '../models/nature_spot.dart';
+import '../models/favorite_item.dart';
 import '../services/device_location_service.dart';
+import '../services/favorites_service.dart';
 import '../services/nature_spots_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/favorite_heart_button.dart';
+import '../widgets/favorite_toggle_mixin.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
@@ -28,6 +32,7 @@ class ExploreNatureScreen extends StatefulWidget {
     super.key,
     this.natureSpotsService,
     this.locationService,
+    this.favoritesService,
   });
 
   /// Injectable for tests; defaults to the real Firestore-backed service.
@@ -38,15 +43,27 @@ class ExploreNatureScreen extends StatefulWidget {
   /// rather than failing.
   final DeviceLocationService? locationService;
 
+  /// Backs the heart on each card. Explore Nature is one of the only two
+  /// screens that can save anything — see [FavoritesService].
+  final FavoritesService? favoritesService;
+
   @override
   State<ExploreNatureScreen> createState() => _ExploreNatureScreenState();
 }
 
-class _ExploreNatureScreenState extends State<ExploreNatureScreen> {
+class _ExploreNatureScreenState extends State<ExploreNatureScreen>
+    with FavoriteToggleMixin<ExploreNatureScreen> {
   late final NatureSpotsService _service =
       widget.natureSpotsService ?? NatureSpotsService();
   late final DeviceLocationService _locationService =
       widget.locationService ?? const DeviceLocationService();
+
+  @override
+  late final FavoritesService favoritesService =
+      widget.favoritesService ?? FavoritesService();
+
+  @override
+  FavoriteCategory get favoriteCategory => FavoriteCategory.nature;
 
   late Future<List<NatureSpot>> _highlightedFuture;
 
@@ -81,6 +98,7 @@ class _ExploreNatureScreenState extends State<ExploreNatureScreen> {
     _highlightedFuture = _service.fetchHighlighted();
     _loadCatalog();
     _loadDeviceLocation();
+    loadFavoriteIds();
   }
 
   @override
@@ -301,6 +319,12 @@ class _ExploreNatureScreenState extends State<ExploreNatureScreen> {
             spot: spot,
             languageCode: languageCode,
             deviceLocation: _deviceLocation,
+            isFavorite: isFavorite(spot.id),
+            favoritePending: favoritePending(spot.id),
+            onFavorite: () => toggleFavorite(
+              itemId: spot.id,
+              snapshot: () => spot.favoriteSnapshot,
+            ),
             onTap: () => _openSpot(spot),
           ),
           if (spot != spots.last) const SizedBox(height: 14),
@@ -928,12 +952,18 @@ class _SpotCard extends StatelessWidget {
     required this.spot,
     required this.languageCode,
     required this.deviceLocation,
+    required this.isFavorite,
+    required this.favoritePending,
+    required this.onFavorite,
     required this.onTap,
   });
 
   final NatureSpot spot;
   final String languageCode;
   final DeviceLocation? deviceLocation;
+  final bool isFavorite;
+  final bool favoritePending;
+  final VoidCallback onFavorite;
   final VoidCallback onTap;
 
   static const double thumbnailWidth = 126;
@@ -967,9 +997,33 @@ class _SpotCard extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: thumbnailWidth,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(radius - 4),
-                      child: _SpotPhoto(spot: spot, index: 0),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(radius - 4),
+                            child: _SpotPhoto(spot: spot, index: 0),
+                          ),
+                        ),
+                        // On the photo rather than beside the title: the
+                        // heart needs its own ground to stay legible over
+                        // arbitrary photography, which is the case
+                        // `07_DESIGN_EXCEPTIONS.md` §8 covers. Placed on the
+                        // leading corner so it mirrors in Kurdish and Arabic
+                        // with the rest of the card.
+                        PositionedDirectional(
+                          top: 2,
+                          start: 2,
+                          child: FavoriteHeartButton(
+                            isFavorite: isFavorite,
+                            pending: favoritePending,
+                            onTap: onFavorite,
+                            targetSize: 38,
+                            circleSize: 28,
+                            iconSize: 16,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 14),

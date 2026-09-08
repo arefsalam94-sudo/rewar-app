@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
-import '../services/map_availability.dart';
+import '../config/tour_map_config.dart';
+import '../models/map_place.dart';
+import '../widgets/tour_map_view.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/favorite_item.dart';
 import '../models/nature_detail.dart';
 import '../models/nature_spot.dart';
 import '../services/device_location_service.dart';
+import '../services/favorites_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/place_weather_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/favorite_heart_button.dart';
+import '../widgets/favorite_toggle_mixin.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
@@ -26,12 +32,17 @@ class NaturePlaceDetailScreen extends StatefulWidget {
     this.natureSpotsService,
     this.locationService,
     this.weatherService,
+    this.favoritesService,
     this.onReviewsTap,
     this.onStayTap,
   });
 
   final NatureSpot spot;
   final NatureSpotsService? natureSpotsService;
+
+  /// Backs the hero's heart. Nature is one of the only two things that can
+  /// be saved — see [FavoritesService].
+  final FavoritesService? favoritesService;
   final DeviceLocationService? locationService;
   final PlaceWeatherService? weatherService;
   final VoidCallback? onReviewsTap;
@@ -42,9 +53,17 @@ class NaturePlaceDetailScreen extends StatefulWidget {
       _NaturePlaceDetailScreenState();
 }
 
-class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
+class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen>
+    with FavoriteToggleMixin<NaturePlaceDetailScreen> {
   late final NatureSpotsService _service =
       widget.natureSpotsService ?? NatureSpotsService();
+
+  @override
+  late final FavoritesService favoritesService =
+      widget.favoritesService ?? FavoritesService();
+
+  @override
+  FavoriteCategory get favoriteCategory => FavoriteCategory.nature;
   late final DeviceLocationService _locationService =
       widget.locationService ?? const DeviceLocationService();
   late final PlaceWeatherService _weatherService =
@@ -85,6 +104,7 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
       _weatherFuture = _weatherService.fetch(latitude, longitude);
     }
     _loadLocation();
+    loadFavoriteIds();
   }
 
   Future<void> _loadLocation() async {
@@ -275,12 +295,30 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
               useCanonicalGlass: true,
             ),
           ),
-          if (widget.spot.reviewScore != null)
-            PositionedDirectional(
-              top: 14,
-              end: 16,
-              child: _RatingPair(score: widget.spot.reviewScore!),
+          // One top-end stack rather than two independently positioned
+          // controls, so the heart can never land on top of the rating.
+          PositionedDirectional(
+            top: 14,
+            end: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.spot.reviewScore != null) ...[
+                  _RatingPair(score: widget.spot.reviewScore!),
+                  const SizedBox(height: 10),
+                ],
+                FavoriteHeartButton(
+                  isFavorite: isFavorite(widget.spot.id),
+                  pending: favoritePending(widget.spot.id),
+                  onTap: () => toggleFavorite(
+                    itemId: widget.spot.id,
+                    snapshot: () => widget.spot.favoriteSnapshot,
+                  ),
+                ),
+              ],
             ),
+          ),
           if (photos.length > 1)
             Positioned(
               // Keep the dots above the overlapping About card, in the clear
@@ -322,6 +360,7 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen> {
       MaterialPageRoute<void>(
         builder: (_) => MapScreen(
           target: LatLng(latitude, longitude),
+          category: MapPlaceCategory.nature,
           title: widget.spot.name(language),
         ),
       ),
@@ -609,24 +648,26 @@ class _LocationCard extends StatelessWidget {
         height: height,
         child: Stack(
           children: [
-            if (googleMapsAvailable && latitude != null && longitude != null)
+            if (latitude != null && longitude != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(28),
                 child: AbsorbPointer(
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: LatLng(latitude, longitude),
-                      zoom: 13.5,
-                    ),
-                    markers: {
-                      Marker(
-                        markerId: MarkerId(spot.id),
-                        position: LatLng(latitude, longitude),
+                  child: TourMapView(
+                    places: [
+                      MapPlace(
+                        id: spot.id,
+                        name: spot.name(
+                          Localizations.localeOf(context).languageCode,
+                        ),
+                        latitude: latitude,
+                        longitude: longitude,
+                        category: MapPlaceCategory.nature,
                       ),
-                    },
-                    liteModeEnabled: true,
-                    mapToolbarEnabled: false,
-                    zoomControlsEnabled: false,
+                    ],
+                    initialLatitude: latitude,
+                    initialLongitude: longitude,
+                    initialZoom: TourMapConfig.placeZoom,
+                    interactive: false,
                   ),
                 ),
               )

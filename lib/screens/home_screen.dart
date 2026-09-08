@@ -6,7 +6,6 @@ import '../l10n/locale_controller.dart';
 import '../models/featured_item.dart';
 import '../services/auth_service.dart';
 import '../services/featured_service.dart';
-import '../services/favorites_service.dart';
 import '../services/profile_setup_service.dart';
 import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
@@ -17,11 +16,11 @@ import '../widgets/liquid_glass_surface.dart';
 import '../widgets/home_bottom_nav.dart';
 import '../widgets/home_drawer.dart';
 import 'explore_nature_screen.dart';
+import 'favorites_screen.dart';
 import 'explore_tours_screen.dart';
 import 'flight_ticketing_screen.dart';
 import 'hotel_screen.dart';
 import 'car_rental_screen.dart';
-import 'login_screen.dart';
 import 'map_screen.dart';
 import 'my_bookings_screen.dart';
 
@@ -39,7 +38,6 @@ class HomeScreen extends StatefulWidget {
     this.isGuest = true,
     this.displayName,
     this.featuredService,
-    this.favoritesService,
     this.userProfileService,
     this.authService,
     this.profileSetupService,
@@ -47,8 +45,10 @@ class HomeScreen extends StatefulWidget {
     this.now,
   });
 
-  /// Guests see the whole screen, but cannot favorite anything — they get a
-  /// sign-in prompt instead. See `SECURITY.md` 6.1f.
+  /// Passed through to the screens the bar and the drawer open — Favorites
+  /// and My Bookings both need an auth uid and show their own sign-in gate.
+  /// Home itself has nothing a guest cannot see: the heart moved to Where to
+  /// Stay and Explore Nature when favorites were consolidated there.
   final bool isGuest;
 
   /// Shown after the greeting. Falls back to a localized "Dear User".
@@ -56,10 +56,9 @@ class HomeScreen extends StatefulWidget {
 
   /// Injectable for tests; defaults to the real Firestore-backed services.
   final FeaturedService? featuredService;
-  final FavoritesService? favoritesService;
 
   /// Passed straight through to the side drawer ([HomeDrawer]); injectable
-  /// for tests the same way as [featuredService]/[favoritesService].
+  /// for tests the same way as [featuredService].
   final UserProfileService? userProfileService;
   final AuthService? authService;
   final ProfileSetupService? profileSetupService;
@@ -75,8 +74,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final FeaturedService _featuredService =
       widget.featuredService ?? FeaturedService();
-  late final FavoritesService _favoritesService =
-      widget.favoritesService ?? FavoritesService();
 
   late Future<List<FeaturedItem>> _featuredFuture;
 
@@ -87,12 +84,6 @@ class _HomeScreenState extends State<HomeScreen> {
   /// and stays null if the count is unavailable — the button then falls back
   /// to a plain "Explore" rather than showing an invented number.
   int? _natureSpotCount;
-
-  /// `itemId`s the signed-in user has already favorited.
-  Set<String> _favoriteIds = <String>{};
-
-  /// Favorites currently being written, so a double-tap can't fire twice.
-  final Set<String> _pendingFavorites = <String>{};
 
   HomeNavTab _currentTab = HomeNavTab.home;
 
@@ -120,19 +111,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// The count and the favorite list are both non-essential: if either fails
-  /// the screen still works, so neither is allowed to surface an error.
+  /// The nature-spot count is non-essential: if it fails the screen still
+  /// works, so it is never allowed to surface an error.
   Future<void> _loadSecondaryData() async {
     final count = await _featuredService.fetchNatureSpotCount();
     if (mounted && count != null) setState(() => _natureSpotCount = count);
-
-    if (widget.isGuest) return;
-    try {
-      final ids = await _favoritesService.fetchFavoriteItemIds();
-      if (mounted) setState(() => _favoriteIds = ids);
-    } catch (e) {
-      debugPrint('Could not load favorites: $e');
-    }
   }
 
   void _retryFeatured() {
@@ -159,102 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  Future<void> _onFavoriteTapped(FeaturedItem item) async {
-    final l10n = AppLocalizations.of(context);
-
-    if (widget.isGuest) {
-      await _showSignInPrompt();
-      return;
-    }
-    if (_pendingFavorites.contains(item.referenceId)) return;
-
-    final wasFavorite = _favoriteIds.contains(item.referenceId);
-    setState(() => _pendingFavorites.add(item.referenceId));
-    try {
-      final nowFavorite = await _favoritesService.toggle(
-        itemType: item.type,
-        itemId: item.referenceId,
-        currentlyFavorite: wasFavorite,
-      );
-      if (!mounted) return;
-      setState(() {
-        if (nowFavorite) {
-          _favoriteIds.add(item.referenceId);
-        } else {
-          _favoriteIds.remove(item.referenceId);
-        }
-      });
-      _snack(nowFavorite ? l10n.addedToFavorites : l10n.removedFromFavorites);
-    } catch (e) {
-      debugPrint('Favorite toggle failed: $e');
-      if (mounted) _snack(l10n.favoriteFailed);
-    } finally {
-      if (mounted) setState(() => _pendingFavorites.remove(item.referenceId));
-    }
-  }
-
-  Future<void> _showSignInPrompt() async {
-    final l10n = AppLocalizations.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => _GlassSheet(
-        dark: isDark,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.signInToSave,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: _headingColor(context),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.signInToSaveBody,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.4,
-                color: AppColors.secondaryText(context),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _ArrowPill(
-                    label: l10n.logIn,
-                    onTap: () {
-                      Navigator.of(sheetContext).pop();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                TextButton(
-                  onPressed: () => Navigator.of(sheetContext).pop(),
-                  child: Text(
-                    l10n.notNow,
-                    style: TextStyle(color: AppColors.secondaryText(context)),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   /// Changes the app's language **in place** — no navigation. [appLocale] is
@@ -355,7 +242,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _onNavSelected(HomeNavTab tab) async {
-    final l10n = AppLocalizations.of(context);
     switch (tab) {
       case HomeNavTab.home:
         setState(() => _currentTab = HomeNavTab.home);
@@ -377,8 +263,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       case HomeNavTab.saved:
-        // Phase 8 of ROADMAP.md — not built yet, and not built ahead here.
-        _snack(l10n.comingSoon);
+        // Same guest handling as My Bookings: the screen itself explains that
+        // saved places need an account and offers a route to Login, rather
+        // than the bar refusing to move.
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FavoritesScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
+      // The heart on Where to Stay and Explore Nature can have changed
+      // while the user was away, but nothing on Home draws it any more, so
+      // there is nothing here to refresh.
     }
   }
 
@@ -528,8 +427,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   return _FeaturedCard(
                     item: item,
                     languageCode: languageCode,
-                    isFavorite: _favoriteIds.contains(item.referenceId),
-                    onFavorite: () => _onFavoriteTapped(item),
                     // The detail screens are Phase 3+; nothing is built ahead.
                     onExplore: () =>
                         _snack(AppLocalizations.of(context).comingSoon),
@@ -732,20 +629,20 @@ class _IconAction extends StatelessWidget {
 
 // --- Featured carousel ------------------------------------------------------
 
-/// One slide: photo, star rating, favourite heart, title, location, Explore.
+/// One slide: photo, star rating, title, location, Explore.
+///
+/// It carried a favourite heart until saving was consolidated onto Where to
+/// Stay and Explore Nature — a carousel that mixes five entity types could
+/// save a car or a flight, which the Favorites screen has no section for.
 class _FeaturedCard extends StatelessWidget {
   const _FeaturedCard({
     required this.item,
     required this.languageCode,
-    required this.isFavorite,
-    required this.onFavorite,
     required this.onExplore,
   });
 
   final FeaturedItem item;
   final String languageCode;
-  final bool isFavorite;
-  final VoidCallback onFavorite;
   final VoidCallback onExplore;
 
   /// Base height, grown for large system font sizes so the overlaid copy
@@ -808,10 +705,6 @@ class _FeaturedCard extends StatelessWidget {
                           if (item.rating != null)
                             _RatingPill(rating: item.rating!),
                           const Spacer(),
-                          _FavoriteButton(
-                            isFavorite: isFavorite,
-                            onTap: onFavorite,
-                          ),
                         ],
                       ),
                       const Spacer(),
@@ -951,53 +844,6 @@ class _RatingPill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _FavoriteButton extends StatelessWidget {
-  const _FavoriteButton({required this.isFavorite, required this.onTap});
-
-  final bool isFavorite;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = isDark ? AppColors.luminousMint : AppColors.actionNavy;
-
-    return Semantics(
-      button: true,
-      selected: isFavorite,
-      label: AppLocalizations.of(context).navSaved,
-      child: SizedBox(
-        // 40dp circle inside a 48dp target — the GlassBackButton pattern.
-        width: 48,
-        height: 48,
-        child: InkWell(
-          onTap: onTap,
-          customBorder: const CircleBorder(),
-          child: Center(
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? AppColors.darkGlassTop.withValues(alpha: 0.55)
-                    : Colors.white.withValues(alpha: 0.9),
-              ),
-              child: Icon(
-                isFavorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-                size: 21,
-                color: accent,
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1497,35 +1343,6 @@ class _ArrowPill extends StatelessWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// --- Bottom sheets ----------------------------------------------------------
-
-/// Glass container for this screen's modal sheets, matching the auth flow's
-/// sheets. Scrollable, per the "bottom sheets scroll" rule.
-class _GlassSheet extends StatelessWidget {
-  const _GlassSheet({required this.child, required this.dark});
-
-  final Widget child;
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: AppLiquidGlass(
-          useCanonicalGlass: true,
-          layer: GlassLayer.surface,
-          dark: dark,
-          borderRadius: 28,
-          padding: const EdgeInsets.all(20),
-          child: SingleChildScrollView(child: child),
         ),
       ),
     );

@@ -13,6 +13,7 @@ import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
 import '../widgets/ticket_card.dart';
+import 'favorites_screen.dart';
 import 'map_screen.dart';
 import 'policy_screen.dart';
 
@@ -88,11 +89,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
           context,
         ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
       case HomeNavTab.saved:
-        // Phase 8 of ROADMAP.md — not built yet, and not built ahead here.
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text(l10n.comingSoon)));
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FavoritesScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
     }
   }
 

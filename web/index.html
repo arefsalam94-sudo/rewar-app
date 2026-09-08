@@ -32,9 +32,9 @@
   <title>kurdistan_paradise_travel_guide</title>
   <link rel="manifest" href="manifest.json">
 
-  <!-- Google Maps is intentionally not loaded while no web API key exists.
-       Add the google_maps_flutter_web script with a browser-restricted Maps
-       JavaScript API key, then enable web in lib/services/map_availability.dart. -->
+  <!-- Required by maplibre_gl 0.26.2 on web. Load before Flutter starts. -->
+  <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js"></script>
+  <link href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" rel="stylesheet">
 </head>
 <body>
   <!--

@@ -34,7 +34,7 @@ don't mark it seeded until it's really there and confirmed rendering.
 | flights | Astra Airlines, Erbil (EBL) → Istanbul | NOT SEEDED |
 | users | (your own test account, created via the Auth screen) | NOT SEEDED |
 | bookings | one per type — hotel, flight, car, tour (upcoming + completed) — seed with `node tool/seed_bookings.js <uid>` | NOT SEEDED (needs a Firebase project) |
-| favorites | (one test favorite once favoriting is wired up) | NOT SEEDED |
+| favorites | one saved stay + one saved nature spot, written by tapping the heart on Where to Stay / Explore Nature while signed in | NOT SEEDED — **nothing seeds this by hand.** Rows carry a denormalized snapshot (`title`, `locationLabel`, `imageRef`) captured at the moment the heart is tapped, so a hand-written row would not match what the app produces. The Favorites screen is verified by saving from the two source screens, not from a script |
 | password_reset_codes | n/a — written only by Cloud Functions | N/A (not seeded by hand) |
 | mail | n/a — written only by Cloud Functions | N/A (not seeded by hand) |
 

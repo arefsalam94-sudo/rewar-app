@@ -32,7 +32,6 @@ import 'package:kurdistan_paradise_travel_guide/screens/splash_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/verification_code_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/terms_of_service_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/auth_service.dart';
-import 'package:kurdistan_paradise_travel_guide/services/favorites_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/featured_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/legal_document_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/onboarding_preferences.dart';
@@ -2548,50 +2547,27 @@ void main() {
       expect(find.text('Explore'), findsNWidgets(2));
     });
 
-    testWidgets('a guest tapping the heart is asked to sign in, not written', (
+    testWidgets('the carousel draws no heart — saving moved off Home', (
       tester,
     ) async {
-      final favorites = _FakeFavoritesService();
-      await _pumpHome(tester, favorites: favorites);
+      // The featured carousel mixes five entity types, so it could save a car
+      // or a flight — and the Favorites screen has sections only for stays and
+      // nature spots. The heart therefore lives on Where to Stay and Explore
+      // Nature instead, and Home must not draw one at all.
+      await _pumpHome(tester, isGuest: false);
 
-      await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sign in to save favourites'), findsOneWidget);
-      // Nothing was persisted, and no favourite was optimistically shown.
-      expect(favorites.toggleCalls, isEmpty);
-      expect(find.byIcon(Icons.favorite_rounded), findsNothing);
-    });
-
-    testWidgets('a signed-in user can favourite and unfavourite a slide', (
-      tester,
-    ) async {
-      final favorites = _FakeFavoritesService();
-      await _pumpHome(tester, isGuest: false, favorites: favorites);
-
-      await tester.tap(find.byIcon(Icons.favorite_border_rounded).first);
-      await tester.pumpAndSettle();
-
-      expect(favorites.ids, contains('rawanduz-canyon'));
-      expect(find.text('Added to your favourites'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.favorite_rounded).first);
-      await tester.pumpAndSettle();
-
-      expect(favorites.ids, isEmpty);
-      expect(find.text('Removed from your favourites'), findsOneWidget);
-    });
-
-    testWidgets('an already-favourited slide opens with a filled heart', (
-      tester,
-    ) async {
-      await _pumpHome(
-        tester,
-        isGuest: false,
-        favorites: _FakeFavoritesService(initial: {'rawanduz-canyon'}),
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Icon &&
+              (widget.icon == Icons.favorite_rounded ||
+                  widget.icon == Icons.favorite_border_rounded),
+        ),
+        // Only the bottom bar's Saved tab, which is a destination and not a
+        // save control.
+        findsOneWidget,
       );
-
-      expect(find.byIcon(Icons.favorite_rounded), findsOneWidget);
+      expect(find.text('Sign in to save favourites'), findsNothing);
     });
 
     testWidgets('the globe changes language in place, without navigating', (
@@ -3304,33 +3280,6 @@ class _FakeFeaturedService extends FeaturedService {
   Future<int?> fetchNatureSpotCount() async => count;
 }
 
-class _FakeFavoritesService extends FavoritesService {
-  _FakeFavoritesService({Set<String>? initial})
-    : ids = {...?initial},
-      toggleCalls = [];
-
-  final Set<String> ids;
-  final List<String> toggleCalls;
-
-  @override
-  Future<Set<String>> fetchFavoriteItemIds() async => {...ids};
-
-  @override
-  Future<bool> toggle({
-    required FeaturedType itemType,
-    required String itemId,
-    required bool currentlyFavorite,
-  }) async {
-    toggleCalls.add(itemId);
-    if (currentlyFavorite) {
-      ids.remove(itemId);
-      return false;
-    }
-    ids.add(itemId);
-    return true;
-  }
-}
-
 /// Stands in for the Firestore-backed drawer profile. Returns null (no
 /// profile) unless one is supplied — same shape a real guest session would
 /// produce, since [HomeDrawer] never calls this for a guest anyway.
@@ -3374,7 +3323,6 @@ Future<void> _pumpHome(
   DateTime? now,
   double textScale = 1.0,
   FeaturedService? featured,
-  FavoritesService? favorites,
   UserProfileService? userProfile,
   AuthService? auth,
   bool listenToLocale = false,
@@ -3385,7 +3333,6 @@ Future<void> _pumpHome(
     // Fixed so the greeting doesn't depend on when the suite runs.
     now: now ?? DateTime(2026, 8, 5, 19, 30),
     featuredService: featured ?? _FakeFeaturedService(),
-    favoritesService: favorites ?? _FakeFavoritesService(),
     userProfileService: userProfile ?? _FakeUserProfileService(),
     authService: auth ?? _FakeAuthService(),
   );

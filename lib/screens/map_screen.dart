@@ -1,22 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
 import '../l10n/app_localizations.dart';
-import '../services/map_availability.dart';
+import '../config/tour_map_config.dart';
+import '../models/map_place.dart';
+import '../widgets/tour_map_view.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 
-/// A native, interactive Google Map shown entirely inside the app.
+/// The shared interactive map used by the main navigation and place details.
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.target, this.title});
+  const MapScreen({
+    super.key,
+    this.target,
+    this.title,
+    this.category = MapPlaceCategory.attraction,
+  });
 
   /// An optional place to open on and pin. When given, the map does **not**
   /// recentre on the device — the user asked to see this place, not where they
   /// are standing. The Map tab passes nothing and keeps the old behaviour.
   final LatLng? target;
+  final MapPlaceCategory category;
 
   /// Header label. Defaults to the Map tab's own title.
   final String? title;
@@ -27,27 +35,23 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   // Erbil is a useful regional fallback while location is unavailable.
-  static const LatLng _fallbackLocation = LatLng(36.1911, 44.0092);
-  static const double _fallbackZoom = 11;
+  static const LatLng _fallbackLocation = LatLng(
+    TourMapConfig.erbilLatitude,
+    TourMapConfig.erbilLongitude,
+  );
+  static const double _fallbackZoom = TourMapConfig.cityZoom;
   static const double _userZoom = 15;
   static const double _targetZoom = 13.5;
 
-  GoogleMapController? _controller;
-  LatLng? _userLocation;
+  final TourMapViewController _controller = TourMapViewController();
   bool _locationPermissionGranted = false;
 
   @override
   void initState() {
     super.initState();
-    if (googleMapsAvailable) {
+    if (tourMapSupported) {
       _centerOnCurrentLocation();
     }
-  }
-
-  @override
-  void dispose() {
-    _controller?.dispose();
-    super.dispose();
   }
 
   Future<void> _centerOnCurrentLocation() async {
@@ -79,23 +83,14 @@ class _MapScreenState extends State<MapScreen> {
       if (!mounted) return;
 
       final location = LatLng(position.latitude, position.longitude);
-      setState(() => _userLocation = location);
-      await _controller?.animateCamera(
-        CameraUpdate.newLatLngZoom(location, _userZoom),
+      await _controller.animateTo(
+        latitude: location.latitude,
+        longitude: location.longitude,
+        zoom: _userZoom,
       );
     } catch (error) {
       // The fallback map remains fully usable when GPS is unavailable.
       debugPrint('Could not determine the current map location: $error');
-    }
-  }
-
-  Future<void> _onMapCreated(GoogleMapController controller) async {
-    _controller = controller;
-    final location = _userLocation;
-    if (location != null) {
-      await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(location, _userZoom),
-      );
     }
   }
 
@@ -106,40 +101,40 @@ class _MapScreenState extends State<MapScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: googleMapsAvailable
-                ? GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: widget.target ?? _fallbackLocation,
-                      zoom: widget.target == null ? _fallbackZoom : _targetZoom,
-                    ),
-                    markers: {
-                      if (widget.target != null)
-                        Marker(
-                          markerId: const MarkerId('map-target'),
-                          position: widget.target!,
-                        ),
-                    },
-                    onMapCreated: _onMapCreated,
-                    myLocationEnabled: _locationPermissionGranted,
-                    myLocationButtonEnabled: _locationPermissionGranted,
-                    compassEnabled: true,
-                    mapToolbarEnabled: false,
-                    zoomControlsEnabled: false,
-                  )
-                : ColoredBox(
-                    color: AppColors.glassBaseTint(
-                      context,
-                    ).withValues(alpha: .22),
-                    child: Center(
-                      child: Text(
-                        AppLocalizations.of(context).hotelMapUnavailable,
-                        style: TextStyle(
-                          color: AppColors.secondaryText(context),
-                        ),
-                      ),
-                    ),
+            child: TourMapView(
+              controller: _controller,
+              initialLatitude:
+                  widget.target?.latitude ?? _fallbackLocation.latitude,
+              initialLongitude:
+                  widget.target?.longitude ?? _fallbackLocation.longitude,
+              initialZoom: widget.target == null ? _fallbackZoom : _targetZoom,
+              showUserLocation: _locationPermissionGranted,
+              places: [
+                if (widget.target != null)
+                  MapPlace(
+                    id: 'map-target',
+                    name: widget.title ?? '',
+                    latitude: widget.target!.latitude,
+                    longitude: widget.target!.longitude,
+                    category: widget.category,
                   ),
+              ],
+            ),
           ),
+          if (_locationPermissionGranted)
+            SafeArea(
+              child: Align(
+                alignment: AlignmentDirectional.bottomEnd,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: FloatingActionButton.small(
+                    tooltip: AppLocalizations.of(context).tourMapMyLocation,
+                    onPressed: _centerOnCurrentLocation,
+                    child: const Icon(Icons.my_location_rounded),
+                  ),
+                ),
+              ),
+            ),
           SafeArea(
             child: Align(
               alignment: Alignment.topLeft,
