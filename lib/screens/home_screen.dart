@@ -246,9 +246,15 @@ class _HomeScreenState extends State<HomeScreen> {
       case HomeNavTab.home:
         setState(() => _currentTab = HomeNavTab.home);
       case HomeNavTab.map:
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MapScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
       case HomeNavTab.trips:
         // Same destination as the drawer's My Bookings row. A guest is pushed
         // the same screen rather than blocked here — the screen itself explains

@@ -278,9 +278,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       case HomeNavTab.home:
         Navigator.of(context).maybePop();
       case HomeNavTab.map:
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MapScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
       case HomeNavTab.trips:
         // Pushed rather than popped: Favorites may have been reached from
         // Home, where popping would land on the dashboard instead of Trips.

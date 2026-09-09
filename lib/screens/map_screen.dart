@@ -9,7 +9,10 @@ import '../widgets/tour_map_view.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
+import '../widgets/home_bottom_nav.dart';
 import '../widgets/liquid_glass_surface.dart';
+import 'favorites_screen.dart';
+import 'my_bookings_screen.dart';
 
 /// The shared interactive map used by the main navigation and place details.
 class MapScreen extends StatefulWidget {
@@ -18,6 +21,8 @@ class MapScreen extends StatefulWidget {
     this.target,
     this.title,
     this.category = MapPlaceCategory.attraction,
+    this.isGuest = false,
+    this.showBottomNav = false,
   });
 
   /// An optional place to open on and pin. When given, the map does **not**
@@ -28,6 +33,17 @@ class MapScreen extends StatefulWidget {
 
   /// Header label. Defaults to the Map tab's own title.
   final String? title;
+
+  /// True when the screen was reached from the home bar's **Map** item. The
+  /// bar is then kept on screen, in the same place and with the same geometry
+  /// as on Home, so tapping it doesn't make the bar disappear out from under
+  /// the finger. A map opened from a place's detail page passes nothing and
+  /// stays a plain full-screen map.
+  final bool showBottomNav;
+
+  /// Forwarded to the bar's Trips and Saved destinations, which each show
+  /// their own sign-in gate for a guest. Only read when [showBottomNav].
+  final bool isGuest;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -94,9 +110,47 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  /// Mirrors Home's, My Bookings' and Favorites' handling, so the bar behaves
+  /// identically from here. Home is a pop rather than a push: the Home screen
+  /// is still underneath, and pushing a second copy would leave two dashboards
+  /// on the stack.
+  Future<void> _onNavSelected(HomeNavTab tab) async {
+    switch (tab) {
+      case HomeNavTab.map:
+        return; // Already here.
+      case HomeNavTab.home:
+        Navigator.of(context).maybePop();
+      case HomeNavTab.trips:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MyBookingsScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
+      case HomeNavTab.saved:
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => FavoritesScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // With the bar visible the "my location" button has to clear it, exactly
+    // as the lists on Home's other bar destinations do.
+    final fabBottomInset = widget.showBottomNav
+        ? HomeBottomNav.barHeight + 12
+        : 0.0;
     return Scaffold(
       body: Stack(
         children: [
@@ -126,7 +180,7 @@ class _MapScreenState extends State<MapScreen> {
               child: Align(
                 alignment: AlignmentDirectional.bottomEnd,
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + fabBottomInset),
                   child: FloatingActionButton.small(
                     tooltip: AppLocalizations.of(context).tourMapMyLocation,
                     onPressed: _centerOnCurrentLocation,
@@ -176,6 +230,12 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+          if (widget.showBottomNav)
+            HomeBottomNav.floating(
+              context: context,
+              current: HomeNavTab.map,
+              onSelect: _onNavSelected,
+            ),
         ],
       ),
     );

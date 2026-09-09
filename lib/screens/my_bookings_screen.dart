@@ -85,9 +85,15 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
       case HomeNavTab.home:
         Navigator.of(context).maybePop();
       case HomeNavTab.map:
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute<void>(builder: (_) => const MapScreen()));
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => MapScreen(
+              isGuest: widget.isGuest,
+              // Reached from the bar, so the bar stays put.
+              showBottomNav: true,
+            ),
+          ),
+        );
       case HomeNavTab.saved:
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
