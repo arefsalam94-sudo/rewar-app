@@ -11,6 +11,7 @@ import '../services/preview_identity.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/liquid_glass_surface.dart';
@@ -79,12 +80,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // Opens on the 18th birthday boundary, the most likely starting point,
     // rather than today (which would be an impossible date of birth).
     final eighteenYearsAgo = DateTime(now.year - 18, now.month, now.day);
-    final picked = await showDatePicker(
+    final picked = await showCanonicalDateOfBirthPicker(
       context: context,
       initialDate: _dateOfBirth ?? eighteenYearsAgo,
       firstDate: DateTime(now.year - 100),
       lastDate: now,
-      helpText: AppLocalizations.of(context).age,
+      title: AppLocalizations.of(context).age,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -95,15 +96,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
   }
 
-  static int _ageFrom(DateTime birthDate) {
-    final now = DateTime.now();
-    var age = now.year - birthDate.year;
-    final hadBirthday =
-        now.month > birthDate.month ||
-        (now.month == birthDate.month && now.day >= birthDate.day);
-    if (!hadBirthday) age--;
-    return age;
-  }
+  /// The one age calculation, shared with every other DOB surface
+  /// (`canonical_date_time_picker.dart`). Month- and day-aware, so someone
+  /// whose birthday has not happened yet this year is still the younger age —
+  /// which is what the 18+ check below depends on.
+  static int _ageFrom(DateTime birthDate) => ageOn(birthDate);
 
   void _toggleGender() {
     FocusScope.of(context).unfocus();

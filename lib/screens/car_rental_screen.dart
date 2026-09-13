@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
@@ -14,7 +13,6 @@ import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/primary_button.dart';
 import '../widgets/rental_car_parts.dart';
 import 'car_rental_details_screen.dart';
 import 'car_rental_results_screen.dart';
@@ -109,76 +107,86 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     });
   }
 
+  /// Pick-up and Drop-off are two separate fields and two separate
+  /// single-date steps — the canonical paired-date behaviour (Hotel is the
+  /// approved reference).
+  ///
+  /// **Pick-up** asks for one date and writes only the pick-up. **Drop-off**
+  /// opens with the pick-up already selected and immovable, and the whole
+  /// rental period is drawn as one continuous path the moment a drop-off
+  /// lands.
+  ///
+  /// Every bound this screen already enforced is carried across unchanged:
+  /// pick-up within one year, return no earlier than pick-up and no later than
+  /// one year after it. **A same-day rental stays valid** — `!isBefore`, never
+  /// Hotel's `isAfter` — because this screen's own time validation is what
+  /// requires drop-off to be after pick-up on the clock.
   Future<void> _chooseDate({required bool pickup}) async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final firstDate = pickup ? today : (_pickupDate ?? today);
-    final initialDate = pickup
-        ? (_pickupDate ?? today)
-        : (_dropOffDate ?? firstDate);
-    final selected = await _showCalendar(
-      initialDate: initialDate.isBefore(firstDate) ? firstDate : initialDate,
-      firstDate: firstDate,
+    final latestPickup = DateTime(today.year + 1, today.month, today.day);
+    final latestPossibleReturn = DateTime(
+      latestPickup.year + 1,
+      latestPickup.month,
+      latestPickup.day,
+    );
+    DateTime oneYearAfter(DateTime date) =>
+        DateTime(date.year + 1, date.month, date.day);
+
+    // A stored date is only offered back while it still satisfies the bound
+    // that applies to its own field.
+    final pickupIsValid =
+        _pickupDate != null &&
+        !_pickupDate!.isBefore(today) &&
+        !_pickupDate!.isAfter(latestPickup);
+    final dropOffIsValid =
+        _dropOffDate != null &&
+        pickupIsValid &&
+        !_dropOffDate!.isBefore(_pickupDate!) &&
+        !_dropOffDate!.isAfter(oneYearAfter(_pickupDate!));
+
+    final selected = await showCanonicalStayDatePicker(
+      context: context,
+      initialDate: pickup
+          ? (pickupIsValid ? _pickupDate : null)
+          : (dropOffIsValid ? _dropOffDate : null),
+      // Pick-up is the first of the pair, so it has no anchor. Drop-off
+      // carries the chosen pick-up, which is what renders it as already
+      // selected and what the rental path is drawn from.
+      stayStart: pickup || !pickupIsValid ? null : _pickupDate,
+      firstDate: today,
+      // The pick-up step is bounded by the pick-up rule; the drop-off step
+      // needs the wider window, with the dependent rule below narrowing it.
+      lastDate: pickup ? latestPickup : latestPossibleReturn,
+      title: pickup
+          ? AppLocalizations.of(context).carPickup
+          : AppLocalizations.of(context).carDropOff,
+      selectableDayPredicate: pickup
+          ? (day) => !day.isAfter(latestPickup)
+          : null,
+      selectableRangePredicate: (start, end) =>
+          !end.isBefore(start) && !end.isAfter(oneYearAfter(start)),
     );
     if (selected == null || !mounted) return;
     setState(() {
       if (pickup) {
         _pickupDate = selected;
-        if (_dropOffDate != null && _dropOffDate!.isBefore(selected)) {
-          _dropOffDate = null;
-          _dropOffTime = null;
+        // A drop-off the new pick-up has invalidated follows it rather than
+        // being left behind as an impossible rental. Same-day is the floor
+        // here, matching this screen's rules.
+        final dropOff = _dropOffDate;
+        if (dropOff != null &&
+            (dropOff.isBefore(selected) ||
+                dropOff.isAfter(oneYearAfter(selected)))) {
+          _dropOffDate = selected;
         }
-        _errors.remove('pickupDate');
       } else {
         _dropOffDate = selected;
-        _errors.remove('dropOffDate');
       }
+      _errors.remove('pickupDate');
+      _errors.remove('dropOffDate');
       _clearDateTimeErrors();
     });
   }
-
-  Future<DateTime?> _showCalendar({
-    required DateTime initialDate,
-    required DateTime firstDate,
-  }) => showModalBottomSheet<DateTime>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      var selectedDate = initialDate;
-      return StatefulBuilder(
-        builder: (context, setSheetState) => Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: AppLiquidGlass(
-            useCanonicalGlass: true,
-            borderRadius: 28,
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  CanonicalCalendarDatePicker(
-                    initialDate: selectedDate,
-                    firstDate: firstDate,
-                    lastDate: DateTime(
-                      firstDate.year + 1,
-                      firstDate.month,
-                      firstDate.day,
-                    ),
-                    onDateChanged: (value) =>
-                        setSheetState(() => selectedDate = value),
-                  ),
-                  PrimaryButton(
-                    label: AppLocalizations.of(context).done,
-                    onTap: () => Navigator.of(sheetContext).pop(selectedDate),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
 
   Future<void> _chooseTime({required bool pickup}) async {
     final selected = await _showTime(
@@ -199,50 +207,10 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     });
   }
 
-  Future<TimeOfDay?> _showTime(
-    TimeOfDay initialTime,
-  ) => showModalBottomSheet<TimeOfDay>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      var selected = DateTime(2020, 1, 1, initialTime.hour, initialTime.minute);
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: AppLiquidGlass(
-          useCanonicalGlass: true,
-          borderRadius: 28,
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppLiquidGlass(
-                useCanonicalGlass: true,
-                layer: GlassLayer.embedded,
-                borderRadius: 20,
-                child: SizedBox(
-                  height: 220,
-                  child: CanonicalCupertinoDatePicker(
-                    mode: CupertinoDatePickerMode.time,
-                    initialDateTime: selected,
-                    use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-                    onDateTimeChanged: (value) => selected = value,
-                  ),
-                ),
-              ),
-              PrimaryButton(
-                label: AppLocalizations.of(context).done,
-                onTap: () => Navigator.of(
-                  sheetContext,
-                ).pop(TimeOfDay(hour: selected.hour, minute: selected.minute)),
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
+  /// The shared canonical sheet — same wheel, same 12h/24h handling, now on
+  /// the one picker shell.
+  Future<TimeOfDay?> _showTime(TimeOfDay initialTime) =>
+      showCanonicalTimePicker(context: context, initialTime: initialTime);
 
   void _clearDateTimeErrors() {
     _errors.remove('pickupFuture');

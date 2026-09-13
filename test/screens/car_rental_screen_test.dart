@@ -8,6 +8,8 @@ import 'package:kurdistan_paradise_travel_guide/screens/car_rental_details_scree
 import 'package:kurdistan_paradise_travel_guide/screens/car_rental_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/car_rental_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/device_location_service.dart';
+import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 
@@ -145,6 +147,38 @@ void main() {
     expect(find.text('Please choose a drop-off date'), findsOneWidget);
   });
 
+  testWidgets('pick-up and return are two steps and both remain visible', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+
+    final range = await _selectRentalRange(tester);
+    final formatter = MaterialLocalizations.of(
+      tester.element(find.byType(CarRentalScreen)),
+    );
+    final pickupLabel = formatter.formatMediumDate(range.start);
+    final returnLabel = formatter.formatMediumDate(range.end);
+    expect(find.text(pickupLabel), findsOneWidget);
+    expect(find.text(returnLabel), findsOneWidget);
+    expect(find.text('Pick-up'), findsWidgets);
+    expect(find.text('Drop-off'), findsWidgets);
+
+    // Return reopens anchored to the pick-up, so the rental period it already
+    // describes is drawn before anything is tapped.
+    await tester.tap(find.text(returnLabel));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(_lightRangeBandCount(tester), greaterThan(0));
+    await tester.tapAt(const Offset(30, 30));
+    await tester.pumpAndSettle();
+    expect(find.text(pickupLabel), findsOneWidget);
+    expect(find.text(returnLabel), findsOneWidget);
+  });
+
   testWidgets('car tap returns the typed vehicle selection', (tester) async {
     RentalVehicle? selected;
     await tester.pumpWidget(_app(onSelected: (vehicle) => selected = vehicle));
@@ -185,32 +219,13 @@ void main() {
     await tester.tap(find.text('Erbil International Airport').last);
     await tester.pumpAndSettle();
 
-    final tomorrow = DateUtils.dateOnly(
-      DateTime.now().add(const Duration(days: 1)),
-    );
-    await tester.tap(find.text('Select date').first);
-    await tester.pumpAndSettle();
-    tester
-        .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
-        .onDateChanged(tomorrow);
-    await tester.pump();
-    await tester.tap(find.text('Done'));
-    await tester.pumpAndSettle();
+    await _selectRentalRange(tester);
 
     await tester.tap(find.text('Select time').first);
     await tester.pumpAndSettle();
     tester
         .widget<CupertinoDatePicker>(find.byType(CupertinoDatePicker))
         .onDateTimeChanged(DateTime(2020, 1, 1, 10));
-    await tester.tap(find.text('Done'));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Select date'));
-    await tester.pumpAndSettle();
-    tester
-        .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
-        .onDateChanged(tomorrow);
-    await tester.pump();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
@@ -309,10 +324,6 @@ void main() {
 /// Fills every required field on the search card, so a test can exercise what
 /// happens once the form validates.
 Future<void> _fillSearchForm(WidgetTester tester) async {
-  final tomorrow = DateUtils.dateOnly(
-    DateTime.now().add(const Duration(days: 1)),
-  );
-
   await tester.tap(find.byKey(const Key('car-pickup-location')));
   await tester.pumpAndSettle();
   await tester.enterText(find.byType(TextFormField).last, 'Erbil');
@@ -322,16 +333,8 @@ Future<void> _fillSearchForm(WidgetTester tester) async {
   await tester.tap(find.text('Erbil International Airport').last);
   await tester.pumpAndSettle();
 
+  await _selectRentalRange(tester);
   for (var index = 0; index < 2; index++) {
-    await tester.tap(find.text('Select date').first);
-    await tester.pumpAndSettle();
-    tester
-        .widget<CalendarDatePicker>(find.byType(CalendarDatePicker))
-        .onDateChanged(tomorrow.add(Duration(days: index)));
-    await tester.pump();
-    await tester.tap(find.text('Done'));
-    await tester.pumpAndSettle();
-
     await tester.tap(find.text('Select time').first);
     await tester.pumpAndSettle();
     tester
@@ -341,6 +344,67 @@ Future<void> _fillSearchForm(WidgetTester tester) async {
     await tester.pumpAndSettle();
   }
 }
+
+/// Fills Pick-up then Drop-off the way the screen now asks for them: two
+/// separate fields, two separate single-date steps.
+///
+/// Pick-up is chosen on its own with no path on screen; Drop-off then opens
+/// with the pick-up already selected and paints the whole rental period.
+Future<DateTimeRange> _selectRentalRange(WidgetTester tester) async {
+  final today = DateUtils.dateOnly(DateTime.now());
+  final targetMonth = DateTime(today.year, today.month + 1);
+  final range = DateTimeRange(
+    start: DateTime(targetMonth.year, targetMonth.month, 12),
+    end: DateTime(targetMonth.year, targetMonth.month, 16),
+  );
+
+  // --- Pick-up: one date, no range ------------------------------------------
+  await tester.tap(find.text('Select date').first);
+  await tester.pumpAndSettle();
+  expect(
+    find.byType(CalendarDatePicker),
+    findsNothing,
+    reason: 'paired rental dates must use the canonical range calendar',
+  );
+  await tester.tap(find.byIcon(Icons.chevron_right));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('12'));
+  await tester.pumpAndSettle();
+  expect(
+    _lightRangeBandCount(tester),
+    0,
+    reason: 'the pick-up step is a single date, not a rental period',
+  );
+  await tester.tap(find.text('Done'));
+  await tester.pumpAndSettle();
+
+  // --- Drop-off: anchored to the pick-up, path appears ----------------------
+  // No month step here: the drop-off picker opens on the pick-up's own month,
+  // which is the point of anchoring it.
+  await tester.tap(find.text('Select date').first);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('16'));
+  await tester.pumpAndSettle();
+  expect(
+    _lightRangeBandCount(tester),
+    greaterThan(0),
+    reason: 'choosing the return must draw the whole rental period',
+  );
+  await tester.tap(find.text('Done'));
+  await tester.pumpAndSettle();
+  return range;
+}
+
+int _lightRangeBandCount(WidgetTester tester) => tester
+    .widgetList<ColoredBox>(find.byType(ColoredBox))
+    .where(
+      (box) =>
+          box.color ==
+          AppColors.actionNavy.withValues(
+            alpha: kCanonicalRangeBandLightOpacity,
+          ),
+    )
+    .length;
 
 Finder _pageScrollable() => find
     .descendant(

@@ -2259,3 +2259,98 @@ trending-hotel card.
 5. **Not seen on Android hardware**, like the rest of the canonical migration.
 6. The reference draws the back button and the title on separate lines, which
    is what was built (matching My Bookings); the written brief said "same row".
+
+## Canonical paired date behaviour — app-wide rollout (2026-09-13) — HOTEL APPROVED, REST AWAITING ANDROID VERIFICATION
+
+Hotel Search's Check-in / Check-out interaction was verified on a real Android
+device and approved. It is now the reference for every start/end date pair in
+the app, and this entry records the rollout.
+
+### The approved interaction
+
+Two visible start/end fields are **two separate single-date steps**, never one
+two-tap range:
+
+- **Start field** — opens the canonical calendar with the current start
+  selected, asks for one date, Done writes only the start. No path is drawn and
+  a second date is never demanded.
+- **End field** — opens the same calendar with the start passed as `stayStart`,
+  rendered selected and immovable; choosing one end date immediately draws the
+  whole period as one continuous path; Done writes only the end.
+
+```
+Start = 15, End = 18   →   [15]━━━━16━━━━17━━━━[18]
+```
+
+`showCanonicalStayDatePicker` is the one entry point for this.
+
+### The zero-height band bug
+
+The band halves rendered at `24.6 × 0.0` and were invisible on device, while
+every widget-counting test passed: a childless `ColoredBox` under the default
+`CrossAxisAlignment.center` gets loose vertical constraints and collapses to
+`constraints.smallest`. `_DayCell`'s band `Row` now carries
+`crossAxisAlignment: CrossAxisAlignment.stretch`, and the tests assert the
+**rendered rect** (non-zero height, edge-to-edge width, contiguity) rather than
+the widget count. Do not remove either.
+
+### One canonical range visual
+
+The band was 0.16 in both themes — invisible over the glass sheet. It is now
+navy `0.38` in Light and mint `0.27` in Dark, promoted to the shared default via
+`canonicalRangeBandColor()`. The Hotel-only `CanonicalRangeBandOpacity` override
+introduced while tuning this is gone; no screen can tune the band.
+
+### Migrated
+
+| Screen | Class | Rule preserved |
+|---|---|---|
+| Hotel Search | paired | `end.isAfter(start)` — reference, unchanged |
+| Hotel Detail / Change Stay | paired | `end.isAfter(start)` |
+| Hotel Detail / stay editor | paired | `end.isAfter(start)` |
+| Car Rental | paired | same-day allowed, `end <= start + 1y`, time validation untouched |
+| Flight, Round Trip | paired | same-day return allowed |
+| Flight, One-Way | single | left alone — no path, ever |
+| Explore Tours | true range | interaction unchanged, band now shared |
+| Register / Traveler DOB | single | left alone |
+
+### Still open
+
+1. **Only Hotel has been seen on Android.** Car Rental, Round Trip, Hotel
+   Detail and Explore Tours are verified by test only.
+2. `UI_TRANSFER_PACKAGE` picker + docs are synced; the admin repo has no date
+   pickers, so nothing was copied there.
+3. Thirteen unrelated suite failures predate this work (six are 0-byte
+   placeholder test files identical to HEAD; the rest are Settings, login
+   drawer, preview-car counts and Hotel Checkout timeouts).
+
+## Time picker — Light-mode readability (2026-09-13) — AWAITING ANDROID VERIFICATION
+
+The Light-mode time wheel still resolved its digits to `AppColors.heading` —
+navy — which read as low-contrast over the glass sheet, the same problem the
+calendar content had before it went white.
+
+**Audit.** `lib/` has exactly **one** user-selectable time field: Car Rental's
+pick-up / drop-off time, already on `showCanonicalTimePicker`. No
+`showTimePicker`, no `CupertinoTimerPicker`, no custom time sheet, no
+screen-specific time design. Everything else matching `TimeOfDay` is
+`formatTimeOfDay` display (flight departure/arrival, rental details) or weather
+hourly data — read-only, not selection.
+
+**Change.** `CanonicalCupertinoDatePicker` now takes its text colour from a new
+`_wheelPrimary()`, which delegates to `_calendarPrimary()` rather than
+repeating `Colors.white`, so the wheel and the calendar cannot drift apart. One
+`dateTimePickerTextStyle` covers hours, minutes and AM/PM together. The Light
+`w600` bump, the selection band, Dark, and all 12h/24h, locale and validation
+behaviour are untouched.
+
+**Verified at runtime**, not just in the theme: every `Text` the wheel renders
+resolves to `#FFFFFFFF` — Light at w600, Dark at the ambient weight.
+
+### Still open
+
+1. Not yet seen on Android in either theme.
+2. `04_COMPONENT_CATALOG.md` said *"Never switch Light text to white"* and
+   `01_DESIGN_SYSTEM_CANONICAL.md` listed Light picker content as navy — both
+   stale since the calendar went white in an earlier session. Corrected to
+   match shipped code while updating the wheel rules; no code changed by it.

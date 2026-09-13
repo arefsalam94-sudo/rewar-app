@@ -1,9 +1,9 @@
 import 'dart:ui' show ImageFilter, TileMode;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import 'system_status_bar.dart';
 
 /// Shared auth-screen background: the mountain photo under the green gradient
 /// wash. Per `DESIGN_SYSTEM.md` section 4:
@@ -18,6 +18,7 @@ class PageBackground extends StatelessWidget {
     this.imageAsset = 'assets/images/Login.webp',
     this.blurSigma,
     this.gradientOpacity,
+    this.statusBarBackdrop,
   });
 
   final Widget child;
@@ -41,6 +42,13 @@ class PageBackground extends StatelessWidget {
 
   /// Switches between light and dark themes. Defaults to ambient brightness.
   final bool? dark;
+
+  /// What the system status bar actually sits on top of here, when that is
+  /// *not* simply this shell's theme gradient — a screen that draws a bright
+  /// map or a dark photograph across its own top edge passes it explicitly so
+  /// the clock, Wi-Fi and battery glyphs stay readable. Defaults to the
+  /// resolved theme brightness, which is right for every photographic page.
+  final StatusBarBackdrop? statusBarBackdrop;
 
   @override
   Widget build(BuildContext context) {
@@ -95,9 +103,16 @@ class PageBackground extends StatelessWidget {
       ),
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-          .copyWith(statusBarColor: Colors.transparent),
+    return SystemStatusBar(
+      // The top strip of this shell is the theme gradient over the photo:
+      // pale in Light, deep emerald in Dark. A screen whose own top-area
+      // artwork disagrees passes `statusBarBackdrop` instead.
+      backdrop:
+          statusBarBackdrop ??
+          StatusBarBackdrop.ofBrightness(
+            isDark ? Brightness.dark : Brightness.light,
+          ),
+      navigationBar: SystemNavBarTreatment.opaqueBlack,
       child: Stack(
         fit: StackFit.expand,
         children: [

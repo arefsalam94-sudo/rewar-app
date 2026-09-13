@@ -11,6 +11,7 @@ import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/system_status_bar.dart';
 import '../widgets/tour_map_view.dart';
 
 /// The key-free full-screen map reached only from Explore Tours map cards.
@@ -125,116 +126,121 @@ class _TourMapScreenState extends State<TourMapScreen> {
     final initialLng =
         widget.selectedTour.longitude ?? TourMapConfig.erbilLongitude;
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: TourMapView(
-              places: _places,
-              controller: _mapController,
-              initialLatitude: initialLat,
-              initialLongitude: initialLng,
-              initialZoom: widget.selectedTour.latitude == null
-                  ? TourMapConfig.cityZoom
-                  : TourMapConfig.placeZoom,
-              showUserLocation: _showUserLocation,
-              onPlaceSelected: (place) =>
-                  setState(() => _selectedPlace = place),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: GlassBackButton(
-                  onTap: () => Navigator.of(context).pop(),
-                  dark: Theme.of(context).brightness == Brightness.dark,
-                  useAppLiquidGlass: true,
-                  useCanonicalGlass: true,
-                ),
+    return SystemStatusBar(
+      // Same rule as the Map tab: the basemap is the backdrop, and it follows
+      // the app theme (`AppMapStyle`), so the glyphs do too.
+      backdrop: StatusBarBackdrop.ofTheme(context),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: TourMapView(
+                places: _places,
+                controller: _mapController,
+                initialLatitude: initialLat,
+                initialLongitude: initialLng,
+                initialZoom: widget.selectedTour.latitude == null
+                    ? TourMapConfig.cityZoom
+                    : TourMapConfig.placeZoom,
+                showUserLocation: _showUserLocation,
+                onPlaceSelected: (place) =>
+                    setState(() => _selectedPlace = place),
               ),
             ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: AlignmentDirectional.topCenter,
-              child: IgnorePointer(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 18),
-                  child: AppLiquidGlass(
-                    // A standalone floating plate over the opaque map, not
-                    // content embedded in a parent glass fill — so it gets
-                    // its own real surface.
-                    useCanonicalGlass: true,
-                    layer: GlassLayer.surface,
-                    borderRadius: 28,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      l10n.tourMap,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.heading(context),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: AlignmentDirectional.bottomEnd,
-              child: Padding(
-                padding: EdgeInsetsDirectional.only(
-                  end: 16,
-                  bottom: selected == null ? 20 : 222,
-                ),
-                child: Semantics(
-                  button: true,
-                  label: l10n.tourMapMyLocation,
-                  child: Material(
-                    color: AppColors.glassBaseTint(context),
-                    elevation: 5,
-                    shape: const CircleBorder(),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: _locating ? null : _locateUser,
-                      child: SizedBox.square(
-                        dimension: 52,
-                        child: _locating
-                            ? const Padding(
-                                padding: EdgeInsets.all(15),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Icon(
-                                Icons.my_location_rounded,
-                                color: AppColors.heading(context),
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (selected != null)
             SafeArea(
               child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _TourMapPlaceCard(
-                  place: selected,
-                  onViewDetails: () => Navigator.of(context).pop(selected.id),
+                alignment: Alignment.topLeft,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: GlassBackButton(
+                    onTap: () => Navigator.of(context).pop(),
+                    dark: Theme.of(context).brightness == Brightness.dark,
+                    useAppLiquidGlass: true,
+                    useCanonicalGlass: true,
+                  ),
                 ),
               ),
             ),
-        ],
+            SafeArea(
+              child: Align(
+                alignment: AlignmentDirectional.topCenter,
+                child: IgnorePointer(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: AppLiquidGlass(
+                      // A standalone floating plate over the opaque map, not
+                      // content embedded in a parent glass fill — so it gets
+                      // its own real surface.
+                      useCanonicalGlass: true,
+                      layer: GlassLayer.surface,
+                      borderRadius: 28,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        l10n.tourMap,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.heading(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: AlignmentDirectional.bottomEnd,
+                child: Padding(
+                  padding: EdgeInsetsDirectional.only(
+                    end: 16,
+                    bottom: selected == null ? 20 : 222,
+                  ),
+                  child: Semantics(
+                    button: true,
+                    label: l10n.tourMapMyLocation,
+                    child: Material(
+                      color: AppColors.glassBaseTint(context),
+                      elevation: 5,
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _locating ? null : _locateUser,
+                        child: SizedBox.square(
+                          dimension: 52,
+                          child: _locating
+                              ? const Padding(
+                                  padding: EdgeInsets.all(15),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                  ),
+                                )
+                              : Icon(
+                                  Icons.my_location_rounded,
+                                  color: AppColors.heading(context),
+                                ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (selected != null)
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _TourMapPlaceCard(
+                    place: selected,
+                    onViewDetails: () => Navigator.of(context).pop(selected.id),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

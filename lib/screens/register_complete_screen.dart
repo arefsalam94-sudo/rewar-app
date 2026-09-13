@@ -52,9 +52,7 @@ class RegisterCompleteScreen extends StatelessWidget {
     // is shown. Clear the entire auth flow so Back cannot return to any
     // consumed registration, verification, or account-setup step.
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(isGuest: false, displayName: displayName),
-      ),
+      HomeScreen.route(isGuest: false, displayName: displayName),
       (route) => false,
     );
   }

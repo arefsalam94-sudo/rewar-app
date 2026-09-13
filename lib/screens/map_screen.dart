@@ -11,6 +11,7 @@ import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/home_bottom_nav.dart';
 import '../widgets/liquid_glass_surface.dart';
+import '../widgets/system_status_bar.dart';
 import 'favorites_screen.dart';
 import 'my_bookings_screen.dart';
 
@@ -151,92 +152,106 @@ class _MapScreenState extends State<MapScreen> {
     final fabBottomInset = widget.showBottomNav
         ? HomeBottomNav.barHeight + 12
         : 0.0;
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: TourMapView(
-              controller: _controller,
-              initialLatitude:
-                  widget.target?.latitude ?? _fallbackLocation.latitude,
-              initialLongitude:
-                  widget.target?.longitude ?? _fallbackLocation.longitude,
-              initialZoom: widget.target == null ? _fallbackZoom : _targetZoom,
-              showUserLocation: _locationPermissionGranted,
-              places: [
-                if (widget.target != null)
-                  MapPlace(
-                    id: 'map-target',
-                    name: widget.title ?? '',
-                    latitude: widget.target!.latitude,
-                    longitude: widget.target!.longitude,
-                    category: widget.category,
-                  ),
-              ],
+    return SystemStatusBar(
+      // The map fills the screen edge to edge, so the backdrop is the basemap
+      // itself — and the basemap follows the app theme (`AppMapStyle`): the
+      // App Light Map in Light, the App Dark Map in Dark. Reading the same
+      // theme brightness here is what keeps the glyphs and the tiles in step.
+      backdrop: StatusBarBackdrop.ofTheme(context),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: TourMapView(
+                controller: _controller,
+                initialLatitude:
+                    widget.target?.latitude ?? _fallbackLocation.latitude,
+                initialLongitude:
+                    widget.target?.longitude ?? _fallbackLocation.longitude,
+                initialZoom: widget.target == null
+                    ? _fallbackZoom
+                    : _targetZoom,
+                showUserLocation: _locationPermissionGranted,
+                places: [
+                  if (widget.target != null)
+                    MapPlace(
+                      id: 'map-target',
+                      name: widget.title ?? '',
+                      latitude: widget.target!.latitude,
+                      longitude: widget.target!.longitude,
+                      category: widget.category,
+                    ),
+                ],
+              ),
             ),
-          ),
-          if (_locationPermissionGranted)
+            if (_locationPermissionGranted)
+              SafeArea(
+                child: Align(
+                  alignment: AlignmentDirectional.bottomEnd,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      16 + fabBottomInset,
+                    ),
+                    child: FloatingActionButton.small(
+                      tooltip: AppLocalizations.of(context).tourMapMyLocation,
+                      onPressed: _centerOnCurrentLocation,
+                      child: const Icon(Icons.my_location_rounded),
+                    ),
+                  ),
+                ),
+              ),
             SafeArea(
               child: Align(
-                alignment: AlignmentDirectional.bottomEnd,
+                alignment: Alignment.topLeft,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + fabBottomInset),
-                  child: FloatingActionButton.small(
-                    tooltip: AppLocalizations.of(context).tourMapMyLocation,
-                    onPressed: _centerOnCurrentLocation,
-                    child: const Icon(Icons.my_location_rounded),
+                  padding: const EdgeInsets.all(12),
+                  child: GlassBackButton(
+                    useAppLiquidGlass: true,
+                    useCanonicalGlass: true,
+                    onTap: () => Navigator.of(context).pop(),
+                    dark: isDark,
                   ),
                 ),
               ),
             ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topLeft,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: GlassBackButton(
-                  useAppLiquidGlass: true,
-                  useCanonicalGlass: true,
-                  onTap: () => Navigator.of(context).pop(),
-                  dark: isDark,
-                ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Align(
-              alignment: AlignmentDirectional.topCenter,
-              child: IgnorePointer(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 18),
-                  child: AppLiquidGlass(
-                    useCanonicalGlass: true,
-                    layer: GlassLayer.surface,
-                    borderRadius: 28,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Text(
-                      widget.title ?? AppLocalizations.of(context).navMap,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.heading(context),
+            SafeArea(
+              child: Align(
+                alignment: AlignmentDirectional.topCenter,
+                child: IgnorePointer(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 18),
+                    child: AppLiquidGlass(
+                      useCanonicalGlass: true,
+                      layer: GlassLayer.surface,
+                      borderRadius: 28,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Text(
+                        widget.title ?? AppLocalizations.of(context).navMap,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.heading(context),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          if (widget.showBottomNav)
-            HomeBottomNav.floating(
-              context: context,
-              current: HomeNavTab.map,
-              onSelect: _onNavSelected,
-            ),
-        ],
+            if (widget.showBottomNav)
+              HomeBottomNav.floating(
+                context: context,
+                current: HomeNavTab.map,
+                onSelect: _onNavSelected,
+              ),
+          ],
+        ),
       ),
     );
   }

@@ -4,8 +4,11 @@ import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel_detail.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/hotel_detail_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/hotel_reviews_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/map_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
+import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
@@ -44,7 +47,9 @@ Widget _app({
   HotelService service = const PreviewHotelService(),
   Locale locale = const Locale('en'),
   ThemeMode themeMode = ThemeMode.light,
+  GlobalKey<NavigatorState>? navigatorKey,
 }) => MaterialApp(
+  navigatorKey: navigatorKey,
   locale: locale,
   supportedLocales: AppLocalizations.supportedLocales,
   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -70,6 +75,34 @@ Future<void> _pump(WidgetTester tester, Widget app) async {
 }
 
 void main() {
+  testWidgets('coming back from the reviews page re-reads without throwing', (
+    tester,
+  ) async {
+    // Regression, found on a device: `_openReviews` refreshed the summary with
+    // an arrow-bodied `setState(() => _reviews = ...fetchTopReviews(...))`. An
+    // arrow closure returns the value of its expression, so that callback
+    // handed `setState` a `Future` — which its debug assert rejects, taking
+    // the screen down with "setState() callback argument returned a Future"
+    // every time the user closed the reviews page.
+    _sizePhone(tester);
+    final navigator = GlobalKey<NavigatorState>();
+    await _pump(tester, _app(navigatorKey: navigator));
+
+    final seeAll = find.byKey(const ValueKey('hotel-comments-see-all'));
+    await tester.ensureVisible(seeAll);
+    await tester.pumpAndSettle();
+    await tester.tap(seeAll);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HotelReviewsScreen), findsOneWidget);
+
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(HotelDetailScreen), findsOneWidget);
+  });
+
   testWidgets('draws the hotel, its stay and every populated section', (
     tester,
   ) async {
@@ -236,6 +269,76 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('Change Stay is two fields and two single-date steps', (
+    tester,
+  ) async {
+    _sizePhone(tester);
+    final today = DateUtils.dateOnly(DateTime.now());
+    final initialStart = today.add(const Duration(days: 2));
+    final criteria = HotelSearchCriteria(
+      checkIn: initialStart,
+      checkOut: initialStart.add(const Duration(days: 3)),
+    );
+    await _pump(tester, _app(criteria: criteria));
+
+    await tester.tap(find.byKey(const ValueKey('hotel-change-stay')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('sheet-check-in')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sheet-check-out')), findsOneWidget);
+
+    // --- Check-in: one date, no stay path -------------------------------
+    await tester.tap(find.byKey(const ValueKey('sheet-check-in')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalendarDatePicker), findsNothing);
+    expect(
+      _lightRangeBandCount(tester),
+      0,
+      reason: 'the check-in step is a single date, not a stay',
+    );
+
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12'));
+    await tester.pumpAndSettle();
+    expect(_lightRangeBandCount(tester), 0);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    // --- Check-out: anchored to the check-in, stay path appears ----------
+    // The check-out picker opens on the check-in's own month, so no month
+    // step is needed here.
+    await tester.tap(find.byKey(const ValueKey('sheet-check-out')));
+    await tester.pumpAndSettle();
+    expect(
+      _lightRangeBandCount(tester),
+      greaterThan(0),
+      reason: 'the stay the check-in step resolved to is drawn on open',
+    );
+    await tester.tap(find.text('16'));
+    await tester.pumpAndSettle();
+    expect(
+      _lightRangeBandCount(tester),
+      greaterThan(0),
+      reason: 'choosing the check-out must draw the whole stay',
+    );
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final start = DateTime(initialStart.year, initialStart.month + 1, 12);
+    final end = DateTime(initialStart.year, initialStart.month + 1, 16);
+    final formatter = MaterialLocalizations.of(
+      tester.element(find.byKey(const ValueKey('hotel-stay-summary'))),
+    );
+    expect(find.text(formatter.formatMediumDate(start)), findsOneWidget);
+    expect(find.text(formatter.formatMediumDate(end)), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('hotel-change-apply')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text(formatter.formatMediumDate(start)), findsOneWidget);
+    expect(find.text(formatter.formatMediumDate(end)), findsOneWidget);
+  });
+
   testWidgets('the adult counter cannot pass the published occupancy limit', (
     tester,
   ) async {
@@ -376,3 +479,14 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 }
+
+int _lightRangeBandCount(WidgetTester tester) => tester
+    .widgetList<ColoredBox>(find.byType(ColoredBox))
+    .where(
+      (box) =>
+          box.color ==
+          AppColors.actionNavy.withValues(
+            alpha: kCanonicalRangeBandLightOpacity,
+          ),
+    )
+    .length;

@@ -398,7 +398,9 @@ class _NaturePlaceDetailScreenState extends State<NaturePlaceDetailScreen>
       ),
     );
     if (!mounted) return;
-    setState(() => _reviewsFuture = _service.fetchTopReviews(widget.spot.id));
+    setState(() {
+      _reviewsFuture = _service.fetchTopReviews(widget.spot.id);
+    });
   }
 
   void _snack(String message) => ScaffoldMessenger.of(context)

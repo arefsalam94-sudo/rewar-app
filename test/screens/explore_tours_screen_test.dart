@@ -9,6 +9,8 @@ import 'package:kurdistan_paradise_travel_guide/services/currency_rates_service.
 import 'package:kurdistan_paradise_travel_guide/services/device_location_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/tours_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
+import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/app_liquid_glass.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
@@ -519,6 +521,46 @@ void main() {
   });
 
   group('ExploreToursScreen', () {
+    testWidgets('keeps the canonical connected date-range behavior', (
+      tester,
+    ) async {
+      await _pumpScreen(tester, service: _FakeToursService());
+
+      await tester.tap(find.byKey(exploreToursDateFieldKey));
+      await tester.pumpAndSettle();
+      expect(find.byType(CalendarDatePicker), findsNothing);
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('12'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('16'));
+      await tester.pumpAndSettle();
+      final bands = tester
+          .widgetList<ColoredBox>(find.byType(ColoredBox))
+          .where(
+            (box) =>
+                box.color ==
+                AppColors.actionNavy.withValues(
+                  alpha: kCanonicalRangeBandLightOpacity,
+                ),
+          );
+      expect(bands, isNotEmpty);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      final today = DateUtils.dateOnly(DateTime.now());
+      final target = DateTime(today.year, today.month + 1);
+      expect(
+        find.text(
+          AppLocalizations(const Locale('en')).tourDateRange(
+            DateTime(target.year, target.month, 12),
+            DateTime(target.year, target.month, 16),
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('uses the supplied background photo under the gradient', (
       tester,
     ) async {
@@ -801,7 +843,10 @@ void main() {
       // date is measured against.
       final badge = tester.getRect(
         find
-            .ancestor(of: find.text(r'$55'), matching: find.byType(AppLiquidGlass))
+            .ancestor(
+              of: find.text(r'$55'),
+              matching: find.byType(AppLiquidGlass),
+            )
             .first,
       );
       expect(date.bottom, lessThan(price.top));

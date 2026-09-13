@@ -4,6 +4,9 @@ import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/models/favorite_item.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/favorites_category_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/favorites_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/home_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/map_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/screens/my_bookings_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/favorites_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/sign_in_required.dart';
@@ -245,6 +248,116 @@ void main() {
     });
   });
 
+  // The "Keep exploring" footer used to call `Navigator.maybePop()`, so it
+  // landed on whatever had pushed Favorites — Map, My Bookings, or the
+  // dashboard — and appeared to lead somewhere different each time. It now
+  // goes through [HomeScreen.goHome], which unwinds to the Home route by
+  // name. These tests pin that down from every entry point.
+  group('Favorites navigation — Keep exploring always reaches Home', () {
+    testWidgets('entered straight from Home', (tester) async {
+      await _pumpNavStack(tester);
+
+      await _tapKeepExploring(tester);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(FavoritesScreen), findsNothing);
+    });
+
+    testWidgets('previous tab was Map', (tester) async {
+      await _pumpNavStack(
+        tester,
+        under: [const MapScreen(isGuest: true, showBottomNav: true)],
+      );
+
+      await _tapKeepExploring(tester);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      // Not the screen that pushed Favorites, which is what a pop would give.
+      expect(find.byType(MapScreen), findsNothing);
+    });
+
+    testWidgets('previous tab was My Bookings', (tester) async {
+      await _pumpNavStack(
+        tester,
+        under: [const MyBookingsScreen(isGuest: true, showBottomNav: true)],
+      );
+
+      await _tapKeepExploring(tester);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(MyBookingsScreen), findsNothing);
+    });
+
+    testWidgets('several tabs deep — the whole history is unwound', (
+      tester,
+    ) async {
+      await _pumpNavStack(
+        tester,
+        under: [
+          const MapScreen(isGuest: true, showBottomNav: true),
+          const MyBookingsScreen(isGuest: true, showBottomNav: true),
+        ],
+      );
+
+      await _tapKeepExploring(tester);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(MapScreen), findsNothing);
+      expect(find.byType(MyBookingsScreen), findsNothing);
+    });
+
+    testWidgets('the route below Home is left alone', (tester) async {
+      // Home is not the first route in the real app — the Language screen
+      // pushes it, so something always sits underneath. The unwind must stop
+      // at Home rather than emptying the stack.
+      await _pumpNavStack(
+        tester,
+        under: [const MyBookingsScreen(isGuest: true, showBottomNav: true)],
+      );
+
+      await _tapKeepExploring(tester);
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text(_belowHomeMarker), findsNothing);
+    });
+
+    testWidgets('the bar Home tab reaches the same place', (tester) async {
+      await _pumpNavStack(
+        tester,
+        under: [const MapScreen(isGuest: true, showBottomNav: true)],
+      );
+
+      await tester.tap(find.text('Home').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.byType(MapScreen), findsNothing);
+    });
+
+    testWidgets('the footer leaves the saved list untouched', (tester) async {
+      final service = _FakeFavoritesService(
+        items: [_stay('divan', 'Divan Erbil', 'Erbil')],
+      );
+      await _pumpNavStack(
+        tester,
+        service: service,
+        under: [const MapScreen(isGuest: true, showBottomNav: true)],
+      );
+
+      // Unchanged before the tap: the same card, the same copy.
+      expect(find.text('Keep exploring'), findsOneWidget);
+      expect(find.text('Your next adventure is waiting.'), findsOneWidget);
+      expect(find.text('Divan Erbil'), findsOneWidget);
+
+      await _tapKeepExploring(tester);
+
+      // Navigation only — nothing was removed, restored or re-read.
+      expect(service.removed, isEmpty);
+      expect(service.restored, isEmpty);
+      expect(service.fetchCount, 1);
+    });
+  });
+
   group('FavoriteSnapshot', () {
     test('omits an empty place line rather than writing an empty map', () {
       // The rules reject an empty locale map, so sending `{}` would have the
@@ -316,6 +429,72 @@ Future<void> _pump(
   await tester.pumpAndSettle();
 }
 
+/// The route that sits below Home in the real app.
+///
+/// The Language screen *pushes* Home rather than replacing itself, so Home is
+/// never the first route. Keeping a marker route underneath here means a
+/// "pop everything" implementation cannot pass these tests by accident.
+const String _belowHomeMarker = 'BELOW-HOME';
+
+/// Rebuilds the real navigation stack: the marker route, then the dashboard,
+/// then each screen in [under] (the bar destinations the user visited before),
+/// and Favorites on top.
+///
+/// Pushed through a real [Navigator] rather than handed to `home:` so the
+/// routes carry the same settings the app gives them — which is exactly what
+/// [HomeScreen.goHome] navigates by.
+Future<void> _pumpNavStack(
+  WidgetTester tester, {
+  _FakeFavoritesService? service,
+  List<Widget> under = const [],
+}) async {
+  final navigator = GlobalKey<NavigatorState>();
+  const locale = Locale('en');
+
+  await tester.pumpWidget(
+    MaterialApp(
+      navigatorKey: navigator,
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: AppTheme.lightForLocale(locale),
+      darkTheme: AppTheme.darkForLocale(locale),
+      home: const Scaffold(body: Center(child: Text(_belowHomeMarker))),
+    ),
+  );
+  // `Localizations` resolves its delegates asynchronously and builds nothing
+  // until they land — so the Navigator, and this key, do not exist on the
+  // first frame.
+  await tester.pumpAndSettle();
+
+  navigator.currentState!.push(HomeScreen.route(isGuest: false));
+  await tester.pumpAndSettle();
+
+  for (final screen in under) {
+    navigator.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => screen),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  navigator.currentState!.push(
+    MaterialPageRoute<void>(
+      builder: (_) => FavoritesScreen(
+        service: service ?? _FakeFavoritesService(items: const []),
+        showBottomNav: true,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapKeepExploring(WidgetTester tester) async {
+  await tester.ensureVisible(find.text('Keep exploring'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Keep exploring'));
+  await tester.pumpAndSettle();
+}
+
 class _FakeFavoritesService extends FavoritesService {
   _FakeFavoritesService({
     required List<FavoriteItem> items,
@@ -328,11 +507,15 @@ class _FakeFavoritesService extends FavoritesService {
   final List<String> removed = [];
   final List<String> restored = [];
 
+  /// Counted so a navigation test can assert the screen was not re-read.
+  int fetchCount = 0;
+
   @override
   bool get hasViewer => true;
 
   @override
   Future<List<FavoriteItem>> fetchFavorites() async {
+    fetchCount++;
     if (failFirst) {
       failFirst = false;
       throw StateError('permission-denied');

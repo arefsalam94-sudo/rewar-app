@@ -7,6 +7,7 @@ import '../services/favorites_service.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/favorite_heart_button.dart';
 import '../widgets/favorite_toggle_mixin.dart';
 import '../widgets/glass_back_button.dart';
@@ -77,23 +78,51 @@ class _HotelScreenState extends State<HotelScreen>
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Each visible field is its own single-date step.
+  ///
+  /// **Check-in** opens with only the current check-in selected and asks for
+  /// one date. The user is never made to choose a check-out to get past Done.
+  ///
+  /// **Check-out** opens with the check-in already selected and immovable; the
+  /// moment a check-out is tapped the whole stay — check-in through check-out —
+  /// is drawn as one continuous path by the shared canonical range rendering.
+  /// There is no Hotel-specific calendar or range paint.
   Future<void> _chooseDate({required bool checkIn}) async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final initial = checkIn ? _criteria.checkIn : _criteria.checkOut;
-    final first = checkIn
-        ? today
-        : _criteria.checkIn.add(const Duration(days: 1));
-    final selected = await showDatePicker(
+    final lastDate = today.add(const Duration(days: 730));
+    final l10n = AppLocalizations.of(context);
+
+    // Only offer an existing value back if it is still inside the booking
+    // window; a stale date from a previous session must not preselect a day
+    // the user can no longer book.
+    bool inBounds(DateTime date) =>
+        !date.isBefore(today) && !date.isAfter(lastDate);
+
+    final selected = await showCanonicalStayDatePicker(
       context: context,
-      initialDate: initial.isBefore(first) ? first : initial,
-      firstDate: first,
-      lastDate: today.add(const Duration(days: 730)),
-      helpText: checkIn
-          ? AppLocalizations.of(context).hotelCheckIn
-          : AppLocalizations.of(context).hotelCheckOut,
+      initialDate: checkIn
+          ? (inBounds(_criteria.checkIn) ? _criteria.checkIn : null)
+          : (inBounds(_criteria.checkOut) ? _criteria.checkOut : null),
+      // Check-in is the first of the pair, so it has no anchor. Check-out
+      // carries the chosen check-in, which is what makes it render as already
+      // selected and what the stay path is drawn from.
+      stayStart: checkIn || !inBounds(_criteria.checkIn)
+          ? null
+          : _criteria.checkIn,
+      firstDate: today,
+      lastDate: lastDate,
+      title: checkIn ? l10n.hotelCheckIn : l10n.hotelCheckOut,
+      // The existing one-night minimum: check-out must fall after check-in,
+      // never on it. An earlier or same day is untappable rather than accepted
+      // and then corrected.
+      selectableRangePredicate: (start, end) => end.isAfter(start),
     );
     if (selected == null || !mounted) return;
+
     if (checkIn) {
+      // Unchanged screen behaviour for an invalidated pair: a check-out that no
+      // longer falls after the new check-in moves to the following night, so
+      // the user is never left holding an invalid stay to fix themselves.
       final checkOut = !_criteria.checkOut.isAfter(selected)
           ? selected.add(const Duration(days: 1))
           : _criteria.checkOut;
@@ -814,10 +843,10 @@ class _DatePanel extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final formatter = MaterialLocalizations.of(context);
     return AppLiquidGlass(
-      // Standalone filter panel — the final canonical surface. The
-      // check-in/check-out taps below open the platform's native
-      // `showDatePicker`, not a custom calendar — see the migration report
-      // for why that internal styling was left untouched.
+      // Standalone filter panel — the final canonical surface. Check-in and
+      // Check-out stay two separate fields with two separate single-date
+      // steps; opening Check-out carries the chosen Check-in across, so the
+      // connected stay path appears without merging the fields.
       useCanonicalGlass: true,
       borderRadius: 26,
       padding: const EdgeInsets.all(14),

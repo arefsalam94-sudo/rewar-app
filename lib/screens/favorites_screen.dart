@@ -16,6 +16,7 @@ import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/sign_in_required.dart';
 import 'favorites_category_screen.dart';
+import 'home_screen.dart';
 import 'hotel_detail_screen.dart';
 import 'map_screen.dart';
 import 'my_bookings_screen.dart';
@@ -267,16 +268,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 
+  /// The canonical Home destination, used by both the bar's Home tab and the
+  /// "Keep exploring" footer.
+  ///
+  /// [HomeScreen.goHome] unwinds to the Home route by name. The previous
+  /// `maybePop()` popped one route, so the destination was whatever had
+  /// pushed Favorites — Map, My Bookings, or the dashboard — and "Keep
+  /// exploring" appeared to lead somewhere different each time.
+  void _goHome() => HomeScreen.goHome(context, isGuest: widget.isGuest);
+
   /// Mirrors Home's and My Bookings' handling, so the bar behaves identically
-  /// from here. Home is a pop rather than a push: the Home screen is still
-  /// underneath, and pushing a second copy would leave two dashboards on the
-  /// stack.
+  /// from here.
   Future<void> _onNavSelected(HomeNavTab tab) async {
     switch (tab) {
       case HomeNavTab.saved:
         return; // Already here.
       case HomeNavTab.home:
-        Navigator.of(context).maybePop();
+        _goHome();
       case HomeNavTab.map:
         await Navigator.of(context).push(
           MaterialPageRoute<void>(
@@ -424,8 +432,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ],
               const SizedBox(height: 2),
               // Always drawn, as in the reference — and tappable back to
-              // browsing rather than left inert.
-              _KeepExploringCard(onTap: () => Navigator.of(context).maybePop()),
+              // browsing rather than left inert. The destination is the
+              // dashboard, always: see [_goHome].
+              _KeepExploringCard(onTap: _goHome),
             ],
           ),
         );

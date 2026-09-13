@@ -70,17 +70,44 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
     super.dispose();
   }
 
+  /// Departure.
+  ///
+  /// **One-Way** is a genuine single date and stays on the plain single-date
+  /// picker — no anchor, no path, nothing to connect it to.
+  ///
+  /// **Round Trip** is the first field of a pair, so it opens the paired-date
+  /// picker in its start step: still one date, still Done after one tap, but
+  /// on the same calendar the Return step uses. The start step never draws a
+  /// path, so Round Trip's departure looks exactly like One-Way's until a
+  /// return exists.
   Future<void> _pickDepartureDate() async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final picked = await _showGlassCalendar(
-      title: AppLocalizations.of(context).flightDepartureDate,
-      initialDate: _departureDate ?? today,
-      firstDate: today,
-      lastDate: DateTime(today.year + 1, today.month, today.day),
-    );
+    final lastDate = DateTime(today.year + 1, today.month, today.day);
+    final title = AppLocalizations.of(context).flightDepartureDate;
+    final inBounds =
+        _departureDate != null &&
+        !_departureDate!.isBefore(today) &&
+        !_departureDate!.isAfter(lastDate);
+
+    final picked = _tripType == FlightTripType.roundTrip
+        ? await showCanonicalStayDatePicker(
+            context: context,
+            initialDate: inBounds ? _departureDate : null,
+            firstDate: today,
+            lastDate: lastDate,
+            title: title,
+          )
+        : await _showGlassCalendar(
+            title: title,
+            initialDate: _departureDate ?? today,
+            firstDate: today,
+            lastDate: lastDate,
+          );
     if (picked == null || !mounted) return;
     setState(() {
       _departureDate = picked;
+      // Unchanged: a return that now falls before the departure is dropped
+      // rather than silently kept.
       if (_returnDate != null && _returnDate!.isBefore(picked)) {
         _returnDate = null;
       }
@@ -88,14 +115,36 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
     _formKey.currentState?.validate();
   }
 
+  /// Return — the second field of the Round Trip pair.
+  ///
+  /// Opens with the departure already selected and immovable; the whole trip
+  /// is drawn as one continuous path the moment a return lands, and Done
+  /// writes only the return.
+  ///
+  /// The existing constraint is carried across unchanged: the return may fall
+  /// **on** the departure day (`!isBefore`, not Hotel's `isAfter`), which is
+  /// what the previous `firstDate: _departureDate` allowed.
   Future<void> _pickReturnDate() async {
     final today = DateUtils.dateOnly(DateTime.now());
-    final first = _departureDate ?? today;
-    final picked = await _showGlassCalendar(
+    final lastDate = DateTime(today.year + 1, today.month, today.day);
+    final departure = _departureDate;
+    final anchored =
+        departure != null &&
+        !departure.isBefore(today) &&
+        !departure.isAfter(lastDate);
+    final inBounds =
+        _returnDate != null &&
+        !_returnDate!.isBefore(today) &&
+        !_returnDate!.isAfter(lastDate);
+
+    final picked = await showCanonicalStayDatePicker(
+      context: context,
+      initialDate: inBounds ? _returnDate : null,
+      stayStart: anchored ? departure : null,
+      firstDate: anchored ? departure : today,
+      lastDate: lastDate,
       title: AppLocalizations.of(context).flightReturnDate,
-      initialDate: _returnDate ?? first,
-      firstDate: first,
-      lastDate: DateTime(today.year + 1, today.month, today.day),
+      selectableRangePredicate: (start, end) => !end.isBefore(start),
     );
     if (picked != null && mounted) {
       setState(() => _returnDate = picked);
@@ -103,62 +152,19 @@ class _FlightTicketingScreenState extends State<FlightTicketingScreen> {
     }
   }
 
+  /// The shared canonical sheet — the local copy this screen used to build
+  /// inline is gone. Every bound the callers pass is forwarded untouched.
   Future<DateTime?> _showGlassCalendar({
     required String title,
     required DateTime initialDate,
     required DateTime firstDate,
     required DateTime lastDate,
-  }) => showModalBottomSheet<DateTime>(
+  }) => showCanonicalDatePicker(
     context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) {
-      var selectedDate = initialDate;
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          final l10n = AppLocalizations.of(context);
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: AppLiquidGlass(
-              borderRadius: 28,
-              useCanonicalGlass: true,
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.heading(context),
-                        fontSize: 20,
-                        height: 1.4,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    CanonicalCalendarDatePicker(
-                      initialDate: selectedDate,
-                      firstDate: firstDate,
-                      lastDate: lastDate,
-                      onDateChanged: (value) =>
-                          setSheetState(() => selectedDate = value),
-                    ),
-                    const SizedBox(height: 8),
-                    PrimaryButton(
-                      label: l10n.done,
-                      onTap: () => Navigator.of(sheetContext).pop(selectedDate),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
+    initialDate: initialDate,
+    firstDate: firstDate,
+    lastDate: lastDate,
+    title: title,
   );
 
   Future<void> _showPassengerAndCabinPicker() async {

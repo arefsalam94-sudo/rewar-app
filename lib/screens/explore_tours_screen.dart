@@ -12,6 +12,7 @@ import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
@@ -231,13 +232,14 @@ class _ExploreToursScreenState extends State<ExploreToursScreen> {
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final picked = await showDateRangePicker(
+    final picked = await showCanonicalDateRangePicker(
       context: context,
-      initialDateRange: _pendingRange,
+      initialRange: _pendingRange,
       // A tour that has already departed cannot be booked, so there is nothing
       // useful behind today.
       firstDate: today,
       lastDate: DateTime(today.year + 2, today.month, today.day),
+      title: AppLocalizations.of(context).toursDateRangeHint,
     );
     if (picked != null && mounted) setState(() => _pendingRange = picked);
   }

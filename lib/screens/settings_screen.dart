@@ -82,7 +82,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context,
     ).push<bool>(MaterialPageRoute<bool>(builder: (_) => page));
     if (changed == true && mounted) {
-      setState(() => _profileFuture = _profileService.fetchProfile());
+      setState(() {
+        _profileFuture = _profileService.fetchProfile();
+      });
     }
   }
 
@@ -118,7 +120,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await _profileService.updateCurrency(selected);
       if (mounted) {
-        setState(() => _profileFuture = _profileService.fetchProfile());
+        setState(() {
+          _profileFuture = _profileService.fetchProfile();
+        });
       }
     } catch (_) {
       if (mounted) _snack(AppLocalizations.of(context).settingsUpdateFailed);

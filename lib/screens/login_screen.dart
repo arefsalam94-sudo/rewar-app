@@ -98,11 +98,9 @@ class _LoginScreenState extends State<LoginScreen> {
     // `pushReplacement`, so Back from the dashboard doesn't return to Login —
     // the auth flow is finished. Same rule as Continue as Guest.
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(
-        builder: (_) => const HomeScreen(
-          isGuest: false,
-          displayName: AuthService.previewDisplayName,
-        ),
+      HomeScreen.route(
+        isGuest: false,
+        displayName: AuthService.previewDisplayName,
       ),
     );
   }
@@ -123,9 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// `pushReplacement`, so Back from the dashboard doesn't return to Login —
   /// the auth flow is finished either way.
   void _onContinueAsGuest() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
-    );
+    Navigator.of(context).pushReplacement(HomeScreen.route());
   }
 
   void _onForgetPassword() {
@@ -198,15 +194,29 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildCard() {
     final l10n = AppLocalizations.of(context);
 
-    // Same canonical surface renderer Settings' cards use
-    // (`AppLiquidGlass(useCanonicalGlass: true)` → `_CanonicalGlass`), not a
-    // parallel hand-built `LiquidGlassGroup`/`LiquidGlassSurface` shell — the
-    // shared renderer applies the card's tint edge-to-edge *before* content
-    // padding, matching the Settings cards' soft edge highlight instead of
-    // insetting the tint and leaving the shader's raw specular edge exposed.
+    // The outer card is a NON-SHADER grouping (`GlassLayer.embedded` →
+    // `_EmbeddedGlass`): the canonical body tint at the embedded opacity, the
+    // same radius, padding and content positioning, but no second
+    // `OCLiquidGlass`, no second blur and no second specular rim.
+    //
+    // APPROVED, NOT TEMPORARY — do not convert this back to
+    // `GlassLayer.surface`. This card contains four independent real-glass
+    // children (the Email and Password fields, and the Apple and Gmail
+    // buttons). Wrapping them in a fifth real shader is the nested-glass
+    // condition `01_DESIGN_SYSTEM_CANONICAL.md` §5 forbids: when the keyboard
+    // opens, `resizeToAvoidBottomInset` reflows the viewport and the scroll
+    // view moves the card, and the nested backdrop-filter composition became
+    // visually unstable — the fields flattened and grew horizontal
+    // lower-edge bands. Register has never shown it because its outer
+    // grouping has always been non-shader; this is the same fix, through the
+    // renderer's own `embedded` layer rather than a second hand-built one.
+    //
+    // The rule is to demote the *parent*, never the children — the two fields
+    // below stay exactly as they were, each its own real canonical surface.
+    // See `07_DESIGN_EXCEPTIONS.md` §1 and §20.
     return AppLiquidGlass(
       useCanonicalGlass: true,
-      layer: GlassLayer.surface,
+      layer: GlassLayer.embedded,
       borderRadius: 28,
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
       child: Form(

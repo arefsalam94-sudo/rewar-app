@@ -9,6 +9,7 @@ import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/booking_step_indicator.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
@@ -216,14 +217,14 @@ class _BookingTravelerInfoScreenState extends State<BookingTravelerInfoScreen> {
   Future<void> _pickBirthDate(int index) async {
     final now = DateTime.now();
     final current = _party.travelers[index].dateOfBirth;
-    final picked = await showDatePicker(
+    final picked = await showCanonicalDateOfBirthPicker(
       context: context,
       initialDate: current ?? DateTime(now.year - 30, now.month, now.day),
       // 120 years is past any real traveller; the upper bound is today, so a
       // future birth date is impossible to pick rather than merely rejected.
       firstDate: DateTime(now.year - 120),
       lastDate: now,
-      helpText: AppLocalizations.of(context).dateOfBirthHint,
+      title: AppLocalizations.of(context).dateOfBirthHint,
     );
     if (picked == null || !mounted) return;
     setState(

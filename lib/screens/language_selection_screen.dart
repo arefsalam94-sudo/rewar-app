@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../l10n/locale_controller.dart';
@@ -9,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
+import '../widgets/system_status_bar.dart';
 import '../widgets/theme_mode_toggle.dart';
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
@@ -95,11 +95,14 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
     return Theme(
       data: theme,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
+      child: SystemStatusBar(
         // Light mode's top edge is pale (dark status-bar icons); dark mode's
-        // is deep emerald (light icons).
-        value: (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-            .copyWith(statusBarColor: Colors.transparent),
+        // is deep emerald (light icons). Declared from this screen's own
+        // flipped brightness rather than the ambient theme.
+        backdrop: StatusBarBackdrop.ofBrightness(
+          isDark ? Brightness.dark : Brightness.light,
+        ),
+        navigationBar: SystemNavBarTreatment.opaqueBlack,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: PageBackground(

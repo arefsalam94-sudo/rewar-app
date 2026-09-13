@@ -3,6 +3,7 @@ import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
 
 import '../config/tour_map_config.dart';
 import '../models/map_place.dart';
+import '../widgets/canonical_date_time_picker.dart';
 import '../widgets/tour_map_view.dart';
 
 import '../l10n/app_localizations.dart';
@@ -109,8 +110,11 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
     super.dispose();
   }
 
-  void _reload() =>
-      setState(() => _detail = widget.service.fetchDetail(widget.hotel.id));
+  void _reload() {
+    setState(() {
+      _detail = widget.service.fetchDetail(widget.hotel.id);
+    });
+  }
 
   void _snack(String message) {
     ScaffoldMessenger.of(context)
@@ -312,23 +316,47 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
     return room < 0 ? 0 : room;
   }
 
+  /// Check-in and Check-out are two separate fields and two separate
+  /// single-date steps — the canonical paired-date behaviour, identical to
+  /// Hotel Search.
+  ///
+  /// **Check-in** asks for one date and writes only the check-in.
+  /// **Check-out** opens with the check-in already selected and immovable, and
+  /// the stay is drawn as one continuous path the moment a check-out lands.
+  ///
+  /// Change Stay's own rule is unchanged: check-out must fall after check-in, so a
+  /// same-day stay stays untappable rather than accepted and then corrected.
   Future<void> _pickChangedDate({required bool checkIn}) async {
     final l10n = AppLocalizations.of(context);
     final today = DateUtils.dateOnly(DateTime.now());
-    final first = checkIn
-        ? today
-        : _changeDraft.checkIn.add(const Duration(days: 1));
-    final initial = checkIn ? _changeDraft.checkIn : _changeDraft.checkOut;
-    final selected = await showDatePicker(
+    final lastDate = today.add(const Duration(days: 730));
+
+    // A stored date is only offered back while it is still inside the booking
+    // window.
+    bool inBounds(DateTime date) =>
+        !date.isBefore(today) && !date.isAfter(lastDate);
+
+    final selected = await showCanonicalStayDatePicker(
       context: context,
-      initialDate: initial.isBefore(first) ? first : initial,
-      firstDate: first,
-      lastDate: today.add(const Duration(days: 730)),
-      helpText: checkIn ? l10n.hotelCheckIn : l10n.hotelCheckOut,
+      initialDate: checkIn
+          ? (inBounds(_changeDraft.checkIn) ? _changeDraft.checkIn : null)
+          : (inBounds(_changeDraft.checkOut) ? _changeDraft.checkOut : null),
+      // Check-in has no anchor; Check-out carries the chosen check-in, which
+      // is what renders it as already selected and what the path is drawn
+      // from.
+      stayStart: checkIn || !inBounds(_changeDraft.checkIn)
+          ? null
+          : _changeDraft.checkIn,
+      firstDate: today,
+      lastDate: lastDate,
+      title: checkIn ? l10n.hotelCheckIn : l10n.hotelCheckOut,
+      selectableRangePredicate: (start, end) => end.isAfter(start),
     );
     if (selected == null || !mounted) return;
     setState(() {
       if (checkIn) {
+        // A check-out that no longer falls after the new check-in moves to the
+        // following night rather than being left invalid.
         final checkOut = !_changeDraft.checkOut.isAfter(selected)
             ? selected.add(const Duration(days: 1))
             : _changeDraft.checkOut;
@@ -409,7 +437,9 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
     );
     if (!mounted) return;
     // The viewer may have posted or edited a review while they were there.
-    setState(() => _reviews = _reviewService.fetchTopReviews(widget.hotel.id));
+    setState(() {
+      _reviews = _reviewService.fetchTopReviews(widget.hotel.id);
+    });
   }
 }
 
@@ -2082,23 +2112,45 @@ class _ChangeStayEditorState extends State<_ChangeStayEditor> {
     return room < 0 ? 0 : room;
   }
 
+  /// Check-in and Check-out are two separate fields and two separate
+  /// single-date steps — the canonical paired-date behaviour, identical to
+  /// Hotel Search.
+  ///
+  /// **Check-in** asks for one date and writes only the check-in.
+  /// **Check-out** opens with the check-in already selected and immovable, and
+  /// the stay is drawn as one continuous path the moment a check-out lands.
+  ///
+  /// The stay editor's own rule is unchanged: check-out must fall after check-in, so a
+  /// same-day stay stays untappable rather than accepted and then corrected.
   Future<void> _pickDate({required bool checkIn}) async {
     final l10n = AppLocalizations.of(context);
     final today = DateUtils.dateOnly(DateTime.now());
-    final first = checkIn ? today : _draft.checkIn.add(const Duration(days: 1));
-    final initial = checkIn ? _draft.checkIn : _draft.checkOut;
-    final selected = await showDatePicker(
+    final lastDate = today.add(const Duration(days: 730));
+
+    // A stored date is only offered back while it is still inside the booking
+    // window.
+    bool inBounds(DateTime date) =>
+        !date.isBefore(today) && !date.isAfter(lastDate);
+
+    final selected = await showCanonicalStayDatePicker(
       context: context,
-      initialDate: initial.isBefore(first) ? first : initial,
-      firstDate: first,
-      lastDate: today.add(const Duration(days: 730)),
-      helpText: checkIn ? l10n.hotelCheckIn : l10n.hotelCheckOut,
+      initialDate: checkIn
+          ? (inBounds(_draft.checkIn) ? _draft.checkIn : null)
+          : (inBounds(_draft.checkOut) ? _draft.checkOut : null),
+      // Check-in has no anchor; Check-out carries the chosen check-in, which
+      // is what renders it as already selected and what the path is drawn
+      // from.
+      stayStart: checkIn || !inBounds(_draft.checkIn) ? null : _draft.checkIn,
+      firstDate: today,
+      lastDate: lastDate,
+      title: checkIn ? l10n.hotelCheckIn : l10n.hotelCheckOut,
+      selectableRangePredicate: (start, end) => end.isAfter(start),
     );
     if (selected == null || !mounted) return;
     setState(() {
       if (checkIn) {
-        // Check-out must stay after check-in — enforced by moving it, so the
-        // user is never left holding an invalid range to fix themselves.
+        // A check-out that no longer falls after the new check-in moves to the
+        // following night rather than being left invalid.
         final checkOut = !_draft.checkOut.isAfter(selected)
             ? selected.add(const Duration(days: 1))
             : _draft.checkOut;

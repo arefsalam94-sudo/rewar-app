@@ -8,6 +8,7 @@ import 'package:kurdistan_paradise_travel_guide/screens/booking_traveler_info_sc
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_theme.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/booking_step_indicator.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
 
 void main() {
   group('TravelerParty — the "exactly one lead" rule', () {
@@ -330,22 +331,34 @@ Future<void> _fillContact(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens the date picker on a traveler card and accepts whatever it opens on —
-/// which is ~30 years back, comfortably over any minAge — then overrides it to
-/// a recent year by typing, so the age check has something young to reject.
+/// Opens the canonical date-of-birth sheet on a traveler card and picks a
+/// recent birth year, so the age check has something young to reject.
+///
+/// The sheet has no free-text entry — it is the canonical calendar
+/// (`showCanonicalDateOfBirthPicker`), so the year is chosen through the
+/// calendar's own year selector and confirmed with Done. A dismissal would
+/// commit nothing, which is the point of the shell.
 Future<void> _pickBirthYear(WidgetTester tester, int index) async {
   await tester.tap(find.widgetWithText(TextFormField, 'Date of birth').first);
   await tester.pumpAndSettle();
 
-  // Switch the picker to text entry and type a date inside minAge.
-  final input = find.byIcon(Icons.edit_outlined);
-  if (input.evaluate().isNotEmpty) {
-    await tester.tap(input);
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '01/01/2015');
-    await tester.pumpAndSettle();
-  }
-  await tester.tap(find.text('OK'));
+  // Open the year grid from the calendar's month/year header.
+  await tester.tap(find.byIcon(Icons.arrow_drop_down));
+  await tester.pumpAndSettle();
+
+  await tester.scrollUntilVisible(
+    find.text('2015'),
+    200,
+    scrollable: find.byType(Scrollable).last,
+  );
+  await tester.tap(find.text('2015'));
+  await tester.pumpAndSettle();
+
+  await tester.tap(find.text('15').last);
+  await tester.pumpAndSettle();
+
+  // The sheet's Done, not the screen's own Continue button.
+  await tester.tap(find.widgetWithText(PrimaryButton, 'Done'));
   await tester.pumpAndSettle();
 }
 

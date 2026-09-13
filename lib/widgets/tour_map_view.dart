@@ -9,6 +9,7 @@ import '../config/tour_map_config.dart';
 import '../l10n/app_localizations.dart';
 import '../models/map_place.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_map_style.dart';
 
 bool get tourMapSupported {
   if (kIsWeb) return true;
@@ -130,6 +131,10 @@ class _TourMapViewState extends State<TourMapView> {
     final controller = _mapController;
     if (controller == null) return;
     _loadTimer?.cancel();
+    // This fires again every time the basemap style is swapped (a Light↔Dark
+    // theme change), so the listener is dropped first — added twice, one tap
+    // would report the place twice.
+    controller.onSymbolTapped.remove(_onSymbolTapped);
     controller.onSymbolTapped.add(_onSymbolTapped);
     widget.controller?._controller = controller;
     try {
@@ -229,7 +234,15 @@ class _TourMapViewState extends State<TourMapView> {
       children: [
         MapLibreMap(
           key: ValueKey('tour-maplibre-map-$_revision'),
-          styleString: TourMapConfig.styleUrl,
+          // Light theme draws the App Light Map, Dark theme the App Dark Map —
+          // the app's own bundled MapLibre styles, same vector source and same
+          // layer list, different paint. Resolved here rather than in each map
+          // screen, and read from the ambient theme so a Light↔Dark switch
+          // swaps the style in place: the plugin diffs `styleString` and calls
+          // the native `setStyle`, which keeps the camera, the zoom and the
+          // location dot exactly where they are. The markers are re-added by
+          // `_onStyleLoaded`, which the reload fires again.
+          styleString: AppMapStyle.of(context),
           initialCameraPosition: CameraPosition(
             target: LatLng(widget.initialLatitude, widget.initialLongitude),
             zoom: widget.initialZoom,

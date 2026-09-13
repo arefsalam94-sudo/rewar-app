@@ -2594,6 +2594,255 @@ void main() {
       expect(find.text('خطّط لرحلتك'), findsOneWidget);
     });
 
+    // Home must not change at all when the language popup opens — no page
+    // blur, no dim. The frost the menu shows is its own, clipped to its own
+    // footprint. An earlier build got this backwards (a full-screen backdrop),
+    // so these tests pin both halves of it.
+    group('language popup frost', () {
+      testWidgets('Home gains no page blur and no dim', (tester) async {
+        await _pumpHome(tester);
+        final before = _fullScreenBlurCount(tester);
+
+        await _openLanguagePopover(tester);
+
+        expect(
+          _fullScreenBlurCount(tester),
+          before,
+          reason: 'opening the menu must not add a full-screen BackdropFilter',
+        );
+        // Nothing anywhere is painting the old modal scrim.
+        expect(_hasModalDimOverlay(tester), isFalse);
+      });
+
+      testWidgets('the page and the bar stay sharp', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        // The menu's frost is clipped to the menu. Nothing that belongs to
+        // Home — the greeting, the journey grid, the bar — may sit inside it.
+        final frost = find.byKey(
+          const ValueKey('home-language-popover-frost'),
+        );
+        expect(frost, findsOneWidget);
+        for (final sharp in <Finder>[
+          find.byType(HomeBottomNav),
+          find.text('Plan your journey'),
+        ]) {
+          expect(
+            find.descendant(of: frost, matching: sharp),
+            findsNothing,
+            reason: 'Home content and the bar must be outside the frost',
+          );
+        }
+        expect(find.byType(HomeBottomNav), findsOneWidget);
+      });
+
+      testWidgets('the frost covers the menu and nothing more', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        final popover = tester.getRect(
+          find.byKey(const ValueKey('home-language-popover')),
+        );
+        final frost = tester.getRect(
+          find.byKey(const ValueKey('home-language-popover-frost')),
+        );
+
+        // Exactly the glass surface's own rect — not the screen.
+        expect(frost, popover);
+        final screen = tester.getRect(find.byType(HomeScreen));
+        expect(frost.width, lessThan(screen.width));
+        expect(frost.height, lessThan(screen.height));
+      });
+
+      testWidgets('the frost is behind the glass, never around it', (
+        tester,
+      ) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        // Nesting a real glass surface inside a BackdropFilter is the
+        // documented black-band corruption. The frost must be a sibling
+        // painted first, so the shader samples it rather than living in it.
+        final frostFilter = find.descendant(
+          of: find.byKey(const ValueKey('home-language-popover-frost')),
+          matching: find.byType(BackdropFilter),
+        );
+        expect(frostFilter, findsOneWidget);
+        expect(
+          find.descendant(
+            of: frostFilter,
+            matching: find.byKey(const ValueKey('home-language-popover')),
+          ),
+          findsNothing,
+        );
+      });
+
+      testWidgets('the menu is still canonical Liquid Glass', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        final glass = tester.widget<AppLiquidGlass>(
+          find.byKey(const ValueKey('home-language-popover')),
+        );
+        expect(glass.useCanonicalGlass, isTrue);
+        expect(glass.layer, GlassLayer.surface);
+        expect(glass.borderRadius, 28);
+        expect(glass.padding, const EdgeInsets.all(6));
+        expect(
+          tester
+              .getRect(find.byKey(const ValueKey('home-language-popover')))
+              .width,
+          140,
+        );
+        for (final code in const ['ku', 'en', 'ar']) {
+          expect(find.byKey(ValueKey('language-option-$code')), findsOneWidget);
+        }
+      });
+
+      testWidgets('the global canonical glass profile is untouched', (
+        tester,
+      ) async {
+        // The extra frost is local to this menu. If it had been achieved by
+        // turning up the shared shader instead, this would change — and every
+        // other glass surface in the app with it.
+        expect(kLiquidGlassSettingsCanonical.blurRadiusPx, 2.8);
+        expect(
+          canonicalGlassSettingsFor(28).blurRadiusPx,
+          kLiquidGlassSettingsCanonical.blurRadiusPx,
+        );
+      });
+
+      testWidgets('choosing a language closes it and takes the frost', (
+        tester,
+      ) async {
+        addTearDown(() => appLocale.value = const Locale('en'));
+        await _pumpHome(tester, listenToLocale: true);
+        await _openLanguagePopover(tester);
+
+        await tester.tap(find.text('العربية'));
+        await tester.pumpAndSettle();
+
+        expect(appLocale.value.languageCode, 'ar');
+        _expectMenuFullyGone(tester);
+      });
+
+      testWidgets('tapping outside closes it and takes the frost', (
+        tester,
+      ) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        await tester.tapAt(const Offset(20, 500));
+        await tester.pumpAndSettle();
+
+        _expectMenuFullyGone(tester);
+      });
+
+      testWidgets('Android back closes it and takes the frost', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+
+        _expectMenuFullyGone(tester);
+        expect(find.byType(HomeScreen), findsOneWidget);
+      });
+
+      testWidgets('reopening works after a dismissal', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        _expectMenuFullyGone(tester);
+
+        await _openLanguagePopover(tester);
+        expect(
+          find.byKey(const ValueKey('home-language-popover-frost')),
+          findsOneWidget,
+        );
+      });
+    });
+
+    group('language popup option text', () {
+      testWidgets('light: every label is white, selected or not', (
+        tester,
+      ) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        // English is the active locale, so it is the selected row and the
+        // other two are not — all three read white regardless.
+        for (final code in const ['ku', 'en', 'ar']) {
+          expect(
+            _languageRowTextColor(tester, code),
+            Colors.white,
+            reason: '$code label must be white in light mode',
+          );
+        }
+      });
+
+      testWidgets('light: the backgrounds are untouched', (tester) async {
+        await _pumpHome(tester);
+        await _openLanguagePopover(tester);
+
+        expect(_languageRowFill(tester, 'en'), AppColors.actionNavy);
+        for (final code in const ['ku', 'ar']) {
+          expect(
+            _languageRowFill(tester, code),
+            Colors.transparent,
+            reason: 'the $code row fill must not have changed',
+          );
+        }
+      });
+
+      testWidgets('dark: unchanged — mint fill, deep emerald on the selected '
+          'row, heading colour on the rest', (tester) async {
+        await _pumpHome(tester, dark: true);
+        await _openLanguagePopover(tester);
+
+        expect(_languageRowFill(tester, 'en'), AppColors.luminousMint);
+        expect(_languageRowTextColor(tester, 'en'), AppColors.darkOnPrimary);
+
+        // Read the expected value from the popup's own context rather than
+        // hard-coding it, so this asserts "still the heading colour" rather
+        // than pinning whatever that colour happens to be today.
+        final heading = AppColors.heading(
+          tester.element(find.byKey(const ValueKey('language-option-ku'))),
+        );
+        for (final code in const ['ku', 'ar']) {
+          expect(_languageRowFill(tester, code), Colors.transparent);
+          expect(
+            _languageRowTextColor(tester, code),
+            heading,
+            reason: 'dark mode must not have changed',
+          );
+        }
+        // And dark is emphatically not the light rule.
+        expect(_languageRowTextColor(tester, 'en'), isNot(Colors.white));
+      });
+
+      for (final dark in const [false, true]) {
+        testWidgets('the type itself is unchanged (dark: $dark)', (
+          tester,
+        ) async {
+          await _pumpHome(tester, dark: dark);
+          await _openLanguagePopover(tester);
+
+          for (final code in const ['ku', 'en', 'ar']) {
+            final style = _languageRowTextStyle(tester, code);
+            expect(style.fontSize, 16, reason: '$code size');
+            expect(
+              style.fontWeight,
+              code == 'en' ? FontWeight.w700 : FontWeight.w600,
+              reason: '$code weight',
+            );
+          }
+        });
+      }
+    });
+
     testWidgets('renders in Kurdish (RTL) with the dots still left-to-right', (
       tester,
     ) async {
@@ -3314,6 +3563,85 @@ class _FakeAuthService extends AuthService {
 
 /// Pumps [HomeScreen] with the app's real theme, localizations and fake
 /// services, then settles the carousel's future.
+/// Taps the top-bar globe and waits for the language popup to settle.
+Future<void> _openLanguagePopover(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.public));
+  await tester.pumpAndSettle();
+  expect(find.byKey(const ValueKey('home-language-popover')), findsOneWidget);
+}
+
+/// The painted fill of one language row.
+///
+/// Read off the row's own `Container` rather than a screenshot, so the
+/// assertion names the colour the widget asked for instead of whatever the
+/// frosted glass and the photograph behind it composited to.
+Color? _languageRowFill(WidgetTester tester, String code) {
+  final container = tester.widget<Container>(
+    find.descendant(
+      of: find.byKey(ValueKey('language-option-$code')),
+      matching: find.byType(Container),
+    ),
+  );
+  return (container.decoration! as BoxDecoration).color;
+}
+
+TextStyle _languageRowTextStyle(WidgetTester tester, String code) => tester
+    .widget<Text>(
+      find.descendant(
+        of: find.byKey(ValueKey('language-option-$code')),
+        matching: find.byType(Text),
+      ),
+    )
+    .style!;
+
+Color? _languageRowTextColor(WidgetTester tester, String code) =>
+    _languageRowTextStyle(tester, code).color;
+
+/// How many `BackdropFilter`s currently cover (near enough) the whole screen.
+///
+/// The app is full of small ones — every glass surface has its own — so a bare
+/// count proves nothing. A *page* blur is the thing that must never reappear,
+/// and what makes it a page blur is that it spans the screen.
+int _fullScreenBlurCount(WidgetTester tester) {
+  final screen = tester.getRect(find.byType(HomeScreen));
+  return find
+      .byType(BackdropFilter)
+      .evaluate()
+      .where((element) {
+        final box = element.renderObject;
+        if (box is! RenderBox || !box.hasSize) return false;
+        return box.size.width >= screen.width * 0.9 &&
+            box.size.height >= screen.height * 0.9;
+      })
+      .length;
+}
+
+/// Whether anything is painting a full-screen dark scrim — the 0.28 black the
+/// removed modal backdrop used, at any opacity in that range.
+bool _hasModalDimOverlay(WidgetTester tester) {
+  final screen = tester.getRect(find.byType(HomeScreen));
+  return find.byType(ColoredBox).evaluate().any((element) {
+    final box = element.renderObject;
+    if (box is! RenderBox || !box.hasSize) return false;
+    final coversScreen =
+        box.size.width >= screen.width * 0.9 &&
+        box.size.height >= screen.height * 0.9;
+    if (!coversScreen) return false;
+    final color = (element.widget as ColoredBox).color;
+    return color.a > 0.05 && color.r == 0 && color.g == 0 && color.b == 0;
+  });
+}
+
+/// The menu, its frost and its rows are all gone — nothing stale left behind.
+void _expectMenuFullyGone(WidgetTester tester) {
+  expect(find.byKey(const ValueKey('home-language-popover')), findsNothing);
+  expect(
+    find.byKey(const ValueKey('home-language-popover-frost')),
+    findsNothing,
+  );
+  expect(find.byKey(const ValueKey('language-option-en')), findsNothing);
+}
+
 Future<void> _pumpHome(
   WidgetTester tester, {
   Locale locale = const Locale('en'),

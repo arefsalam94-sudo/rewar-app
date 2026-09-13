@@ -3,12 +3,12 @@ import 'dart:ui';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/onboarding_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
+import '../widgets/system_status_bar.dart';
 import 'login_screen.dart';
 
 /// Three-slide onboarding intro, shown once after the language is chosen.
@@ -172,13 +172,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       languageCode: widget.languageCode,
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      // White text over a photo throughout, so the system icons stay light.
-      value: SystemUiOverlayStyle.light.copyWith(
-        statusBarColor: Colors.transparent,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
+    return SystemStatusBar(
+      // A dark panorama fills the top of all three slides in both themes, so
+      // the system glyphs stay white here regardless of Light/Dark.
+      backdrop: StatusBarBackdrop.dark,
+      // Edge-to-edge: the slide artwork runs under the gesture area.
+      navigationBar: SystemNavBarTreatment.transparent,
       child: Scaffold(
         body: Stack(
           fit: StackFit.expand,

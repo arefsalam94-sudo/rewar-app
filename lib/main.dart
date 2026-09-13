@@ -9,6 +9,7 @@ import 'services/preview_identity.dart';
 import 'services/settings_preferences.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/app_scroll_behavior.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,13 @@ class KurdistanParadiseApp extends StatelessWidget {
           builder: (context, isDark, _) => MaterialApp(
             title: 'Kurdistan Paradise Travel Guide',
             debugShowCheckedModeBanner: false,
+            // Installed app-wide so no screen has to remember: Android's
+            // stretch overscroll wraps scrolling content in an offscreen
+            // ImageFilterLayer, and a real Liquid Glass surface inside it can
+            // no longer sample the page background behind the scroll view —
+            // it samples transparent black and renders as black bars. See
+            // `AppScrollBehavior` for the full mechanism.
+            scrollBehavior: const AppScrollBehavior(),
             // Font follows the authoritative locale mapping, while the
             // saved preference selects the matching light/dark theme.
             theme: AppTheme.lightForLocale(locale),

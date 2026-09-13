@@ -279,7 +279,9 @@ class _TourDetailScreenState extends State<TourDetailScreen> {
       ),
     );
     if (!mounted) return;
-    setState(() => _reviewsFuture = _service.fetchTopReviews(widget.tour.id));
+    setState(() {
+      _reviewsFuture = _service.fetchTopReviews(widget.tour.id);
+    });
   }
 }
 

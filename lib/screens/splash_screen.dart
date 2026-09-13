@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/page_background.dart';
@@ -42,20 +41,19 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      // Top of the gradient is light, so status-bar icons should be dark.
-      value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: Colors.transparent,
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: PageBackground(
-          imageAsset: 'assets/images/main screen back image.webp',
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [_Logo(), const SizedBox(height: 28), _Title()],
-            ),
+    // The status-bar contrast is declared by `PageBackground` itself (see
+    // `SystemStatusBar`): the top of the gradient is pale in Light mode and
+    // deep in Dark, so the glyphs follow the theme. A second region here
+    // would be dead code — the innermost annotation is the one the engine
+    // reads.
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: PageBackground(
+        imageAsset: 'assets/images/main screen back image.webp',
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [_Logo(), const SizedBox(height: 28), _Title()],
           ),
         ),
       ),

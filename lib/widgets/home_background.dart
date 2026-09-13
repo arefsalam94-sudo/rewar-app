@@ -1,9 +1,9 @@
 import 'dart:ui' show ImageFilter, TileMode;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../theme/app_colors.dart';
+import 'system_status_bar.dart';
 
 /// The home screen's full-bleed background.
 ///
@@ -59,14 +59,14 @@ class HomeBackground extends StatelessWidget {
       ),
     );
 
-    return AnnotatedRegion<SystemUiOverlayStyle>(
+    return SystemStatusBar(
       // Light mode draws navy text on a pale background, so the status-bar
       // icons must be dark; dark mode is the reverse.
-      value: (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-          .copyWith(
-            statusBarColor: Colors.transparent,
-            systemNavigationBarColor: Colors.transparent,
-          ),
+      backdrop: StatusBarBackdrop.ofBrightness(
+        isDark ? Brightness.dark : Brightness.light,
+      ),
+      // Home draws its own floating bar over the gesture area.
+      navigationBar: SystemNavBarTreatment.transparent,
       child: Stack(
         fit: StackFit.expand,
         children: [

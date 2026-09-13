@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -66,6 +68,53 @@ class HomeScreen extends StatefulWidget {
 
   /// Fixes "now" in tests so the time-of-day greeting is deterministic.
   final DateTime? now;
+
+  /// Stamped on every route that hosts the dashboard.
+  ///
+  /// The app has no route table — each screen pushes the next one directly —
+  /// so a route's name is the only thing that identifies the dashboard from
+  /// an arbitrary depth in the stack. [route] stamps it; [goHome] looks for
+  /// it. Nothing else should construct a Home route, or [goHome] will walk
+  /// straight past it.
+  static const String routeName = '/home';
+
+  /// The one way to build a route hosting the dashboard.
+  static Route<void> route({bool isGuest = true, String? displayName}) {
+    return MaterialPageRoute<void>(
+      settings: const RouteSettings(name: routeName),
+      builder: (_) => HomeScreen(isGuest: isGuest, displayName: displayName),
+    );
+  }
+
+  /// Returns to the dashboard from anywhere above it, deterministically.
+  ///
+  /// Unwinds the stack to the existing Home route instead of popping once. A
+  /// single pop lands on whatever pushed the current screen — which is why
+  /// Favorites' "Keep exploring" used to surface Map or My Bookings depending
+  /// on where the user had been. The destination here does not depend on the
+  /// route history, the selected tab, or how the current screen was entered.
+  ///
+  /// Popping to the existing route rather than pushing a second dashboard is
+  /// deliberate: Home sits below every bar destination, so a push would leave
+  /// two of them on the stack, each with its own carousel and its own loaded
+  /// data.
+  ///
+  /// `isFirst` bounds the unwind so the predicate always terminates. If no
+  /// Home route is found, a dashboard is pushed so the destination is still
+  /// Home. That branch is unreachable in the running app — Login and Register
+  /// both install Home beneath everything else — but a widget test that pumps
+  /// one screen on its own has no Home to return to.
+  static void goHome(BuildContext context, {bool isGuest = true}) {
+    final navigator = Navigator.of(context);
+    var found = false;
+    navigator.popUntil((route) {
+      found = found || route.settings.name == routeName;
+      return found || route.isFirst;
+    });
+    if (!found) {
+      navigator.pushReplacement(HomeScreen.route(isGuest: isGuest));
+    }
+  }
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -159,26 +208,28 @@ class _HomeScreenState extends State<HomeScreen> {
       barrierLabel: AppLocalizations.of(context).changeLanguage,
       barrierColor: Colors.transparent,
       transitionDuration: const Duration(milliseconds: 180),
-      pageBuilder: (dialogContext, _, _) => Dialog(
-        alignment: AlignmentDirectional.topEnd,
-        constraints: const BoxConstraints.tightFor(
-          width: _LanguagePopover.menuWidth,
-        ),
-        insetPadding: EdgeInsetsDirectional.only(
-          top: topInset + 58,
-          end: 8,
-        ).resolve(textDirection),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        child: _LanguagePopover(
-          dark: isDark,
-          current: current,
-          onSelected: (languageCode) {
-            appLocale.value = Locale(languageCode);
-            Navigator.of(dialogContext).pop();
-          },
-        ),
-      ),
+      pageBuilder: (dialogContext, _, _) {
+        return Dialog(
+          alignment: AlignmentDirectional.topEnd,
+          constraints: const BoxConstraints.tightFor(
+            width: _LanguagePopover.menuWidth,
+          ),
+          insetPadding: EdgeInsetsDirectional.only(
+            top: topInset + 58,
+            end: 8,
+          ).resolve(textDirection),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: _LanguagePopover(
+            dark: isDark,
+            current: current,
+            onSelected: (languageCode) {
+              appLocale.value = Locale(languageCode);
+              Navigator.of(dialogContext).pop();
+            },
+          ),
+        );
+      },
       transitionBuilder: (context, animation, _, child) => FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
         child: child,
@@ -1369,6 +1420,33 @@ class _LanguagePopover extends StatelessWidget {
 
   static const double menuWidth = 140;
 
+  /// Corner radius of the glass surface — shared with [_frostRadius] so the
+  /// local frost is clipped to exactly the surface it sits behind.
+  static const double _radius = 28;
+
+  /// ## Local exception: extra frost behind this popup only
+  ///
+  /// The canonical glass shader carries very little blur of its own
+  /// (`blurRadiusPx: 2.8` in `kLiquidGlassSettingsCanonical`). Nearly all of
+  /// the frost this menu showed on device came from a **full-screen** blur
+  /// that was briefly painted over Home while the menu was open. That page
+  /// blur is gone — Home stays completely sharp now — so without this the
+  /// menu would suddenly read as thin, near-clear glass over a sharp
+  /// photograph.
+  ///
+  /// These reproduce that same treatment **clipped to the menu's own
+  /// footprint**: the page behind the menu is frosted, the rest of the screen
+  /// is untouched. The values are the ones the page blur used, so the menu
+  /// keeps the appearance that was approved on device.
+  ///
+  /// Deliberately private to this widget. Nothing global is involved —
+  /// `kLiquidGlassSettingsCanonical`, `canonicalGlassSettingsFor` and
+  /// `CanonicalGlassShell` are untouched, so no other glass surface in the app
+  /// (nav bar, Login, pickers, cards, fields) changes by so much as a pixel.
+  static const double _frostSigma = 12;
+  static const double _frostDimOpacity = 0.28;
+  static const double _frostRadius = _radius;
+
   @override
   Widget build(BuildContext context) {
     final pointerColor = dark
@@ -1382,29 +1460,56 @@ class _LanguagePopover extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: AppLiquidGlass(
-              key: const ValueKey('home-language-popover'),
-              useCanonicalGlass: true,
-              layer: GlassLayer.surface,
-              dark: dark,
-              borderRadius: 28,
-              padding: const EdgeInsets.all(6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final option in const [
-                    ('ku', 'کوردی'),
-                    ('en', 'English'),
-                    ('ar', 'العربية'),
-                  ])
-                    _LanguageOption(
-                      key: ValueKey('language-option-${option.$1}'),
-                      label: option.$2,
-                      selected: option.$1 == current,
-                      onTap: () => onSelected(option.$1),
+            // The frost is a **sibling painted before** the glass, never an
+            // ancestor of it. A real glass surface pushes its own
+            // `BackdropFilterLayer`, and nesting that inside another filter's
+            // offscreen layer is the black-band corruption documented in
+            // `07_DESIGN_EXCEPTIONS.md` §19. As an earlier sibling the shader
+            // simply samples the already-frosted region — the same
+            // relationship the canonical picker's sheet has with its backdrop.
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ClipRRect(
+                    key: const ValueKey('home-language-popover-frost'),
+                    borderRadius: BorderRadius.circular(_frostRadius),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: _frostSigma,
+                        sigmaY: _frostSigma,
+                      ),
+                      child: ColoredBox(
+                        color: Colors.black.withValues(alpha: _frostDimOpacity),
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                ],
-              ),
+                  ),
+                ),
+                AppLiquidGlass(
+                  key: const ValueKey('home-language-popover'),
+                  useCanonicalGlass: true,
+                  layer: GlassLayer.surface,
+                  dark: dark,
+                  borderRadius: _radius,
+                  padding: const EdgeInsets.all(6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final option in const [
+                        ('ku', 'کوردی'),
+                        ('en', 'English'),
+                        ('ar', 'العربية'),
+                      ])
+                        _LanguageOption(
+                          key: ValueKey('language-option-${option.$1}'),
+                          label: option.$2,
+                          selected: option.$1 == current,
+                          onTap: () => onSelected(option.$1),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           PositionedDirectional(
@@ -1477,9 +1582,20 @@ class _LanguageOption extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-            color: selected
-                ? (isDark ? AppColors.darkOnPrimary : Colors.white)
-                : _HomeScreenState._headingColor(context),
+            // Light: every label is white, selected or not. The menu's frosted
+            // glass sits over a photograph rather than a page colour, so the
+            // heading colour an unselected row used to take was tuned for a
+            // surface this popup does not have.
+            //
+            // Dark keeps both of its existing branches untouched: dark-on-mint
+            // for the selected row — the one place dark mode puts dark text on
+            // a light fill (`DESIGN DARK F.md`) — and the heading colour for
+            // the rest.
+            color: isDark
+                ? (selected
+                      ? AppColors.darkOnPrimary
+                      : _HomeScreenState._headingColor(context))
+                : Colors.white,
           ),
         ),
       ),

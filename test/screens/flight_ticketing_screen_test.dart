@@ -6,6 +6,9 @@ import 'package:kurdistan_paradise_travel_guide/models/airport.dart';
 import 'package:kurdistan_paradise_travel_guide/models/flight_search_criteria.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/flight_ticketing_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/services/airport_search_service.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/primary_button.dart';
+import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
+import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
 
 const _erbil = Airport(
   id: '3391',
@@ -114,6 +117,147 @@ void main() {
     expect(find.byType(Dialog), findsNothing);
   });
 
+  // =========================================================================
+  // Round Trip is a paired start/end flow; One-Way is a genuine single date.
+  // =========================================================================
+
+  /// Opens Round Trip and returns the departure/return field finders.
+  Future<void> openRoundTrip(WidgetTester tester) async {
+    await tester.pumpWidget(_app());
+    await tester.pump();
+    await tester.tap(find.text('Round trip'));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('One-Way departure stays a plain single-date picker', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pump();
+    await tester.ensureVisible(find.text('Departure'));
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pumpAndSettle();
+
+    // The stock canonical calendar, not the range grid — and no path.
+    expect(find.byType(CalendarDatePicker), findsOneWidget);
+    expect(_rangeBandCount(tester), 0);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(_rangeBandCount(tester), 0);
+  });
+
+  testWidgets('Round Trip departure asks for one date and draws no path', (
+    tester,
+  ) async {
+    await openRoundTrip(tester);
+    await tester.ensureVisible(find.text('Departure'));
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pumpAndSettle();
+
+    // Done is reachable without a return being demanded here.
+    expect(find.text('Done'), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12'));
+    await tester.pumpAndSettle();
+    expect(
+      _rangeBandCount(tester),
+      0,
+      reason: 'the departure step is a single date, not a trip',
+    );
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('Round Trip return opens anchored and paints the whole trip', (
+    tester,
+  ) async {
+    await openRoundTrip(tester);
+
+    // --- Departure ---------------------------------------------------------
+    await tester.ensureVisible(find.text('Departure'));
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    // --- Return ------------------------------------------------------------
+    // Opens on the departure's own month, with it already selected.
+    await tester.ensureVisible(find.text('Return'));
+    await tester.tap(find.byType(TextFormField).at(3));
+    await tester.pumpAndSettle();
+    expect(
+      _rangeBandCount(tester),
+      0,
+      reason: 'the anchor alone has nothing to connect to yet',
+    );
+
+    await tester.tap(find.text('16'));
+    await tester.pumpAndSettle();
+    // 12 trailing + 13/14/15 both + 16 leading = 8 half-cells.
+    expect(
+      _rangeBandCount(tester),
+      8,
+      reason: 'choosing the return must draw the whole trip as one path',
+    );
+
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final month = DateTime(today.year, today.month + 1);
+    final formatter = MaterialLocalizations.of(
+      tester.element(find.text('Return')),
+    );
+    // Departure untouched, return written.
+    expect(
+      find.text(formatter.formatMediumDate(DateTime(month.year, month.month, 12))),
+      findsOneWidget,
+    );
+    expect(
+      find.text(formatter.formatMediumDate(DateTime(month.year, month.month, 16))),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a same-day return stays allowed, as it was before', (
+    tester,
+  ) async {
+    await openRoundTrip(tester);
+
+    await tester.ensureVisible(find.text('Departure'));
+    await tester.tap(find.byType(TextFormField).at(2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.chevron_right));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('12'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('Return'));
+    await tester.tap(find.byType(TextFormField).at(3));
+    await tester.pumpAndSettle();
+    // Tapping the departure day itself is a valid return here — unlike Hotel,
+    // where check-out must fall after check-in.
+    await tester.tap(find.text('12'));
+    await tester.pumpAndSettle();
+    // The sheet's own Done — the page behind it has a PrimaryButton too.
+    final done = find.ancestor(
+      of: find.text('Done'),
+      matching: find.byType(PrimaryButton),
+    );
+    expect(
+      tester.widget<PrimaryButton>(done).onTap,
+      isNotNull,
+      reason: 'a same-day round trip must remain committable',
+    );
+  });
+
   testWidgets('passenger picker exposes age groups and cabin classes', (
     tester,
   ) async {
@@ -193,3 +337,16 @@ void main() {
     expect(find.text('Enter at least 2 characters'), findsNothing);
   });
 }
+
+/// Half-cells of the trip path painted in Light — the one canonical range
+/// band, shared with Hotel, Hotel Detail, Car Rental and Explore Tours.
+int _rangeBandCount(WidgetTester tester) => tester
+    .widgetList<ColoredBox>(find.byType(ColoredBox))
+    .where(
+      (box) =>
+          box.color ==
+          AppColors.actionNavy.withValues(
+            alpha: kCanonicalRangeBandLightOpacity,
+          ),
+    )
+    .length;
