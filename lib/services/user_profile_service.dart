@@ -4,7 +4,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
 import 'firebase_bootstrap.dart';
-import 'preview_identity.dart';
 
 /// The currencies offered by account preferences.
 ///
@@ -76,31 +75,14 @@ class UserProfileService {
   FirebaseFunctions get _functions =>
       _functionsOverride ?? FirebaseFunctions.instance;
 
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
-  /// Stand-in profile so account surfaces can be reviewed before Firebase
-  /// exists.
+  /// Placeholder profile the Settings screen draws for a **guest**, and as a
+  /// fallback while the real profile is still loading.
   ///
-  /// Prefers whatever the user actually entered at registration
-  /// ([PreviewIdentity]) and only falls back to the Settings reference
-  /// screenshot's values when nobody has registered on this device. Without
-  /// that preference the side drawer greeted every user as "Sara Ahmad",
-  /// which is the bug this fixes.
-  static UserProfile bundledProfile() {
-    final identity = PreviewIdentity.current;
-    if (!identity.hasName) return _referenceProfile;
+  /// This is display data for a not-signed-in visitor, not an identity: it
+  /// grants nothing and is never written anywhere.
+  static UserProfile bundledProfile() => _referenceProfile;
 
-    return UserProfile(
-      name: identity.name!,
-      email: identity.email ?? _referenceProfile.email,
-      phone: identity.phone ?? _referenceProfile.phone,
-      profileImageUrl: null,
-      currency: AppCurrency.usd,
-      hasPaymentMethod: false,
-    );
-  }
-
-  /// The design-review stand-in, used only before anyone has registered.
+  /// The design-review stand-in shown to guests.
   static const UserProfile _referenceProfile = UserProfile(
     name: 'Sara Ahmad',
     email: 'Saraahmad@gmail.com',
@@ -114,8 +96,11 @@ class UserProfileService {
   /// to have already checked [FirebaseBootstrap] / guest state before
   /// calling this for a real profile screen.
   Future<UserProfile?> fetchProfile() async {
-    if (isPreviewMode) return bundledProfile();
-
+    // Touching FirebaseAuth.instance before Firebase initialises throws
+    // [core/no-app]. FirebaseBootstrap deliberately keeps the app running when
+    // init fails, so this has to degrade to "no profile" rather than throw —
+    // the same guard favorites_service and bookings_service already use.
+    if (!FirebaseBootstrap.isReady) return null;
     final signedIn = _auth.currentUser;
     if (signedIn == null) return null;
     // Held in a separate non-nullable local: reassigning `user` below (after
@@ -164,14 +149,9 @@ class UserProfileService {
   /// `preferredCurrency` is on the client-writable allow-list in
   /// `firestore.rules`, alongside `preferredLanguage`.
   Future<void> updateCurrency(AppCurrency currency) async {
-    if (isPreviewMode) {
-      debugPrint(
-        'PREVIEW MODE: pretending to set currency to ${currency.code}.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      return;
+    if (!FirebaseBootstrap.isReady) {
+      throw StateError('Cannot set a currency without Firebase');
     }
-
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
       throw StateError('Cannot set a currency without a signed-in user');
@@ -184,7 +164,9 @@ class UserProfileService {
   }
 
   Future<void> updateLanguage(String languageCode) async {
-    if (isPreviewMode) return;
+    if (!FirebaseBootstrap.isReady) {
+      throw StateError('Cannot set a language without Firebase');
+    }
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
       throw StateError('Cannot set a language without a signed-in user');

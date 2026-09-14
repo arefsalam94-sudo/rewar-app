@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/app_permissions.dart';
+import '../widgets/permission_blocked_prompt.dart';
 import '../services/profile_setup_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
@@ -14,7 +15,6 @@ import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
 import 'register_complete_screen.dart';
 
@@ -110,16 +110,21 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
 
     // Even with the up-front request, re-check here: the user may have
     // declined then, or revoked it in Settings since.
-    final granted = await AppPermissions.requestForImageSource(
+    final outcome = await AppPermissions.requestForImageSource(
       fromCamera: fromCamera,
     );
     if (!mounted) return;
-    if (!granted) {
-      setState(() {
-        _errorText = fromCamera
-            ? l10n.cameraPermissionDenied
-            : l10n.galleryPermissionDenied;
-      });
+    if (!outcome.isGranted) {
+      final reason = fromCamera
+          ? l10n.cameraPermissionDenied
+          : l10n.galleryPermissionDenied;
+      setState(() => _errorText = reason);
+      // A plain denial can be resolved by tapping again, so it keeps the
+      // inline message alone. A permanent one cannot — the OS will not ask
+      // again — so it also offers the way out.
+      if (outcome.needsSettings) {
+        await showPermissionBlockedPrompt(context, reason: reason);
+      }
       return;
     }
 
@@ -268,11 +273,6 @@ class _AccountSetupScreenState extends State<AccountSetupScreen> {
                               height: 1.35,
                               color: AppColors.secondaryText(context),
                             ),
-                          ),
-                          const PreviewModeBanner(
-                            message:
-                                'Preview mode: the profile will not '
-                                'really be saved.',
                           ),
                           const SizedBox(height: 40),
                           Center(

@@ -44,8 +44,11 @@ dependencies:
   cloud_firestore: ^6.7.1
   cloud_functions: ^6.3.5
   image_picker: ^1.2.3
-  permission_handler: ^12.0.3
+  permission_handler: ^13.0.2
   firebase_storage: ^13.4.5
+  # Crash reporting (SECURITY.md 10). Free on the Spark plan — no Blaze needed.
+  # Every report is scrubbed by CrashReporter before it leaves the device.
+  firebase_crashlytics: ^5.0.4
   # Remembers that onboarding has already been seen, so the 3-slide intro
   # only ever runs on first install.
   shared_preferences: ^2.5.3

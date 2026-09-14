@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/favorite_item.dart';
 import '../models/hotel.dart';
 import '../services/favorites_service.dart';
+import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
@@ -21,11 +22,14 @@ enum _HotelFilter { location, date, guests, options }
 class HotelScreen extends StatefulWidget {
   const HotelScreen({
     super.key,
-    this.service = const PreviewHotelService(),
+    this.service,
     this.favoritesService,
   });
 
-  final HotelService service;
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final HotelService? service;
 
   /// Backs the heart on the featured and trending cards. Where to Stay is one
   /// of the only two screens that can save anything — see [FavoritesService].
@@ -37,6 +41,9 @@ class HotelScreen extends StatefulWidget {
 
 class _HotelScreenState extends State<HotelScreen>
     with SingleTickerProviderStateMixin, FavoriteToggleMixin<HotelScreen> {
+  late final HotelService _resolvedService =
+      widget.service ?? FirestoreHotelService();
+
   @override
   late final FavoritesService favoritesService =
       widget.favoritesService ?? FavoritesService();
@@ -58,7 +65,7 @@ class _HotelScreenState extends State<HotelScreen>
       checkIn: today.add(const Duration(days: 1)),
       checkOut: today.add(const Duration(days: 3)),
     );
-    _hotels = widget.service.trendingHotels();
+    _hotels = _resolvedService.trendingHotels();
     loadFavoriteIds();
   }
 
@@ -133,7 +140,7 @@ class _HotelScreenState extends State<HotelScreen>
   }
 
   Future<void> _searchDestinations(String query) async {
-    final results = await widget.service.searchDestinations(query);
+    final results = await _resolvedService.searchDestinations(query);
     if (mounted) setState(() => _destinationResults = results);
   }
 
@@ -151,7 +158,7 @@ class _HotelScreenState extends State<HotelScreen>
         builder: (_) => HotelDetailScreen(
           hotel: hotel,
           criteria: _criteria,
-          service: widget.service,
+          service: _resolvedService,
         ),
       ),
     );
@@ -169,7 +176,7 @@ class _HotelScreenState extends State<HotelScreen>
       _snack(l10n.hotelInvalidDates);
       return;
     }
-    await widget.service.searchHotels(_criteria);
+    await _resolvedService.searchHotels(_criteria);
     if (mounted) _snack(l10n.comingSoon);
   }
 
@@ -538,8 +545,13 @@ class _FeaturedHotelCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${hotel.city.forLanguage(language)}  •  '
-                            '${l10n.hotelDistanceFromCenter(hotel.distanceFromCenterKm)}',
+                            // The distance half is appended only when a
+                            // verified value exists; otherwise the city stands
+                            // alone rather than the card inventing a number.
+                            hotel.distanceFromCenterKm == null
+                                ? hotel.city.forLanguage(language)
+                                : '${hotel.city.forLanguage(language)}  •  '
+                                      '${l10n.hotelDistanceFromCenter(hotel.distanceFromCenterKm!)}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -1299,17 +1311,19 @@ class _TrendingHotelCard extends StatelessWidget {
                                 color: AppColors.heading(context),
                               ),
                             ),
-                            Text(
-                              l10n.hotelDistanceFromCenter(
-                                hotel.distanceFromCenterKm,
+                            // Hidden entirely without a verified distance.
+                            if (hotel.distanceFromCenterKm != null)
+                              Text(
+                                l10n.hotelDistanceFromCenter(
+                                  hotel.distanceFromCenterKm!,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: AppColors.secondaryTextV3(context),
+                                  fontSize: 11,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: AppColors.secondaryTextV3(context),
-                                fontSize: 11,
-                              ),
-                            ),
                             const SizedBox(height: 8),
                             Wrap(
                               spacing: 8,

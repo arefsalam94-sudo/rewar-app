@@ -11,7 +11,6 @@ import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
 import 'account_setup_screen.dart';
 import 'reset_password_screen.dart';
@@ -350,11 +349,6 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                         _Subtitle(
                           maskedValue: widget.target.maskedValue,
                           purpose: widget.purpose,
-                        ),
-                        const PreviewModeBanner(
-                          message:
-                              'Preview mode: no code was really sent. '
-                              'Any 6 digits will pass.',
                         ),
                         const SizedBox(height: 40),
                         _CodeBox(

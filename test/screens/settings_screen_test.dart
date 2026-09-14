@@ -6,6 +6,7 @@ import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/login_screen.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/account_edit_screens.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/settings_screen.dart';
+import 'package:kurdistan_paradise_travel_guide/services/app_permissions.dart';
 import 'package:kurdistan_paradise_travel_guide/services/auth_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/settings_preferences.dart';
 import 'package:kurdistan_paradise_travel_guide/services/user_profile_service.dart';
@@ -136,8 +137,14 @@ void main() {
       expect(find.text('EUR'), findsNothing);
 
       // The choices are part of the Settings route, not a modal overlay.
+      //
+      // NOT asserted via ModalBarrier: every ModalRoute builds one as its own
+      // overlay entry, so a bare MaterialApp already contains one and
+      // findsNothing can never hold. Dialog/BottomSheet are what actually
+      // distinguish an overlay from inline expansion.
       expect(find.byType(SettingsScreen), findsOneWidget);
-      expect(find.byType(ModalBarrier), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
     });
     testWidgets('notification switch requests permission and persists', (
       tester,
@@ -150,7 +157,7 @@ void main() {
         preferences: preferences,
         requestPermission: () async {
           permissionCalls++;
-          return true;
+          return PermissionOutcome.granted;
         },
       );
 
@@ -178,7 +185,7 @@ void main() {
         tester,
         profile: profile,
         preferences: preferences,
-        requestPermission: () async => false,
+        requestPermission: () async => PermissionOutcome.denied,
       );
 
       final switchFinder = find.byKey(
@@ -254,7 +261,7 @@ Future<void> _pump(
   Size size = const Size(430, 1900),
   double textScale = 1,
   SettingsPreferences? preferences,
-  Future<bool> Function()? requestPermission,
+  Future<PermissionOutcome> Function()? requestPermission,
   AuthService? authService,
   bool withHost = false,
   bool dark = false,
@@ -267,7 +274,8 @@ Future<void> _pump(
     userProfileService: _FakeUserProfileService(profile),
     authService: authService ?? _FakeAuthService(),
     preferences: preferences ?? _FakeSettingsPreferences(enabled: true),
-    requestNotificationPermission: requestPermission ?? () async => true,
+    requestNotificationPermission:
+        requestPermission ?? () async => PermissionOutcome.granted,
   );
 
   await tester.pumpWidget(

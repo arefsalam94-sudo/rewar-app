@@ -11,8 +11,9 @@ import '../models/hotel.dart';
 import '../models/favorite_item.dart';
 import '../models/hotel_detail.dart';
 import '../models/nature_detail.dart';
-import '../services/hotel_reviews_service.dart';
 import '../services/favorites_service.dart';
+import '../services/firestore_hotel_reviews_service.dart';
+import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/user_profile_service.dart';
@@ -42,7 +43,7 @@ class HotelDetailScreen extends StatefulWidget {
     super.key,
     required this.hotel,
     required this.criteria,
-    this.service = const PreviewHotelService(),
+    this.service,
     this.favoritesService,
     this.reviewService,
     this.userProfileService,
@@ -51,7 +52,11 @@ class HotelDetailScreen extends StatefulWidget {
 
   final Hotel hotel;
   final HotelSearchCriteria criteria;
-  final HotelService service;
+
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final HotelService? service;
 
   /// Backs the hero's heart. A stay is one of only two things that can be
   /// saved — see [FavoritesService].
@@ -75,6 +80,9 @@ class HotelDetailScreen extends StatefulWidget {
 
 class _HotelDetailScreenState extends State<HotelDetailScreen>
     with FavoriteToggleMixin<HotelDetailScreen> {
+  late final HotelService _resolvedService =
+      widget.service ?? FirestoreHotelService();
+
   @override
   late final FavoritesService favoritesService =
       widget.favoritesService ?? FavoritesService();
@@ -83,9 +91,11 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
   FavoriteCategory get favoriteCategory => FavoriteCategory.stay;
 
   late HotelSearchCriteria _criteria = widget.criteria;
+  // Firestore-backed, falling back to the in-memory preview store when
+  // Firebase is unavailable or a live read fails.
   late final NatureSpotsService _reviewService =
       widget.reviewService ??
-      PreviewHotelReviewService(subject: hotelAsNatureSpot(widget.hotel));
+      FirestoreHotelReviewsService(subject: hotelAsNatureSpot(widget.hotel));
 
   late Future<HotelDetail?> _detail;
   late Future<List<NatureReview>> _reviews;
@@ -100,7 +110,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
   @override
   void initState() {
     super.initState();
-    _detail = widget.service.fetchDetail(widget.hotel.id);
+    _detail = _resolvedService.fetchDetail(widget.hotel.id);
     _reviews = _reviewService.fetchTopReviews(widget.hotel.id);
   }
 
@@ -110,11 +120,16 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
     super.dispose();
   }
 
+<<<<<<< HEAD
   void _reload() {
     setState(() {
       _detail = widget.service.fetchDetail(widget.hotel.id);
     });
   }
+=======
+  void _reload() =>
+      setState(() => _detail = _resolvedService.fetchDetail(widget.hotel.id));
+>>>>>>> ab113c6 (Latest app update)
 
   void _snack(String message) {
     ScaffoldMessenger.of(context)
@@ -275,7 +290,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
         builder: (_) => ChooseRoomScreen(
           hotel: widget.hotel,
           criteria: _criteria,
-          hotelService: widget.service,
+          hotelService: _resolvedService,
         ),
       ),
     );
@@ -373,7 +388,7 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
   void _applyChangedStay(HotelSearchCriteria updated) {
     setState(() {
       _criteria = updated;
-      _detail = widget.service.fetchDetail(widget.hotel.id);
+      _detail = _resolvedService.fetchDetail(widget.hotel.id);
       _changeEditorOpen = false;
     });
     _snack(AppLocalizations.of(context).hotelStayUpdated);

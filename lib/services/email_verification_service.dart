@@ -1,7 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:flutter/foundation.dart';
 
-import 'firebase_bootstrap.dart';
 import 'password_reset_service.dart' show ResetErrorKind, ResetException;
 
 /// Proves the user controls the email address they registered with.
@@ -45,22 +43,8 @@ class EmailVerificationService {
   FirebaseFunctions get _functions =>
       _functionsOverride ?? FirebaseFunctions.instance;
 
-  /// **Debug-only** stand-in so registration can be walked end to end before
-  /// Firebase exists. While active no code is sent and **any** six digits are
-  /// accepted; the screen shows the preview banner so this is never mistaken
-  /// for a working backend.
-  ///
-  /// Guarded by [kDebugMode] as well as the Firebase check, so a release build
-  /// fails closed rather than accepting any code.
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
   /// Sends (or resends) the code to the address on the signed-in account.
   Future<void> sendCode() async {
-    if (isPreviewMode) {
-      debugPrint('PREVIEW MODE: pretending to email a verification code.');
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      return;
-    }
     try {
       await _functions
           .httpsCallable('sendRegistrationEmailCode')
@@ -74,14 +58,6 @@ class EmailVerificationService {
 
   /// Confirms [code]. Returns normally on success; throws otherwise.
   Future<void> verifyCode(String code) async {
-    if (isPreviewMode) {
-      debugPrint('PREVIEW MODE: accepting any six-digit code.');
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      if (code.length != 6) {
-        throw ResetException(ResetErrorKind.incorrectCode, 'preview');
-      }
-      return;
-    }
     try {
       await _functions
           .httpsCallable('confirmRegistrationEmailCode')

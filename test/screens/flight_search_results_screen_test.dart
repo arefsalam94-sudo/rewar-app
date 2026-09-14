@@ -66,12 +66,21 @@ Widget _app(
   ),
 );
 
+/// These doubles all stand in for a *connected* provider — each exercises a
+/// different search outcome, not the "no provider at all" state, which
+/// `release_gating_test.dart` covers.
 class _EmptyService implements FlightResultsService {
+  @override
+  bool get isAvailable => true;
+
   @override
   Future<List<FlightOffer>> search(FlightSearchCriteria criteria) async => [];
 }
 
 class _ErrorService implements FlightResultsService {
+  @override
+  bool get isAvailable => true;
+
   @override
   Future<List<FlightOffer>> search(FlightSearchCriteria criteria) async =>
       throw StateError('network details must not be shown');
@@ -79,6 +88,9 @@ class _ErrorService implements FlightResultsService {
 
 class _PendingService implements FlightResultsService {
   final completer = Completer<List<FlightOffer>>();
+
+  @override
+  bool get isAvailable => true;
 
   @override
   Future<List<FlightOffer>> search(FlightSearchCriteria criteria) =>

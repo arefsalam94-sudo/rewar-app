@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/airport.dart';
 import 'firebase_bootstrap.dart';
@@ -19,6 +20,34 @@ class FirebaseAirportSearchService implements AirportSearchService {
 
   FirebaseFunctions get _functions =>
       _functionsOverride ?? FirebaseFunctions.instance;
+
+  /// Callable failures that mean "could not be reached", and are therefore
+  /// safe to answer from the bundled catalogue.
+  ///
+  /// `not-found` is the one that matters today: `searchAirports` is not
+  /// deployed, because Cloud Functions need the Blaze plan. Without this the
+  /// airport picker is dead on any configured device — the user cannot choose
+  /// an origin or destination at all.
+  static const Set<String> unreachableCodes = {
+    'not-found',
+    'unavailable',
+    'deadline-exceeded',
+    'internal',
+  };
+
+  /// Failures that mean the request was **refused**, not unreachable.
+  ///
+  /// These must stay visible. Quietly serving five bundled airports instead
+  /// would hide a misconfigured App Check, a revoked key, a rejected token or
+  /// a malformed request — and would hide it behind a screen that looks like
+  /// it is working, which is the worst possible place to hide it.
+  static const Set<String> refusedCodes = {
+    'permission-denied',
+    'unauthenticated',
+    'invalid-argument',
+    'resource-exhausted',
+    'failed-precondition',
+  };
 
   @override
   Future<List<Airport>> search(String query) async {
@@ -43,7 +72,20 @@ class FirebaseAirportSearchService implements AirportSearchService {
             (airport) => airport.id.isNotEmpty && airport.iataCode.isNotEmpty,
           )
           .toList(growable: false);
-    } on FirebaseFunctionsException {
+    } on FirebaseFunctionsException catch (error) {
+      if (refusedCodes.contains(error.code)) {
+        // Deliberately NOT falling back — see refusedCodes.
+        throw const AirportSearchException();
+      }
+      if (unreachableCodes.contains(error.code)) {
+        debugPrint(
+          'searchAirports unreachable (${error.code}) — serving the bundled '
+          'airport catalogue.',
+        );
+        return const PreviewAirportSearchService().search(normalized);
+      }
+      // An unrecognised code surfaces rather than silently degrading: a new
+      // failure mode should be seen, not absorbed.
       throw const AirportSearchException();
     } on AirportSearchException {
       rethrow;

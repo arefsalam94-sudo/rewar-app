@@ -1,8 +1,27 @@
 import '../models/airport.dart';
 import '../models/flight_offer.dart';
 import '../models/flight_search_criteria.dart';
+import 'release_gate.dart';
+
+/// Thrown when a source cannot serve offers at all, as opposed to finding
+/// none. The two must stay distinguishable: "no flights match your dates" and
+/// "we do not sell flights yet" are different statements to a user.
+class FlightResultsUnavailable implements Exception {
+  const FlightResultsUnavailable();
+
+  @override
+  String toString() =>
+      'FlightResultsUnavailable: no flight provider is connected.';
+}
 
 abstract interface class FlightResultsService {
+  /// False when this source must not be shown to the user at all.
+  ///
+  /// Callers check this **before** searching, so the screen can say "coming
+  /// soon" rather than render an empty result list that reads as "we looked
+  /// and found nothing".
+  bool get isAvailable;
+
   Future<List<FlightOffer>> search(FlightSearchCriteria criteria);
 }
 
@@ -10,8 +29,19 @@ abstract interface class FlightResultsService {
 ///
 /// The UI depends only on [FlightResultsService], so replacing this class with
 /// an API repository requires no widget or database rewrite.
+///
+/// ## These offers must never reach a release build
+///
+/// Every airline name, fare, flight number and duration below is invented, and
+/// the route and dates are manufactured from whatever the user typed into the
+/// search form. Shown to a real user they are indistinguishable from bookable
+/// inventory — which is why [isAvailable] is false in release and [search]
+/// refuses outright rather than returning an empty list.
 class MockFlightResultsService implements FlightResultsService {
   const MockFlightResultsService();
+
+  @override
+  bool get isAvailable => ReleaseGate.previewFeaturesAllowed;
 
   static const _airportCodes = <String, String>{
     'erbil': 'EBL',
@@ -32,6 +62,10 @@ class MockFlightResultsService implements FlightResultsService {
 
   @override
   Future<List<FlightOffer>> search(FlightSearchCriteria criteria) async {
+    // The backstop, not the normal path: the screen checks [isAvailable]
+    // first. This refuses anyway, so no caller — including one added later —
+    // can obtain invented offers in a shipped build.
+    if (!isAvailable) throw const FlightResultsUnavailable();
     await Future<void>.delayed(const Duration(milliseconds: 650));
     final originCode = _codeFor(criteria.origin);
     final destinationCode = _codeFor(criteria.destination);

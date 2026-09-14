@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/booking.dart';
 import 'firebase_bootstrap.dart';
+import 'release_gate.dart';
 
 /// Reads the signed-in user's own `bookings` for the My Bookings screen.
 ///
@@ -41,8 +42,14 @@ class BookingsService {
   /// never written to Firestore and disappear when the process exits.
   static final List<Booking> _sessionPreviewBookings = <Booking>[];
 
+  /// Records a preview reservation for the current process only.
+  ///
+  /// The old `assert(kDebugMode)` here was not a guard: Dart strips asserts
+  /// from release builds, so a release user who reached checkout was shown a
+  /// "confirmed" booking that held no room and took no payment. This is a
+  /// real runtime check, so the list stays empty in release whatever calls it.
   static void addSessionPreviewBooking(Booking booking) {
-    assert(kDebugMode, 'Preview bookings must never be created in release.');
+    if (!ReleaseGate.previewFeaturesAllowed) return;
     _sessionPreviewBookings.insert(0, booking);
   }
 
@@ -54,11 +61,13 @@ class BookingsService {
   /// — so the screen shows a sign-in prompt rather than an empty list. Same
   /// precedent as favorites and the drawer's Currency row.
   String? get currentUserId {
-    if (isPreviewMode) return _previewUserId;
     if (!FirebaseBootstrap.isReady) return null;
     return _auth.currentUser?.uid;
   }
 
+  /// Owner id stamped on the bundled fixtures below. It is fixture data only —
+  /// [currentUserId] never returns it, so it can no longer stand in for a
+  /// signed-in user the way it did before real sign-in existed.
   static const String _previewUserId = 'preview-user';
 
   /// Every booking belonging to the signed-in user, newest trip first.

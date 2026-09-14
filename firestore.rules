@@ -142,6 +142,28 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------
+    // help_topics — the ten Help & Support categories (DATA_MODEL.md).
+    //
+    // PUBLIC read, including unauthenticated, and deliberately so: a user who
+    // cannot sign in is exactly the person who needs the help centre. There is
+    // nothing user-specific in it.
+    //
+    // No `list`, matching legal_documents: every id is fixed in
+    // `HelpTopic.docId`, so the screen fetches by known id and never needs to
+    // enumerate the collection. Denying it keeps one more query surface shut.
+    //
+    // Admin-only write via the custom claim (SECURITY.md 3). Support answers
+    // are the app's own voice — a client that could write here could publish
+    // "call this number to verify your card" to every user of the app, which
+    // is a phishing surface, not merely an editorial one.
+    // -------------------------------------------------------------------
+    match /help_topics/{topicId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------
     // password_reset_codes — hashed one-time password-reset codes.
     //
     // NO client access whatsoever, in either direction. Only the Cloud
@@ -445,6 +467,203 @@ service cloud.firestore {
           allow delete: if isVoter();
         }
       }
+    }
+
+    // -------------------------------------------------------------------
+    // hotels — catalog data, same posture as nature_spots and tours.
+    //
+    // PUBLIC read including unauthenticated: Where to Stay is browsable by a
+    // guest, and `list` is required because the screen queries the collection
+    // rather than fetching known ids.
+    //
+    // Write stays admin-only, and here that is a **payment-adjacent** control:
+    // `pricePerNightFrom` on the hotel and the whole `offers` subcollection are
+    // what a checkout would quote against. A client that could write them could
+    // set its own price before booking. The charge must still be re-priced
+    // server-side at booking time (DATA_MODEL.md) — these rules stop a client
+    // editing the catalogue, they are not a substitute for that.
+    //
+    // The rating aggregates (`reviewScore`, `ratingCount`, `ratingBreakdown`,
+    // `categoryScores`) are server-owned and covered by this same admin-only
+    // write, exactly as on nature_spots and tours.
+    // -------------------------------------------------------------------
+    match /hotels/{hotelId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+
+      // ----------------------------------------------------------------
+      // rooms — permanent room data. Public read, admin-only write.
+      // `list` is required: the Room Selection screen enumerates them.
+      // ----------------------------------------------------------------
+      match /rooms/{roomId} {
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
+      }
+
+      // ----------------------------------------------------------------
+      // offers — a priced, bookable rate. Public read, admin-only write.
+      //
+      // `availableQuantity` lives here and is the only source for "Only N
+      // rooms left" (DATA_MODEL.md). A client that could write it could
+      // manufacture scarcity; one that could write `nightlyPrice` could
+      // quote itself any figure. Both stay admin-only.
+      // ----------------------------------------------------------------
+      match /offers/{offerId} {
+        allow get, list: if true;
+        allow create, update, delete: if isAdmin();
+      }
+
+      // ----------------------------------------------------------------
+      // reviews — identical rules to nature_spots/{id}/reviews, because the
+      // Hotel Details page reuses that screen through a service adapter
+      // (DATA_MODEL.md). The document id IS the author's uid, which is what
+      // makes "one review per person per hotel" enforceable rather than
+      // merely intended.
+      // ----------------------------------------------------------------
+      match /reviews/{reviewId} {
+        function authorFields() {
+          return [
+            'userId', 'userName', 'avatarUrl', 'rating', 'comment',
+            'status', 'createdAt', 'updatedAt'
+          ];
+        }
+
+        function isAuthor() {
+          return request.auth != null && request.auth.uid == reviewId;
+        }
+
+        function validRating() {
+          return request.resource.data.rating is number
+            && request.resource.data.rating >= 0.5
+            && request.resource.data.rating <= 5
+            && request.resource.data.rating * 2 ==
+                 math.round(request.resource.data.rating * 2);
+        }
+
+        function validComment() {
+          return request.resource.data.comment is string
+            && request.resource.data.comment.size() >= 3
+            && request.resource.data.comment.size() <= 1000;
+        }
+
+        function validShape() {
+          return request.resource.data.keys().hasOnly(authorFields())
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.userName is string
+            && request.resource.data.userName.size() > 0
+            && request.resource.data.userName.size() <= 80
+            && request.resource.data.status == 'published'
+            && validRating()
+            && validComment()
+            && request.resource.data.updatedAt == request.time;
+        }
+
+        allow get, list: if resource.data.status == 'published';
+
+        allow create: if isAuthor() && validShape()
+          && request.resource.data.createdAt == request.time;
+
+        // Compares only CHANGED keys, so the server-owned `helpfulCount` can
+        // sit on the document without the author having to send it back — and
+        // without becoming writable. `createdAt` is pinned so an author cannot
+        // re-date an old review to the top of "Most recent".
+        allow update: if isAuthor()
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(authorFields())
+          && request.resource.data.userId == resource.data.userId
+          && request.resource.data.userName is string
+          && request.resource.data.userName.size() > 0
+          && request.resource.data.userName.size() <= 80
+          && request.resource.data.status == 'published'
+          && validRating()
+          && validComment()
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isAdmin() || isAuthor();
+
+        // --------------------------------------------------------------
+        // votes/{voterId} — "I found this review helpful", one per person.
+        // A document keyed by the voter cannot be cast twice, whereas an
+        // incrementable counter can be sent in a loop. `list` is denied:
+        // nobody needs to enumerate who liked a review.
+        // --------------------------------------------------------------
+        match /votes/{voterId} {
+          function isVoter() {
+            return request.auth != null && voterId == request.auth.uid;
+          }
+
+          allow get: if isVoter();
+          allow list: if false;
+          allow create: if isVoter()
+            && request.resource.data.keys().hasOnly(['userId', 'createdAt'])
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.createdAt == request.time;
+          allow update: if false;
+          allow delete: if isVoter();
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------
+    // cars — rental catalogue. Public read, admin-only write (SECURITY.md 1).
+    //
+    // `list` is required: the Car Rental and Results screens query the
+    // collection rather than fetching known ids.
+    //
+    // The write side is **payment- and inventory-adjacent**, not editorial:
+    // `pricePerDay`, `currencyCode`, `extras[].pricePerDay` and every key of
+    // `conditions` (deposit, damage excess, cancellation deadline, minimum
+    // driver age, required documents) are contractual and financial terms a
+    // user acts on. A client that could write them could quote itself a rate
+    // no supplier honours, or erase a deposit it is about to be charged.
+    //
+    // `currencyCode` is validated HERE and not only in the client, because an
+    // unsupported code renders a price nobody can act on. USD and IQD are the
+    // two the app supports (DATA_MODEL.md).
+    // -------------------------------------------------------------------
+    match /cars/{carId} {
+      function validCurrency() {
+        return !('currencyCode' in request.resource.data.keys())
+          || request.resource.data.currencyCode in ['USD', 'IQD'];
+      }
+
+      // Prices are stored, never inferred, and must be real non-negative
+      // numbers — a string "65" would render as a price and compare as text.
+      function validPrice() {
+        return !('pricePerDay' in request.resource.data.keys())
+          || (request.resource.data.pricePerDay is number
+              && request.resource.data.pricePerDay >= 0);
+      }
+
+      function validFlags() {
+        return (!('featured' in request.resource.data.keys())
+                || request.resource.data.featured is bool)
+          && (!('active' in request.resource.data.keys())
+              || request.resource.data.active is bool);
+      }
+
+      allow get, list: if true;
+      // Admin-only, AND still shape-checked: an admin panel bug must not be
+      // able to publish a car priced in a currency the app cannot display.
+      allow create, update: if isAdmin()
+        && validCurrency()
+        && validPrice()
+        && validFlags();
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------------
+    // rental_locations — the pickup/drop-off branches the Car Rental search
+    // offers (DATA_MODEL.md). Public read including unauthenticated, because
+    // the search screen is browsable by a guest; `list` is required since the
+    // picker matches a typed query across every branch.
+    //
+    // Admin-only write: a client that could add a branch could offer a pickup
+    // point that does not exist.
+    // -------------------------------------------------------------------
+    match /rental_locations/{locationId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // -------------------------------------------------------------------

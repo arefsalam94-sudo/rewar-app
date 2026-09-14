@@ -32,6 +32,12 @@ highest bar in this file — see section 5 specifically.**
 - Write rules for a collection **at the same time** you build the screen
   that uses it — not as cleanup at the end. Add them to version control
   and treat changes to them with the same scrutiny as schema changes.
+- **Every rule change must be covered by `rules_test/`** — the emulator-based
+  regression suite for `firestore.rules` (201 tests, `cd rules_test && npm test`).
+  It runs on a `demo-` project id, so it never touches the live project, and it
+  uses a simulated `admin: true` custom claim rather than a real admin account.
+  Adding a collection means adding its allow *and* deny cases there in the same
+  change; a rule with no test is a rule nobody will notice regressing.
 
 ### 1a. `bookings` is owner-read and **client-write-denied**
 
@@ -67,38 +73,51 @@ the UI hides the button:
    → all three must be denied.
 4. Signed in as the owner: `list` filtered to your own uid → must succeed.
 
-> Not yet run — there is no live Firebase project. This is a release blocker for
-> the screen, not an optional step.
+> ✅ **Run against the live project 2026-09-12, all four passed.** Two throwaway
+> Auth users were created; A could not create, update or delete a booking, and
+> could not read B's rows. Signed-out reads were denied. Both users and every
+> document written during the test were deleted afterwards.
 
-### 1b. The preview sign-in account — debug-only, and must stay that way
+### 1b. The preview sign-in account — REMOVED 2026-09-12
 
-There is **one hard-coded account** (`kurdistan` / `Asd!@3`) in
-`AuthService.previewUsername` / `previewPassword`, so the app can be walked and
-design-reviewed before a Firebase project exists. The Login button is otherwise
-inert — real sign-in has never been wired up (see section 6.1 and `ROADMAP.md`
-Phase 1).
+There was **one hard-coded account** (`kurdistan` / `Asd!@3`) in
+`AuthService.previewUsername` / `previewPassword`, so the app could be walked
+and design-reviewed before a Firebase project existed. Real sign-in now exists
+(`AuthService.signIn`, section 6.1), so per the deletion rule this scaffolding
+has been removed outright.
 
-It is gated on `AuthService.isPreviewMode`, i.e.
-`kDebugMode && !FirebaseBootstrap.isReady`. **Two independent conditions must
-both hold**, so it disappears the moment *either* a release build is made *or*
-Firebase is configured. A hard-coded credential that could survive into a
-shipped binary would be a backdoor; this one cannot.
+**What was deleted**
 
-Also true of it, deliberately:
+- `AuthService.previewUsername` / `previewPassword` / `previewDisplayName` /
+  `checkPreviewCredentials`, and `AuthService.isPreviewMode`
+- `lib/services/preview_identity.dart` — the locally-stored stand-in identity
+- `lib/widgets/preview_mode_banner.dart` and its use on all five auth screens
+- The Login screen's preview fallback, including the validator exception that
+  let a bare username through where an email is required
+- The preview branches in `PasswordResetService`, `EmailVerificationService`,
+  `AccountSettingsService`, `ProfileSetupService` and `UserProfileService`
+- `BookingsService.currentUserId` no longer returns a fabricated
+  `'preview-user'` uid
+- `test/screens/login_preview_signin_test.dart`,
+  `test/services/preview_identity_test.dart`, and the two preview-dependent
+  tests in `test/widget_test.dart` / `email_verification_service_test.dart`
 
-- It calls no Firebase API and creates no session. It only flips the UI into
-  its signed-in appearance.
-- `checkPreviewCredentials` **throws** rather than returning false if called
-  outside preview mode — reaching it in a real build is a bug worth surfacing
-  loudly, not a login worth failing quietly.
-- A loud yellow `PreviewModeBanner` sits on the Login card stating it is not
-  real sign-in. It renders nothing once Firebase is configured.
-- Tests pin all of the above (`test/screens/login_preview_signin_test.dart`).
+**The most important one was not the password.** `EmailVerificationService`
+accepted *any* six digits in preview mode. That is a verification bypass, not
+merely a convenience account, and it is gone.
 
-**Delete this account when real sign-in is built.** It is scaffolding, not a
-feature. Note also that `Asd!@3` is 6 characters and would be **rejected by the
-app's own registration policy** (8-character minimum, section 6.1b) — it is
-acceptable only because it never reaches Firebase Auth.
+**What deliberately remains, and why it is not an auth backdoor.** Several
+catalog services keep an `isPreviewMode` getter
+(`kDebugMode && !FirebaseBootstrap.isReady`) that serves **bundled content**
+when Firebase is unreachable — `featured`, `nature_spots`, `tours`,
+`currency_rates`, `legal_documents`, `favorites`, and the bundled booking
+fixtures. These supply data to draw; none of them authenticates anyone, grants
+access, or asserts an identity. The mock services behind the unfinished
+Hotels, Cars and Flights screens (`PreviewHotelService`,
+`PreviewCarRentalService`, `MockFlightResultsService`) are likewise untouched.
+
+The rule going forward: **a preview path may supply content, never an
+identity or a credential.**
 
 ### 1c. User-generated reviews — the id is the control
 
@@ -156,8 +175,13 @@ to both the author and an admin.
 7. Any client: `update` on `nature_spots/{id}` or `tours/{id}` setting
    `reviewScore` → denied.
 
-> Not yet run — there is no live Firebase project. This is a release blocker
-> for the screen, not an optional step.
+> ✅ **Run against the live project 2026-09-12, all seven passed.** A could not
+> write a review at B's uid, could not use `rating: 3.7` or `rating: 6`, could
+> not set `helpfulCount`, could not vote as B, could not list the `votes`
+> subcollection, and could not set `reviewScore` on a `nature_spots` or `tours`
+> document. Writing a review at A's own uid succeeded, so the denials above are
+> the rules working rather than the whole path being broken. All test data was
+> deleted afterwards.
 
 > ⚠️ **Two more billing-surface reads to watch.** Each page of reviews costs
 > one small read per review for the viewer's own votes, and each review write
@@ -166,6 +190,27 @@ to both the author and an admin.
 > be on before launch, and reasons to watch the usage dashboard (section 10).
 
 ## 2. Firebase Storage Security Rules
+
+> 🚫 **`storage.rules` is NOT deployed, and cannot be — verified 2026-09-12.**
+> The bucket does not exist: `storage.googleapis.com` reports
+> "The specified bucket does not exist" for both
+> `rewar-app-1c10e.firebasestorage.app` and `rewar-app-1c10e.appspot.com`.
+> **Firebase Storage has never been initialized on this project**, so there is
+> no release target to attach a ruleset to — the release call fails with
+> "The caller does not have permission".
+>
+> The rules file itself is correct and compiles cleanly (it was uploaded as a
+> valid ruleset; only the release step failed). Fix order:
+> 1. Firebase Console → Storage → **Get started** (creates the bucket).
+> 2. Re-run `firebase deploy --only storage`.
+> 3. Re-verify: an unauthenticated write to `profile_images/{uid}/avatar.jpg`
+>    must be denied, a >5 MB image must be denied, a non-image content type
+>    must be denied, and a signed-in user writing to another uid's path must
+>    be denied.
+>
+> Until then **any Storage-dependent feature is blocked**, notably the Account
+> Setup screen's avatar upload (6.1e). Note the default-deny is not protecting
+> you here — there is simply nothing to protect yet.
 
 Same principles as Firestore, applied to file uploads:
 - Users can only upload to their own path (e.g. `profile_images/{uid}/`).
@@ -193,6 +238,77 @@ protection — that only stops accidental access, not a deliberate one.
   `createdBy`/`updatedBy` field per document (already required by
   `DATA_MODEL.md`), ideally an `admin_activity_log` collection for
   higher-risk actions like deletes.
+
+### 3.1 The mechanism — `tool/admin_claim.js` (added 2026-09-13)
+
+**No account holds the admin claim yet.** The mechanism is built and tested;
+granting it to a real person is a deliberate, separate act.
+
+```
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json node tool/admin_claim.js inspect <uid>
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json node tool/admin_claim.js grant  <uid> --yes
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json node tool/admin_claim.js revoke <uid> --yes
+```
+
+**Why a local script and not a Cloud Function**, as the bullet above asks for:
+the binding requirement in that bullet is the parenthetical — *a client must
+never set this*. A local operator script satisfies it more strictly than a
+callable, because there is no deployed endpoint to attack, guess, or forget to
+protect; the only way to run it is to already hold a service-account key. It is
+also the only option on the Spark plan. When a callable is eventually added it
+must itself be gated on `request.auth.token.admin`, and **the first admin will
+still have to be created with this script** — a bootstrap cannot be performed
+by an endpoint that requires an admin to call it.
+
+Properties that matter:
+
+- **UID only.** Email and display name are rejected as selectors; both are
+  mutable, and "make the account called X an admin" is exactly the instruction
+  that elevates the wrong person. `inspect` prints email, display name and
+  disabled state so the operator can confirm the UID before writing.
+- **Unrelated claims are preserved.** Grant and revoke merge rather than
+  replace, so a future `region` or `tier` claim survives. Revoke deletes the
+  `admin` key rather than setting it false.
+- **Mutations refuse to run without `--yes`**, and always print before/after.
+- **`inspect` never writes.**
+- Nothing in `lib/` can set a claim. The client SDK has no such API.
+
+#### A claim does not reach the client until its ID token refreshes
+
+A custom claim is baked into the ID token when it is issued. A signed-in user
+keeps their old token — and their old permissions — until it refreshes
+(automatically about hourly, or immediately on `getIdToken(true)` or a fresh
+sign-in).
+
+| | effect |
+|---|---|
+| **Grant** | the new admin must sign out and back in before the rules let them write |
+| **Revoke** | ⚠️ the ex-admin **keeps admin** until their current ID token expires — up to ~1 hour |
+
+`revoke` calls `revokeRefreshTokens`, which stops them obtaining a *new* token,
+but cannot invalidate the one already in their hand. **If a revoke is a
+security response to a compromised or hostile account, disable the account as
+well** — that takes effect immediately.
+
+#### A Firestore field can never grant admin
+
+`isAdmin()` reads `request.auth.token.admin`, and `firestore.rules` contains
+**no `get()` or `exists()` lookup anywhere** — no document can influence any
+access decision. `rules_test/admin_bypass.test.js` pins both: a static check
+that no document lookup has been introduced into the rules, plus behavioural
+tests that plant `role: "admin"`, `admin: true`, `isAdmin: true`,
+`claims.admin`, `token.admin`, `customClaims.admin` and `permissions: ["admin"]`
+on a user's own profile — first proving the client cannot even write them
+(6.1c), then planting them server-side with rules disabled and confirming every
+admin-only write is still refused. A control test confirms a real token claim
+*does* grant the same writes, so the denials are not passing vacuously.
+
+#### Still missing
+
+An `admin_activity_log` collection (the "ideally" in the bullet list above) is
+not implemented — the script prints an auditable before/after to the operator's
+terminal, but nothing is persisted. Adding it means a new collection in
+`DATA_MODEL.md` first.
 
 ## 4. Secrets & API keys
 
@@ -446,6 +562,46 @@ Added when the Reset Password screen was built.
   screen. Client validation is UX; this is the boundary (section 7). Also
   configure the same policy in Firebase Auth's own password-policy settings
   so it applies to registration too, not just reset.
+
+  > ✅ **Fixed and verified live 2026-09-12.** The policy is now
+  > `enforcementState: ENFORCE`. (It was previously `OFF` — configured but not
+  > enforced — so a direct `accounts:signUp` with a 6-character password
+  > succeeded. That hole is closed.)
+
+#### The one password policy, stated once
+
+This is the **authoritative** wording. Firebase Auth is the boundary; every
+other copy exists to mirror it and must not add or drop a rule.
+
+| Rule | Required |
+|---|---|
+| Minimum length | **8** |
+| Uppercase letter | **yes** |
+| Lowercase letter | **yes** |
+| Number | **yes** |
+| Special character | **no** — deliberately not required |
+| Maximum length | 4096 (Firebase default) |
+
+Five places encode it. They drifted once already and must be changed together:
+
+1. Firebase Console → Authentication → Settings → Password policy *(the
+   boundary for registration and any client-side password set)*
+2. `isStrongEnough()` in `functions/index.js` *(the boundary for the reset
+   flow — the Admin SDK **bypasses** the Auth policy, so without this check
+   that path would have no policy at all)*
+3. `_validatePassword` in `lib/screens/register_screen.dart`
+4. `_validatePassword` in `lib/screens/reset_password_screen.dart`
+5. the inline check in `ChangePasswordScreen._save`
+   (`lib/screens/account_edit_screens.dart`)
+
+Plus the two user-facing descriptions, `passwordHint` and
+`passwordChangeRules`, in all three languages.
+
+> **Why a client rule that is *stricter* than Firebase is also a bug**, not a
+> safe default: it rejects passwords the backend would accept, so the user is
+> blocked by a rule no real boundary enforces. Until 2026-09-12 all three
+> client validators required a special character Firebase did not, while none
+> of them required the number Firebase did — wrong in both directions at once.
 - **The client needs no write access to `users`.** Both stamping functions
   run under the Admin SDK, so `users` stays fully closed in
   `firestore.rules` rather than being opened up for one field.
@@ -675,6 +831,62 @@ needs its own setup for phone/SMS verification to work correctly:
 - Run `flutter pub outdated` periodically and flag anything with a known
   CVE for priority updating.
 
+> **`permission_handler` 12.0.3 → 13.0.2, 2026-09-14.** The only code change
+> needed was a build one: `permission_handler_android` 14.x requires
+> `compileSdk 37`, so `android/app/build.gradle.kts` now pins that instead of
+> deferring to `flutter.compileSdkVersion`. **That raises the compile SDK for
+> every plugin in the app, not just this one**, so it was verified with a full
+> `flutter build apk --debug` rather than assumed. `app_permissions.dart` was
+> not touched — the API surface it uses is unchanged.
+>
+> 13.0.2 also changes how a **permanently denied** permission is detected on
+> Android: `status` alone can no longer distinguish it, and `request()` must be
+> called. This app was already doing exactly that, so nothing had to change.
+> Worth knowing before anyone adds a `status`-based check.
+>
+> **Permanently-denied recovery, 2026-09-14.** The gap the upgrade note
+> flagged is now closed. `AppPermissions` returns a `PermissionOutcome`
+> (`granted` / `denied` / `permanentlyDenied` / `unavailable`) read from the
+> **result of `request()`**, never from a prior `status` check, which is what
+> 13.x requires on Android. Only `permanentlyDenied` sets `needsSettings`, so a
+> normal refusal is never mistaken for a permanent one and the user is never
+> told to visit Settings when the OS will simply ask again.
+>
+> When a permission is permanently denied at its point of use,
+> `showPermissionBlockedPrompt` offers an **Open Settings** action alongside
+> the explanation the screen already showed. Camera and photos (Account Setup
+> avatar) and notifications (Settings toggle) have this path.
+> **Nothing opens Settings on its own** — leaving the app unprompted is a
+> hostile thing to do, so `openAppSettings()` runs only from that tap.
+>
+> Request *timing* is deliberately unchanged: `requestAll()` still runs one
+> sweep on Account Setup open and still reports plain booleans, because four
+> "open settings" nudges on screen open would be worse than useless. The 6.1e
+> permission-timing decision is still open and separate.
+>
+> Location is the exception, by design: its point of use is
+> `DeviceLocationService`, which goes through **Geolocator**, not
+> `permission_handler`, and deliberately returns `null` on `deniedForever` so
+> the card hides its Distance row. Nagging there would contradict that.
+
+> **Simulated flows are release-gated, 2026-09-14.** Two features were
+> stand-ins that shipped: `MockFlightResultsService` served five invented
+> airlines at invented fares to any release user who searched, and hotel
+> checkout ended by showing a "confirmed" booking that held no room and took
+> no payment. The `assert(kDebugMode)` guarding the latter was not a guard —
+> Dart strips assert bodies from release builds.
+>
+> `ReleaseGate.previewFeaturesAllowed` (`lib/services/release_gate.dart`) now
+> gates both. Its test override lives inside an `assert` body, so it too is
+> stripped in release: a shipped build can only ever read `kDebugMode`, and
+> there is no flag or environment variable that reopens either flow.
+>
+> Flights refuse at the source (`isAvailable` false, `search()` throws
+> `FlightResultsUnavailable`) as well as at the screen, so no future caller
+> can obtain invented offers. Checkout disables its confirm button and states
+> that booking is coming soon. Neither change touches `firestore.rules` —
+> client booking writes were already denied outright and still are.
+
 ## 9. Privacy & compliance
 
 - Since the app collects email, phone, profile photos, and location data,
@@ -698,12 +910,70 @@ needs its own setup for phone/SMS verification to work correctly:
   being exploited (or just a bug), and Firestore's pay-per-read model
   means this is also a cost issue.
 
+### 10.1 Crashlytics — what is captured, and what is scrubbed first
+
+*(implemented 2026-09-14)* Crashlytics is **free on the Spark plan**; no Blaze
+upgrade was involved.
+
+**Captured**
+
+- Flutter framework errors, via `FlutterError.onError` — build, layout, paint.
+- Uncaught asynchronous and platform errors, via
+  `PlatformDispatcher.instance.onError` — a failed `Future` with no catch, a
+  platform-channel throw. The handler returns `true`, because returning `false`
+  lets the platform terminate the isolate and lose the report just filed.
+- Native Android crashes and ANRs, through the Crashlytics Gradle plugin, which
+  also uploads mapping files so release stack traces stay readable.
+
+**Collection is off in debug** (`!kDebugMode && FirebaseBootstrap.isReady`), so
+developer crashes never reach the live dashboard and `flutter test` cannot post
+anything. Handlers are still installed in debug, so console output is unchanged.
+
+**Nothing is forwarded verbatim.** Section 5.1 names Crashlytics explicitly as
+somewhere card data must never reach, and 6.1b says the same of passwords. An
+exception message is assembled by whoever threw it — a Firebase SDK, or a
+future payment SDK — so it cannot be assumed safe. `CrashReporter.redact`
+rewrites it first, and the report carries the exception **type** plus the
+redacted text. Type names describe code, never values.
+
+Redacted before upload:
+
+| Kind | Examples |
+|---|---|
+| Passwords | `password:`, `newPassword=`, `"currentPassword":"…"` |
+| Card data | 13–19 digit PANs (spaced or dashed), `cvv`, `cvc`, `expiry` |
+| Verification / reset codes | any standalone 6-digit run, `otp`, `smsCode`, `verificationCode` |
+| Tokens | JWT/`eyJ…` strings, `idToken`, `access_token`, `Authorization: Bearer …`, `apiKey` |
+| Personal identifiers | email addresses, E.164 phone numbers |
+
+Over-redaction is the intended failure mode: a harder-to-read report costs
+debugging time, a leaked credential costs an account. Stack traces are
+forwarded unmodified — frames carry file, line and function names, never
+argument values.
+
+`redact` is pure and covered by 31 tests, including adversarial and combined
+inputs. Two real defects were caught by those tests during implementation: a
+`Authorization: Bearer <token>` pair that lost only the word "Bearer", and a
+`+964…` phone number being claimed by the card pattern.
+
+**Existing logging was audited before any of this was wired.** No `debugPrint`
+in the auth, reset, verification, account-settings or profile services
+interpolates a password, code or token — the closest is
+`'Phone code auto-retrieved by the OS.'`, which reports the event and not the
+code.
+
+> ⚠️ **One manual step:** Firebase Console → Crashlytics → **Get started** for
+> `rewar-app-1c10e`. The dashboard does not activate until it has been opened
+> once and received a first report.
+
 ## 11. Pre-launch security checklist (before App Store/Play Store submission)
 
 - [ ] Every Firestore collection has explicit rules — no collection is
       left in test/open mode
 - [ ] Every Storage bucket path has explicit rules
-- [ ] Admin custom claim implemented via Cloud Function, verified in rules
+- [x] Admin custom claim mechanism implemented (`tool/admin_claim.js`, 3.1)
+      and verified in rules. **No account holds it yet** — granting the first
+      real admin is still a manual step
 - [ ] App Check enabled
 - [ ] No API keys or secrets anywhere in the Flutter client codebase
 - [ ] Auth tokens stored via `flutter_secure_storage`, not
@@ -714,10 +984,13 @@ needs its own setup for phone/SMS verification to work correctly:
       to true** only after a qualified translator/lawyer has signed off all
       three languages (see 6.1d)
 - [ ] Account/data deletion flow implemented and tested
-- [ ] Crashlytics enabled
+- [x] Crashlytics enabled — `firebase_crashlytics` + the Android Gradle
+      plugin are wired and the APK builds; every report is scrubbed by
+      `CrashReporter.redact` (section 10.1). **One manual step remains:**
+      Firebase Console → Crashlytics → Get started
 - [ ] `flutter pub outdated` run, no known-vulnerable packages in use
-- [ ] `PreviewIdentity` deleted along with the preview sign-in account (1b) —
-      both are scaffolding for the missing Firebase project
+- [x] `PreviewIdentity` deleted along with the preview sign-in account (1b) —
+      done 2026-09-12; no preview authentication path remains
 - [ ] **Auth/verification-specific:**
   - [ ] Email verification required and tested — registration cannot be
         completed without a verified address (6.1g)

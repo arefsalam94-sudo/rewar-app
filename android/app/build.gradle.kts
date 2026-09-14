@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -9,7 +10,11 @@ plugins {
 
 android {
     namespace = "com.kurdistanparadise.kurdistan_paradise_travel_guide"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned above flutter.compileSdkVersion because permission_handler_android
+    // 14.x requires compileSdk 37 (permission_handler 13.0.0 breaking change).
+    // Raising it affects how EVERY plugin compiles, not just this one, so it
+    // was verified with a full debug build rather than assumed.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

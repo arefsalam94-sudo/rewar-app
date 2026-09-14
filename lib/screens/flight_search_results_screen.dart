@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/flight_offer.dart';
 import '../models/flight_search_criteria.dart';
+import 'explore_tours_screen.dart' show formatMoney;
 import '../services/currency_rates_service.dart';
+import '../services/user_profile_service.dart';
 import '../services/flight_results_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
@@ -19,11 +21,17 @@ class FlightSearchResultsScreen extends StatefulWidget {
     super.key,
     required this.criteria,
     this.service = const MockFlightResultsService(),
+    this.currencyRatesService,
+    this.userProfileService,
     this.onSelected,
   });
 
   final FlightSearchCriteria criteria;
   final FlightResultsService service;
+
+  /// Injectable for tests; both default to the live services.
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
   final ValueChanged<FlightResultsSelection>? onSelected;
 
   @override
@@ -32,6 +40,36 @@ class FlightSearchResultsScreen extends StatefulWidget {
 }
 
 class _FlightSearchResultsScreenState extends State<FlightSearchResultsScreen> {
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // Display-only. The carrier is still owed the stored figure in the stored
+  // currency; this never changes what is charged.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  FlightPricing get _pricing =>
+      FlightPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
+
   late FlightSearchCriteria _criteria = widget.criteria;
   FlightOfferSort _sort = FlightOfferSort.best;
   List<FlightOffer>? _offers;
@@ -40,10 +78,18 @@ class _FlightSearchResultsScreenState extends State<FlightSearchResultsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDisplayCurrency();
     _load();
   }
 
+  /// True when the app has no flight source it may show. Release builds sit
+  /// here permanently until a real provider is connected.
+  bool get _unavailable => !widget.service.isAvailable;
+
   Future<void> _load() async {
+    // Nothing is searched when the source may not be shown at all — the
+    // screen renders its "coming soon" state instead of an empty result list.
+    if (_unavailable) return;
     setState(() {
       _offers = null;
       _error = null;
@@ -155,6 +201,8 @@ class _FlightSearchResultsScreenState extends State<FlightSearchResultsScreen> {
                         ),
                         const SizedBox(height: 24),
                         _ResultsBody(
+                          pricing: _pricing,
+                          unavailable: _unavailable,
                           offers: _offers,
                           error: _error,
                           sort: _sort,
@@ -284,7 +332,17 @@ class _ResultsBody extends StatelessWidget {
     required this.onSort,
     required this.onRetry,
     required this.onSelect,
+    this.unavailable = false,
+    this.pricing = FlightPricing.unconverted,
   });
+
+  /// No flight source may be shown at all — distinct from a search that ran
+  /// and matched nothing.
+  final bool unavailable;
+
+  /// Passed straight through, so every fare on the screen renders in the same
+  /// currency.
+  final FlightPricing pricing;
 
   final List<FlightOffer>? offers;
   final Object? error;
@@ -296,6 +354,15 @@ class _ResultsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    if (unavailable) {
+      // Checked before everything else: there is nothing to retry, so this
+      // state deliberately carries no action button.
+      return _MessageState(
+        icon: Icons.flight_takeoff_outlined,
+        title: l10n.flightComingSoonTitle,
+        body: l10n.flightComingSoonBody,
+      );
+    }
     if (error != null) {
       return _MessageState(
         icon: Icons.cloud_off_outlined,
@@ -338,12 +405,21 @@ class _ResultsBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        _SortRow(offers: source, selected: sort, onChanged: onSort),
+        _SortRow(
+          offers: source,
+          selected: sort,
+          onChanged: onSort,
+          pricing: pricing,
+        ),
         const SizedBox(height: 24),
         Divider(color: Theme.of(context).colorScheme.outlineVariant),
         const SizedBox(height: 16),
         for (var index = 0; index < sorted.length; index++) ...[
-          _FlightOfferCard(offer: sorted[index], onSelect: onSelect),
+          _FlightOfferCard(
+            offer: sorted[index],
+            onSelect: onSelect,
+            pricing: pricing,
+          ),
           if (index != sorted.length - 1) const SizedBox(height: 14),
         ],
       ],
@@ -356,7 +432,12 @@ class _SortRow extends StatelessWidget {
     required this.offers,
     required this.selected,
     required this.onChanged,
+    this.pricing = FlightPricing.unconverted,
   });
+
+  /// Passed straight through, so every fare on the screen renders in the same
+  /// currency.
+  final FlightPricing pricing;
 
   final List<FlightOffer> offers;
   final FlightOfferSort selected;
@@ -382,6 +463,7 @@ class _SortRow extends StatelessWidget {
                 child: _SortCard(
                   label: label,
                   offer: offer,
+                  pricing: pricing,
                   selected: selected == sort,
                   onTap: () => onChanged(sort),
                 ),
@@ -420,7 +502,12 @@ class _SortCard extends StatelessWidget {
     required this.offer,
     required this.selected,
     required this.onTap,
+    this.pricing = FlightPricing.unconverted,
   });
+
+  /// Renders the fare in the user's chosen currency. Defaults to
+  /// [FlightPricing.unconverted], which shows the carrier's own currency.
+  final FlightPricing pricing;
 
   final String label;
   final FlightOffer offer;
@@ -448,7 +535,7 @@ class _SortCard extends StatelessWidget {
           const SizedBox(height: 6),
           FittedBox(
             child: Text(
-              _price(offer),
+              _price(offer, pricing),
               style: TextStyle(
                 color: AppColors.heading(context),
                 fontSize: 24,
@@ -468,7 +555,15 @@ class _SortCard extends StatelessWidget {
 }
 
 class _FlightOfferCard extends StatelessWidget {
-  const _FlightOfferCard({required this.offer, required this.onSelect});
+  const _FlightOfferCard({
+    required this.offer,
+    required this.onSelect,
+    this.pricing = FlightPricing.unconverted,
+  });
+
+  /// Renders the fare in the user's chosen currency. Defaults to
+  /// [FlightPricing.unconverted], which shows the carrier's own currency.
+  final FlightPricing pricing;
 
   final FlightOffer offer;
   final ValueChanged<FlightOffer> onSelect;
@@ -531,7 +626,7 @@ class _FlightOfferCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _price(offer),
+                      _price(offer, pricing),
                       textDirection: TextDirection.ltr,
                       style: TextStyle(
                         color: AppColors.heading(context),
@@ -822,15 +917,17 @@ class _MessageState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.body,
-    required this.actionLabel,
-    required this.onAction,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String body;
-  final String actionLabel;
-  final VoidCallback onAction;
+
+  /// Both null for a state with nothing to retry, such as "coming soon".
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) => AppLiquidGlass(
@@ -857,8 +954,10 @@ class _MessageState extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.secondaryText(context)),
         ),
-        const SizedBox(height: 18),
-        FilledButton(onPressed: onAction, child: Text(actionLabel)),
+        if (actionLabel != null && onAction != null) ...[
+          const SizedBox(height: 18),
+          FilledButton(onPressed: onAction, child: Text(actionLabel!)),
+        ],
       ],
     ),
   );
@@ -872,7 +971,60 @@ String _duration(int minutes) {
   return '${hours}h ${rest}m';
 }
 
-String _price(FlightOffer offer) {
+/// Converts an offer's stored fare into the currency the user chose in
+/// Settings, using the live `currency_rates` table.
+///
+/// An offer stores **one authoritative price** in the carrier's currency
+/// (`price` + `currencyCode`, DATA_MODEL.md). Nothing is duplicated in
+/// Firestore; the conversion happens here, at render time, and is indicative
+/// only — a fare is settled by the payment processor, never at a rate this app
+/// stored (SECURITY.md 5). That is what the `≈` prefix discloses.
+///
+/// Mirrors `TourPricing` and `RentalPricing`, and reuses the same
+/// `formatMoney`, so the same figure cannot be formatted three different ways
+/// across three screens.
+class FlightPricing {
+  const FlightPricing({required this.rates, required this.displayCurrency});
+
+  /// No rate table — every fare renders in its own stored currency. The honest
+  /// state before `currency_rates/latest` has loaded.
+  static const FlightPricing unconverted = FlightPricing(
+    rates: CurrencyRates.empty,
+    displayCurrency: '',
+  );
+
+  final CurrencyRates rates;
+
+  /// The ISO code the user chose in Settings (`users.preferredCurrency`).
+  final String displayCurrency;
+
+  /// Whether a fare quoted in [currency] would actually be converted — false
+  /// when it already matches, and false when the table cannot do it.
+  bool isConverted(String currency) {
+    if (displayCurrency.isEmpty) return false;
+    if (currency.toUpperCase() == displayCurrency.toUpperCase()) return false;
+    return rates.convert(1, from: currency, to: displayCurrency) != null;
+  }
+
+  /// An offer's fare as drawn, e.g. `$400` or `≈ IQD 524,000`.
+  String fare(FlightOffer offer) => format(offer.totalPrice, offer.currency);
+
+  /// Falls back to the carrier's own currency whenever the conversion cannot
+  /// be made — an unconverted true fare beats a converted invented one.
+  String format(num amount, String currency) {
+    if (!isConverted(currency)) return formatMoney(amount, currency);
+    final converted = rates.convert(
+      amount,
+      from: currency,
+      to: displayCurrency,
+    );
+    if (converted == null) return formatMoney(amount, currency);
+    return '≈ ${formatMoney(converted, displayCurrency)}';
+  }
+}
+
+String _price(FlightOffer offer, [FlightPricing? pricing]) {
+  if (pricing != null) return pricing.fare(offer);
   final symbol = CurrencyRatesService.symbolFor(offer.currency);
   final amount = offer.totalPrice == offer.totalPrice.roundToDouble()
       ? offer.totalPrice.toStringAsFixed(0)

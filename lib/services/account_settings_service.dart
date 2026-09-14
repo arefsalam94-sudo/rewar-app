@@ -4,7 +4,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-import 'firebase_bootstrap.dart';
 import 'profile_setup_service.dart';
 
 class AccountSettingsService {
@@ -24,8 +23,6 @@ class AccountSettingsService {
   FirebaseFunctions get _functions =>
       _functionsOverride ?? FirebaseFunctions.instance;
 
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
   Future<void> updateProfile({required String fullName, File? image}) async {
     await _profileSetup.completeSetup(displayName: fullName, imageFile: image);
   }
@@ -41,10 +38,6 @@ class AccountSettingsService {
     required String currentEmail,
     required String currentPassword,
   }) async {
-    if (isPreviewMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return;
-    }
     final user = _requireUser();
     final signedInEmail = user.email;
     if (signedInEmail == null) {
@@ -67,10 +60,6 @@ class AccountSettingsService {
 
   /// Sends a six-digit verification code to the proposed new email address.
   Future<void> sendEmailChangeCode(String newEmail) async {
-    if (isPreviewMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return;
-    }
     await _functions.httpsCallable('sendEmailChangeCode').call<void>(
       <String, dynamic>{'newEmail': newEmail.trim().toLowerCase()},
     );
@@ -82,13 +71,6 @@ class AccountSettingsService {
     required String newEmail,
     required String code,
   }) async {
-    if (isPreviewMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      if (!RegExp(r'^\d{6}$').hasMatch(code)) {
-        throw StateError('A six-digit code is required.');
-      }
-      return;
-    }
     await _functions.httpsCallable('confirmEmailChangeCode').call<void>(
       <String, dynamic>{
         'newEmail': newEmail.trim().toLowerCase(),
@@ -103,10 +85,6 @@ class AccountSettingsService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    if (isPreviewMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      return;
-    }
     final user = _requireUser();
     final email = user.email;
     if (email == null) throw StateError('Password login is not available.');
@@ -125,11 +103,6 @@ class AccountSettingsService {
     required VoidCallback completed,
     required void Function(FirebaseAuthException error) failed,
   }) async {
-    if (isPreviewMode) {
-      await Future<void>.delayed(const Duration(milliseconds: 350));
-      codeSent('preview');
-      return;
-    }
     await _auth.verifyPhoneNumber(
       phoneNumber: phone.trim(),
       verificationCompleted: (credential) async {
@@ -149,7 +122,6 @@ class AccountSettingsService {
     required String verificationId,
     required String code,
   }) async {
-    if (isPreviewMode) return;
     final credential = PhoneAuthProvider.credential(
       verificationId: verificationId,
       smsCode: code,

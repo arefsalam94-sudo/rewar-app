@@ -195,12 +195,17 @@ class RentalOptionRow extends StatelessWidget {
     super.key,
     required this.extra,
     required this.currencyCode,
+    this.pricing = RentalPricing.unconverted,
     required this.quantity,
     required this.onChanged,
   });
 
   final RentalExtra extra;
   final String currencyCode;
+
+  /// Renders the add-on price in the user's chosen currency. Defaults to
+  /// [RentalPricing.unconverted], which shows the supplier's own currency.
+  final RentalPricing pricing;
 
   /// 0 means "not taken" for both selection types.
   final int quantity;
@@ -212,7 +217,7 @@ class RentalOptionRow extends StatelessWidget {
     final language = Localizations.localeOf(context).languageCode;
     final name = extra.name.forLanguage(language);
     final unitPrice = l10n.carPricePerDay(
-      rentalFormatAmount(extra.pricePerDay, currencyCode),
+      pricing.format(extra.pricePerDay, currencyCode),
     );
     // A quantity above one restates the maths on the row itself, so the price
     // the user is agreeing to is never left implicit.

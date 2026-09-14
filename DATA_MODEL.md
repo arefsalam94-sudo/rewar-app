@@ -264,7 +264,7 @@ Both app stores require a working in-app deletion route for any app with
 sign-up, so the second one is a release blocker, not a nice-to-have — the page
 describing it is not the same as the page doing it.
 
-## `help_topics` *(approved live source; bundled fallback is implemented)*
+## `help_topics` *(LIVE — seeded and wired 2026-09-13)*
 
 The ten categories on the Help & Support screen. **Confirmed to live in
 Firestore**, for the same reason as `legal_documents` and more urgently:
@@ -292,12 +292,26 @@ Document ids are fixed in `lib/models/help_topic.dart` (`HelpTopic.docId`):
 `cancellation_changes`, `flights`, `stays_hotels`, `car_rental`,
 `tours_nature`, `safety_travel_info`, `contact_support`.
 
+> **Status 2026-09-13.** Seeded (10 documents, 43 English questions) and read
+> by `HelpTopicsService`, which the Help & Support screen now uses as its
+> primary source. Rules deployed: public `get`, `list` denied (ids are fixed in
+> `HelpTopic.docId`), admin-only write — the `legal_documents` pattern this
+> section called for. `tool/export_help_topics.dart` regenerates the seed JSON
+> from the Dart bundled copy so the two cannot drift.
+
 Open questions, to settle when the content arrives:
 
 - **The row titles and preview lines are currently app strings**, not
   Firestore — they are in `app_localizations.dart` like every other piece of
   UI copy. If the admin panel should rename a topic without a release, they
-  have to move into this collection too. Decide before seeding.
+  have to move into this collection too.
+  **Still open.** Seeding went ahead without resolving it because the approved
+  field list above has no title field: the row list is drawn from the
+  `HelpTopic` enum and only the Q&A body comes from Firestore. Moving titles
+  here is a schema change, not a fix, so it needs sign-off first.
+  One consequence to accept meanwhile: `active: false` cannot hide a row,
+  because the row list is not Firestore-driven. A disabled topic renders the
+  same empty "Coming soon" state the tenth row uses.
 - **`contact_support` is not a Q&A topic** — it is a route to a human (email,
   phone/WhatsApp, hours). It may need a different shape from the other nine,
   or may be better served by reading the contact details already in
@@ -508,6 +522,8 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 | country | string | |
 | location | geopoint | drives the map card; absent hides the map, never fakes it |
 | imageUrls | array<string> | Storage URLs, in gallery order. The first is the card photo |
+| highlighted | boolean | *(approved 2026-09-13)* fills the trending carousel at the top of Where to Stay. Same field, same meaning as on `nature_spots` and `tours` |
+| active | boolean | *(approved 2026-09-13)* false hides a hotel from the customer-facing list without deleting it. Same meaning as on `nature_spots` |
 | starRating | number | 0–5, the **official classification** |
 | reviewScore | number | 0–10, the **guest score**. Server-owned (see below) |
 | ratingCount | number | server-owned |
@@ -523,6 +539,14 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 
 `starRating` and `reviewScore` are **two different measurements** and are drawn
 as two separate badges. Never merge them.
+
+**There is deliberately no `distanceFromCenterKm`.** It was proposed when the
+Firestore wiring was built and **declined**: no collection holds a city-centre
+coordinate to derive it from, and a defaulted `0` would publish a false claim
+about a named real property. The Dart model carries it as **nullable** and the
+hotel card **hides the "N km from centre" line entirely when it is absent**,
+rather than showing a fabricated number. Add the field only alongside a real,
+verified source for it.
 
 `categoryScores` keys: `location`, `cleanliness`, `comfort`, `service`,
 `value`, `facilities`, `wifi`. A category with no data is **absent**, not zero —
@@ -618,29 +642,74 @@ intended.
 | helpfulCount | number | server-owned, from the `votes` subcollection |
 
 ## `cars`
+
+> **Revised 2026-09-13** when the Firestore wiring was built. Six changes, all
+> approved: `name` and the company became locale maps, `currencyCode` was added
+> and constrained, `featured` and `active` were added, and the bare `location`
+> geopoint was replaced by a reference into the new `rental_locations`
+> collection below. The previous shape could not express a localized vehicle or
+> company name, could not state which currency a price was in, and could not
+> support the pickup/drop-off branch search the screen already performs.
+
 | field | type | notes |
 |---|---|---|
-| name | string | |
+| name | map<lang,string> | `{en, ku, ar}`. **Was a plain string**; the screens render `name.forLanguage(...)` like every other catalog collection |
 | year | number | |
-| rentalCompany | string | |
-| companyTag | string | |
+| company | map | `{ id, name: {en, ku, ar} }`. **Replaces `rentalCompany` + `companyTag`**, which were two flat strings and could not carry a localized company name |
 | imageUrls | array<string> | |
 | capacity | number | |
-| fuelType | string | |
+| fuelType | string | `hybrid` \| `electric` \| `petrol` \| `diesel` |
 | bags | number | |
 | hasAC | boolean | |
-| paymentInfo | string | |
-| location | geopoint | |
-| pricePerDay | number | |
-| transmission | string | `"automatic"` \| `"manual"` — added for the Car Rental Details screen's facilities row |
+| paymentInfo | string | `payAtPickup` \| `payNow` |
+| locationId | string | the `rental_locations` branch this vehicle is based at. **Replaces the bare `location` geopoint** |
+| pricePerDay | number | the **authoritative** price, in `currencyCode` |
+| currencyCode | string | **`USD` \| `IQD` only**, enforced in `firestore.rules` |
+| featured | boolean | fills the Car Rental screen's featured carousel. Same role as `highlighted` on hotels |
+| active | boolean | false hides a vehicle from the customer-facing list without deleting it |
+| transmission | string | `automatic` \| `manual` |
 | extras | array<map> | optional add-ons, see below |
 | conditions | map | supplier terms, see below — **every key optional** |
 
-**Not yet read by the app.** The Car Rental, Car Rental Results and Car Rental
-Details screens all read `PreviewCarRentalService` (typed mock data), not this
-collection — see `SEED_DATA.md`. The three rows added above document what the
-Details screen expects once a rental provider is connected, so the admin panel
-and a future importer agree on shape before anything is written.
+### Price and currency — one authoritative pair, never duplicated
+
+A vehicle stores **the price its supplier actually quotes, in the currency they
+quote it in**: `pricePerDay: 65, currencyCode: "USD"` or
+`pricePerDay: 85000, currencyCode: "IQD"`.
+
+**There are deliberately no `priceUSD` / `priceIQD` fields.** Two stored prices
+are two things to keep in step, and the moment a rate moves they disagree —
+with no way to tell which one the supplier is actually honouring. Conversion to
+the user's chosen display currency happens at render time through
+`CurrencyRatesService`, and every converted figure is prefixed with `≈` because
+it is indicative, not a quote (SECURITY.md 5: a charge is settled by the
+processor, never at a rate this app stored).
+
+**Nothing in the service or UI layer may assume USD.** The currency is read
+from the document. `CurrencyRatesService.symbolFor` already falls back to the
+plain ISO code for currencies with no symbol, so `IQD` renders as `IQD`.
+
+`currencyCode` is constrained to `USD`/`IQD` **in the rules**, not only in the
+client: an unsupported code would render a price nobody can act on.
+
+## `rental_locations`
+
+*(added 2026-09-13)* The pickup and drop-off branches the Car Rental search
+screen offers. A **separate collection**, not a field on `cars`, because
+branches are shared across vehicles and are searched independently of them —
+the screen matches a typed query against branch name, city, country and airport
+code, which a geopoint on a vehicle cannot support. Erbil alone has four.
+
+| field | type | notes |
+|---|---|---|
+| name | map<lang,string> | e.g. "Erbil International Airport" |
+| city | map<lang,string> | |
+| country | map<lang,string> | |
+| airportCode | string | optional IATA code, e.g. `EBL`. Absent for city branches |
+| location | geopoint | |
+| active | boolean | false removes a branch from the picker without deleting it |
+
+Public read, admin-only write, exactly like `cars`.
 
 ### `cars.extras[]` — optional add-ons
 | field | type | notes |
@@ -659,14 +728,24 @@ add-on at different prices without a schema change.
 | field | type | notes |
 |---|---|---|
 | fuelPolicy | string | `"fullToFull"` \| `"fullToEmpty"` \| `"sameToSame"` |
-| mileagePolicy | map | `{ unlimited: bool, kilometresPerDay?, extraKilometrePrice? }` |
-| depositAmount | number | in the vehicle's `currencyCode` |
-| damageExcess | number | |
+| mileagePolicy | map | `{ unlimited: bool, kilometresPerDay?, extraKilometrePrice? }`. `extraKilometrePrice` is **in the vehicle's `currencyCode`** |
+| depositAmount | number | **in the vehicle's `currencyCode`** |
+| damageExcess | number | **in the vehicle's `currencyCode`** |
 | freeCancellationUntil | timestamp | |
 | minimumDriverAge | number | |
 | requiredDocuments | array<map> | each keyed by locale `{ en, ku, ar }` |
 | guaranteedModel | boolean | `false` renders the "or a similar vehicle" disclaimer |
 
+> **Every monetary value here is denominated in the vehicle's own
+> `currencyCode`** — `depositAmount`, `damageExcess` and
+> `mileagePolicy.extraKilometrePrice`. Stated explicitly on each row as of
+> 2026-09-13: only `depositAmount` carried the note before, and an unstated
+> currency on a deposit is exactly the kind of ambiguity that ends in a renter
+> being quoted 200 of the wrong unit. There is no second currency field on
+> `cars`, so nothing here may be denominated in anything else, and the display
+> currency the user picks in Settings is **display-only** — it never changes
+> what the supplier is owed.
+>
 > **Every field here is optional on purpose.** These are contractual and
 > financial terms a user would act on, so none may be invented for review data.
 > Absent fields hide their row, and a fully empty `conditions` hides the Rental
@@ -866,17 +945,74 @@ currency here is therefore safe; adding a wrong one is not.
 > in Secret Manager, never in the repo) or an admin-panel form. Recorded in
 > `tool/seed_currency_rates.js` as well.
 
-## `flights`
+## `flights` — priced flight **offers**, not airline schedules
+
+> **Revised 2026-09-14.** This collection holds **priced offers**: a fare a
+> traveller can select, made of one or two legs, quoted in one currency. It is
+> **not** a schedule table of airline movements. That distinction is the whole
+> reason for the shape below — a schedule row has one leg and no price, while
+> an offer has a price, a currency, a per-person-or-total basis, and a return
+> leg that may differ from the outbound in stops and flight number.
+>
+> The previous shape was flat (`fromAirportCode`, `departTime`, … at the top
+> level) and could not express a round trip at all.
+
 | field | type | notes |
 |---|---|---|
-| airline | string | |
-| fromAirportCode | string | |
-| toAirportCode | string | |
+| airline | string | marketing carrier for the offer |
+| outbound | map | the outbound leg, see **Legs** below. Required |
+| returnSegment | map | the return leg, same shape. **Absent on a one-way offer** — never an empty map |
+| price | number | the **authoritative** fare, in `currencyCode` |
+| currencyCode | string | **`USD` \| `IQD` only**, enforced in `firestore.rules` |
+| priceIsTotal | boolean | **stored, never inferred.** `true` = the figure covers the whole party; `false` = per person. The UI must always be able to state which it is showing |
+| cabinClass | string | `economy` \| `premiumEconomy` \| `business` \| `first` |
+| active | boolean | false hides an offer without deleting it |
+
+### Legs — `outbound` and `returnSegment`
+
+| field | type | notes |
+|---|---|---|
+| fromAirportCode | string | IATA |
+| toAirportCode | string | IATA |
 | departTime | timestamp | |
 | arriveTime | timestamp | |
 | durationMinutes | number | |
-| price | number | |
-| cabinClass | string | Economy / Premium Economy / Business / First |
+| stops | number | non-negative integer. **Lives on the leg, not the offer** — an outbound may be direct while the return is not, and a single offer-level count would misdescribe one of them |
+| flightNumber | string | optional |
+
+**The direct-flight filter reads the per-leg `stops`.** A round-trip offer is
+direct only when *both* legs are; filtering on an offer-level number would
+either hide direct outbounds or advertise a non-stop return that stops.
+
+There are deliberately **no duplicated flat `returnDepartTime` /
+`returnArriveTime` fields** — a return leg is a leg, and flattening it loses
+its own stops and flight number.
+
+### Price and currency
+
+One authoritative pair, exactly as `cars` and `tours`: `price` +
+`currencyCode`. **No duplicated `priceUSD` / `priceIQD`** — two stored prices
+drift the moment a rate moves, and there is then no way to tell which one a
+carrier is honouring. Conversion into the user's preferred currency happens at
+render time through `CurrencyRatesService`, is marked `≈`, and is indicative
+only: a charge is settled by the payment processor, never at a rate this app
+stored (`SECURITY.md` 5).
+
+`airportCode` values resolve to city and airport names through the bundled
+airport catalogue, so **no airport names are stored on an offer** and none can
+drift from the catalogue.
+
+### ⚠️ Nothing is seeded, and the mock service cannot be seeded
+
+`MockFlightResultsService` **manufactures route and dates from the user's own
+search** — see `SEED_DATA.md`. Only the airline, a departure minute-of-day,
+duration, price, stops and flight number are fixed; origin, destination and
+both dates come from `FlightSearchCriteria`. Those five entries are display
+templates, not inventory, and **must not be written to this collection**:
+doing so would publish invented routes under real airline names.
+
+Seeding waits on a real source — a provider feed, or a hand-authored set of
+genuine offers.
 
 ## `bookings`
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/help_faq.dart';
 import '../models/help_topic.dart';
+import '../services/help_topics_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/glass_list_row.dart';
@@ -17,11 +18,20 @@ import 'policy_screen.dart';
 /// — a stroke-only circled icon, a title, a truncated question preview, and a
 /// downward chevron.
 ///
-/// The supplied English Q&A is bundled as an offline fallback. A future live
-/// `help_topics/{docId}` source can replace it using the shape documented in
-/// `DATA_MODEL.md` without changing this accordion interaction.
+/// Q&A comes from the `help_topics` collection (`DATA_MODEL.md`), read by
+/// [HelpTopicsService]. The bundled English copy in [bundledHelpFaqs] remains
+/// the fallback for every failure path — Firebase absent, document unseeded,
+/// offline, malformed — because a slightly stale answer beats an error page in
+/// front of someone who is already stuck.
+///
+/// The row list itself still comes from the [HelpTopic] enum, not Firestore:
+/// titles and preview lines are app strings, and the approved schema has no
+/// field for them.
 class HelpSupportScreen extends StatefulWidget {
-  const HelpSupportScreen({super.key});
+  const HelpSupportScreen({super.key, this.service});
+
+  /// Injectable for tests. Defaults to the real Firestore-backed service.
+  final HelpTopicsService? service;
 
   @override
   State<HelpSupportScreen> createState() => _HelpSupportScreenState();
@@ -29,6 +39,7 @@ class HelpSupportScreen extends StatefulWidget {
 
 class _HelpSupportScreenState extends State<HelpSupportScreen> {
   HelpTopic? _expandedTopic;
+  late final HelpTopicsService _service = widget.service ?? HelpTopicsService();
 
   void _toggle(HelpTopic topic) {
     setState(() {
@@ -91,7 +102,10 @@ class _HelpSupportScreenState extends State<HelpSupportScreen> {
                   subtitle: l10n.helpTopicPreview(topic),
                   trailing: GlassListRowTrailing.expand,
                   expanded: _expandedTopic == topic,
-                  expandedChild: _HelpTopicDetails(topic: topic),
+                  expandedChild: _HelpTopicDetails(
+                    topic: topic,
+                    service: _service,
+                  ),
                   onTap: () => _toggle(topic),
                   useCanonicalGlass: true,
                 ),
@@ -119,14 +133,55 @@ IconData helpTopicIcon(HelpTopic topic) => switch (topic) {
   HelpTopic.contact => Icons.support_agent_outlined,
 };
 
-class _HelpTopicDetails extends StatelessWidget {
-  const _HelpTopicDetails({required this.topic});
+class _HelpTopicDetails extends StatefulWidget {
+  const _HelpTopicDetails({required this.topic, required this.service});
 
   final HelpTopic topic;
+  final HelpTopicsService service;
+
+  @override
+  State<_HelpTopicDetails> createState() => _HelpTopicDetailsState();
+}
+
+class _HelpTopicDetailsState extends State<_HelpTopicDetails> {
+  Future<HelpTopicContent>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Started here rather than in initState because it needs the locale.
+    _future ??= widget.service.fetchTopic(
+      widget.topic,
+      Localizations.localeOf(context).languageCode,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final entries = bundledHelpFaqsFor(topic);
+    return FutureBuilder<HelpTopicContent>(
+      future: _future,
+      builder: (context, snapshot) {
+        // No spinner: the bundled copy is always available as a floor, so the
+        // row would flash a loader for one frame and then fill in. Drawing the
+        // fallback immediately and swapping in the live answers when they
+        // arrive keeps the accordion's height stable, which is what the
+        // layout tests pin.
+        final entries = snapshot.data?.questions ??
+            bundledHelpFaqsFor(widget.topic);
+        return _HelpTopicBody(topic: widget.topic, entries: entries);
+      },
+    );
+  }
+}
+
+class _HelpTopicBody extends StatelessWidget {
+  const _HelpTopicBody({required this.topic, required this.entries});
+
+  final HelpTopic topic;
+  final List<HelpFaqEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
     final dividerColor = AppColors.accent(context).withValues(alpha: 0.22);
 
     return Container(

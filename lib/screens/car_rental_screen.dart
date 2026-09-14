@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
+import '../services/currency_rates_service.dart';
+import '../services/user_profile_service.dart';
 import '../services/car_rental_service.dart';
+import '../services/firestore_car_rental_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
@@ -22,12 +25,21 @@ const carRentalBackgroundAsset = 'assets/images/car rental background.webp';
 class CarRentalScreen extends StatefulWidget {
   const CarRentalScreen({
     super.key,
-    this.service = const PreviewCarRentalService(),
+    this.service,
+    this.currencyRatesService,
+    this.userProfileService,
     this.locationService = const DeviceLocationService(),
     this.onVehicleSelected,
   });
 
-  final CarRentalService service;
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final CarRentalService? service;
+
+  /// Injectable for tests; both default to the live services.
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
   final DeviceLocationService locationService;
   final ValueChanged<RentalVehicle>? onVehicleSelected;
 
@@ -36,6 +48,42 @@ class CarRentalScreen extends StatefulWidget {
 }
 
 class _CarRentalScreenState extends State<CarRentalScreen> {
+  late final CarRentalService _resolvedService =
+      widget.service ?? FirestoreCarRentalService();
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // --- display currency -------------------------------------------------
+  //
+  // A vehicle stores one authoritative price in its supplier's currency; this
+  // converts it for display only (DATA_MODEL.md). Both loads are allowed to
+  // fail silently — a car list that refused to draw because a rate table was
+  // missing would be a far worse bug than an unconverted price.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  RentalPricing get _pricing =>
+      RentalPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
+
   final _carouselController = PageController();
   final _searchCardKey = GlobalKey();
 
@@ -61,6 +109,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDisplayCurrency();
     _loadTrending();
     _loadLocation();
   }
@@ -77,7 +126,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       _loadError = null;
     });
     try {
-      final cars = await widget.service.trendingCars();
+      final cars = await _resolvedService.trendingCars();
       if (mounted) setState(() => _cars = cars);
     } catch (error) {
       if (mounted) setState(() => _loadError = error);
@@ -306,7 +355,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         MaterialPageRoute<void>(
           builder: (_) => CarRentalResultsScreen(
             criteria: criteria,
-            service: widget.service,
+            service: _resolvedService,
             locationService: widget.locationService,
             onVehicleSelected: onVehicleSelected == null
                 ? null
@@ -382,7 +431,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       dropOffTime: _dropOffTime,
                       errors: _errors,
                       searching: _searching,
-                      service: widget.service,
+                      service: _resolvedService,
                       openLocation: _openLocation,
                       onPickupLocation: () =>
                           _toggleLocationSearch(pickup: true),
@@ -425,6 +474,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     else
                       for (final car in cars) ...[
                         _RentalCarCard(
+                          pricing: _pricing,
                           vehicle: car,
                           deviceLocation: _deviceLocation,
                           onTap: () => _selectVehicle(car),
@@ -992,7 +1042,13 @@ class _RentalCarCard extends StatelessWidget {
     required this.vehicle,
     required this.deviceLocation,
     required this.onTap,
+    this.pricing = RentalPricing.unconverted,
   });
+
+  /// How to render this vehicle's stored price in the user's chosen currency.
+  /// Defaults to [RentalPricing.unconverted], which shows the supplier's own
+  /// currency — the honest state before the rate table has loaded.
+  final RentalPricing pricing;
 
   final RentalVehicle vehicle;
   final DeviceLocation? deviceLocation;
@@ -1159,7 +1215,7 @@ class _RentalCarCard extends StatelessWidget {
                       vertical: 10,
                     ),
                     child: Text(
-                      l10n.carPricePerDay(rentalPriceAmount(vehicle)),
+                      l10n.carPricePerDay(rentalPriceAmount(vehicle, pricing)),
                       textDirection: TextDirection.ltr,
                       style: TextStyle(
                         color: AppColors.heading(context),

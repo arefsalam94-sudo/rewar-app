@@ -4,8 +4,8 @@ import 'package:oc_liquid_glass/oc_liquid_glass.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/locale_controller.dart';
 import 'screens/splash_screen.dart';
+import 'services/crash_reporter.dart';
 import 'services/firebase_bootstrap.dart';
-import 'services/preview_identity.dart';
 import 'services/settings_preferences.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
@@ -22,10 +22,12 @@ Future<void> main() async {
   // records the failure and the app still runs (backend features report a
   // real error instead of pretending to work). See FIREBASE_SETUP.md.
   await FirebaseBootstrap.ensureInitialized();
+  // Installed after Firebase, because Crashlytics needs it, and before the
+  // first frame so a crash during startup is still caught. Collection is off
+  // in debug; every report is scrubbed by CrashReporter.redact first
+  // (SECURITY.md 10, and 5.1 on what must never reach Crashlytics).
+  await CrashReporter().initialize();
   await ThemePreference.restore();
-  // Only consulted while Firebase is missing, so account surfaces can show the
-  // name the user registered with instead of a hard-coded stand-in.
-  await PreviewIdentity.load();
   final savedLanguage = await const SettingsPreferences().languageCode();
   appLocale.value = Locale(savedLanguage);
   runApp(const KurdistanParadiseApp());

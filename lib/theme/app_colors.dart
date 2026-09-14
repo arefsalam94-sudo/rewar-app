@@ -518,8 +518,8 @@ class AppColors {
   static Color selectionTint(BuildContext context) =>
       _isDark(context) ? darkSelectionTint : lightSelectionTint;
 
-  // --- Warning banner (PreviewModeBanner, legal-document "unreviewed"
-  // notice) --------------------------------------------------------------
+  // --- Warning banner (legal-document "unreviewed" notice)
+  // ----------------------------------------------------------------------
   //
   // Named here to stop the same four hex values being duplicated verbatim
   // in both call sites. Intentionally one value in both themes — an amber

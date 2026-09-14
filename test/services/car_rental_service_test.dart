@@ -18,15 +18,43 @@ void main() {
 
     final searched = await service.searchCars(criteria);
 
+    // The point of this test: both entry points serve the same fixtures, so a
+    // car opened from Trending and the same car opened from Results cannot
+    // disagree.
     expect(searched.map((car) => car.id), trending.map((car) => car.id));
-    expect(searched, hasLength(3));
+
+    // Tied to the fixture list rather than a hard-coded count. The catalogue
+    // grew from three vehicles to five and silently broke this test; anchoring
+    // it to the source list means growing it again cannot.
+    expect(searched, hasLength(PreviewCarRentalService.vehicles.length));
+    expect(searched, isNotEmpty);
   });
 
-  test('location search supports city and airport code', () async {
+  test('location search matches city names', () async {
     final byCity = await service.searchLocations('Erbil');
+
+    // Erbil has four branches — the airport plus three city pickup points — so
+    // this asserts the whole matched set, not a single hit.
+    expect(byCity, hasLength(greaterThan(1)));
+    expect(byCity.map((location) => location.id), contains('preview-erbil-airport'));
+    expect(
+      byCity.every((location) => location.city.en == 'Erbil'),
+      isTrue,
+      reason: 'a city search must not return branches in another city',
+    );
+  });
+
+  test('location search matches a unique airport code', () async {
     final byCode = await service.searchLocations('ISU');
 
-    expect(byCity.single.id, 'preview-erbil-airport');
+    // An IATA code belongs to exactly one branch, so `single` is the right
+    // assertion here even though it is wrong for a city name.
     expect(byCode.single.id, 'preview-sulaymaniyah-airport');
+    expect(byCode.single.airportCode, 'ISU');
+  });
+
+  test('a query shorter than two characters returns nothing', () async {
+    expect(await service.searchLocations('E'), isEmpty);
+    expect(await service.searchLocations(' '), isEmpty);
   });
 }

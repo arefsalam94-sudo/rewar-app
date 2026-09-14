@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
 import '../models/hotel_detail.dart';
 import '../services/hotel_booking_service.dart';
+import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
@@ -32,13 +33,16 @@ class ChooseRoomScreen extends StatefulWidget {
     super.key,
     required this.hotel,
     required this.criteria,
-    this.hotelService = const PreviewHotelService(),
+    this.hotelService,
     this.bookingService,
   });
 
   final Hotel hotel;
   final HotelSearchCriteria criteria;
-  final HotelService hotelService;
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final HotelService? hotelService;
   final HotelBookingService? bookingService;
 
   @override
@@ -46,9 +50,12 @@ class ChooseRoomScreen extends StatefulWidget {
 }
 
 class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
+  late final HotelService _resolvedHotelService =
+      widget.hotelService ?? FirestoreHotelService();
+
   late final HotelBookingService _service =
       widget.bookingService ??
-      PreviewHotelBookingService(hotelService: widget.hotelService);
+      PreviewHotelBookingService(hotelService: _resolvedHotelService);
 
   ChooseRoomStatus _status = ChooseRoomStatus.loading;
   HotelAvailability? _availability;

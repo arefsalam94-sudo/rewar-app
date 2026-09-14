@@ -10,7 +10,6 @@ import '../widgets/app_liquid_glass.dart';
 import '../widgets/auth_glass_field.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/social_auth_button.dart';
 import 'forget_password_screen.dart';
@@ -24,9 +23,13 @@ import 'register_screen.dart';
 /// "liquid glass" card containing the login form, social sign-in, and
 /// register link, with "Continue as Guest" outside the card.
 ///
-/// IMPORTANT: the actions here are placeholders. Real authentication needs
-/// Firebase, which is not set up yet. Every button currently calls
-/// [_notWired] so nothing silently pretends to work.
+/// Email + password sign-in runs against **real Firebase Auth**
+/// ([AuthService.signIn], `SECURITY.md` 6.1). The password is handed to the
+/// SDK and nothing else — it is never logged, cached, or persisted.
+///
+/// The two social buttons are still honestly [_notWired]: Apple and Google
+/// sign-in providers have not been configured. They say so rather than
+/// failing silently.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, this.languageCode = 'en'});
 
@@ -42,6 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+
+  /// True while a sign-in request is in flight. Disables the button so a
+  /// double-tap cannot fire two attempts, which would burn a second try
+  /// against Firebase's own rate limiter (`SECURITY.md` 6.4).
+  bool _submitting = false;
+
+  /// Localized failure text shown under the form. Same idiom as Register.
+  String? _errorText;
 
   /// Mirrors the app-wide [appDarkMode] notifier, which the toggle on the
   /// **Language** screen owns. This screen only reads it — there is no toggle
@@ -65,44 +76,84 @@ class _LoginScreenState extends State<LoginScreen> {
       );
   }
 
-  void _onLogin() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    // Real sign-in still needs Firebase (SECURITY.md 6.1). Until it exists,
-    // preview mode accepts one hard-coded account so the app can be walked
-    // for design review — see [AuthService.previewUsername].
-    if (!AuthService.isPreviewMode) {
-      _notWired('Would sign in with email + password via Firebase Auth');
-      return;
+  String _messageFor(AuthErrorKind kind, AppLocalizations l10n) {
+    switch (kind) {
+      case AuthErrorKind.invalidCredentials:
+        return l10n.invalidCredentials;
+      case AuthErrorKind.userDisabled:
+        return l10n.accountDisabled;
+      case AuthErrorKind.invalidEmail:
+        return l10n.emailInvalid;
+      case AuthErrorKind.network:
+        return l10n.networkError;
+      case AuthErrorKind.tooManyRequests:
+        return l10n.tooManyAttempts;
+      case AuthErrorKind.backendUnavailable:
+        return 'Firebase is not configured yet — see FIREBASE_SETUP.md';
+      // Registration outcomes. Unreachable from this screen, which only signs
+      // existing users in, but the enum is shared so the switch stays
+      // exhaustive.
+      case AuthErrorKind.emailAlreadyInUse:
+      case AuthErrorKind.weakPassword:
+      case AuthErrorKind.unknown:
+        return l10n.loginFailed;
     }
+  }
 
-    final ok = AuthService().checkPreviewCredentials(
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    if (!ok) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'PREVIEW MODE: wrong preview credentials. '
-              'Use kurdistan / Asd!@3',
-            ),
-          ),
-        );
-      return;
-    }
-
-    // `pushReplacement`, so Back from the dashboard doesn't return to Login —
-    // the auth flow is finished. Same rule as Continue as Guest.
+  /// Sends the user to the dashboard. `pushReplacement`, so Back from there
+  /// doesn't return to Login — the auth flow is finished. Same rule as
+  /// Continue as Guest.
+  void _enterApp(String? displayName) {
     Navigator.of(context).pushReplacement(
+<<<<<<< HEAD
       HomeScreen.route(
         isGuest: false,
         displayName: AuthService.previewDisplayName,
+=======
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            HomeScreen(isGuest: false, displayName: displayName),
+>>>>>>> ab113c6 (Latest app update)
       ),
     );
+  }
+
+  Future<void> _onLogin() async {
+    final l10n = AppLocalizations.of(context);
+    FocusScope.of(context).unfocus();
+
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_submitting) return;
+
+    setState(() {
+      _submitting = true;
+      _errorText = null;
+    });
+
+    try {
+      final displayName = await AuthService().signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      // The password controller is cleared before navigating so the entered
+      // secret does not sit in a live TextEditingController behind the
+      // dashboard for the rest of the session.
+      _passwordController.clear();
+      _enterApp(displayName);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _errorText = _messageFor(e.kind, l10n);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _errorText = l10n.loginFailed;
+      });
+    }
   }
 
   void _onBack() {
@@ -235,15 +286,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppColors.heading(context),
               ),
             ),
-            // Debug-only, and renders nothing once Firebase is configured.
-            // Nobody should be able to mistake the preview account for real
-            // authentication.
-            const PreviewModeBanner(
-              message:
-                  'PREVIEW MODE — not real sign-in. '
-                  'Use kurdistan / Asd!@3 to browse the app. '
-                  'This account cannot exist in a release build.',
-            ),
             const SizedBox(height: 22),
             AuthGlassField(
               controller: _emailController,
@@ -253,14 +295,6 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.isEmpty) return l10n.emailRequired;
-                // Preview mode signs in with a plain username, not an email,
-                // so the format check would otherwise block the one account
-                // that exists before Firebase does. Debug-only, like the
-                // account itself.
-                if (AuthService.isPreviewMode &&
-                    text.toLowerCase() == AuthService.previewUsername) {
-                  return null;
-                }
                 final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
                 if (!emailRegex.hasMatch(text)) {
                   return l10n.emailInvalid;
@@ -308,8 +342,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
             ),
+            if (_errorText != null) ...[
+              const SizedBox(height: 14),
+              Text(
+                _errorText!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
-            PrimaryButton(label: l10n.logIn, onTap: _onLogin, dark: _darkMode),
+            PrimaryButton(
+              label: l10n.logIn,
+              onTap: _submitting ? null : _onLogin,
+              dark: _darkMode,
+            ),
             const SizedBox(height: 20),
             const _OrDivider(),
             const SizedBox(height: 20),

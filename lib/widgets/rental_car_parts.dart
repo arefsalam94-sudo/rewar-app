@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
+import '../screens/explore_tours_screen.dart' show formatMoney;
 import '../services/currency_rates_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
@@ -237,10 +238,70 @@ class RentalPriceBadge extends StatelessWidget {
   }
 }
 
+/// Converts a vehicle's stored price into the currency the user chose in
+/// Settings, using the live `currency_rates` table.
+///
+/// A vehicle stores **one authoritative price** in its supplier's currency
+/// (`pricePerDay` + `currencyCode`, DATA_MODEL.md). Nothing is duplicated in
+/// Firestore; the conversion happens here, at render time.
+///
+/// Mirrors `TourPricing` in `explore_tours_screen.dart` deliberately, and
+/// reuses its `formatMoney`, so a price on a car card and the same figure at
+/// checkout cannot be formatted two different ways.
+///
+/// Conversions are **indicative**, never a quote: a charge is settled by the
+/// payment processor in the operator's own currency, never at a rate this app
+/// stored (SECURITY.md 5). That is what the `≈` prefix discloses.
+class RentalPricing {
+  const RentalPricing({required this.rates, required this.displayCurrency});
+
+  /// No rate table — every price renders in its own stored currency. This is
+  /// the honest state before `currency_rates/latest` has loaded.
+  static const RentalPricing unconverted = RentalPricing(
+    rates: CurrencyRates.empty,
+    displayCurrency: '',
+  );
+
+  final CurrencyRates rates;
+
+  /// The ISO code the user chose in Settings (`users.preferredCurrency`).
+  final String displayCurrency;
+
+  /// Whether a price quoted in [currency] would actually be converted — false
+  /// when it already matches the display currency, and false when the rate
+  /// table cannot do it.
+  bool isConverted(String currency) {
+    if (displayCurrency.isEmpty) return false;
+    if (currency.toUpperCase() == displayCurrency.toUpperCase()) return false;
+    return rates.convert(1, from: currency, to: displayCurrency) != null;
+  }
+
+  /// A vehicle's daily rate as drawn, e.g. `$56` or `≈ IQD 73,360`.
+  String perDay(RentalVehicle vehicle) =>
+      format(vehicle.dailyPrice, vehicle.currencyCode);
+
+  /// Any amount in [currency], converted for display when possible.
+  ///
+  /// Falls back to the stored currency whenever the conversion cannot be made
+  /// — an unconverted true price beats a converted invented one.
+  String format(num amount, String currency) {
+    if (!isConverted(currency)) return formatMoney(amount, currency);
+    final converted = rates.convert(
+      amount,
+      from: currency,
+      to: displayCurrency,
+    );
+    if (converted == null) return formatMoney(amount, currency);
+    return '≈ ${formatMoney(converted, displayCurrency)}';
+  }
+}
+
 /// Formats the structured `dailyPrice` + `currencyCode` pair into a symbol and
 /// amount. Symbols longer than one character are spaced off the number, which
 /// covers the codes rendered as words in the rates table.
-String rentalPriceAmount(RentalVehicle vehicle) {
+String rentalPriceAmount(RentalVehicle vehicle, [RentalPricing? pricing]) {
+  // With a rate table and a chosen display currency, render in that currency.
+  if (pricing != null) return pricing.perDay(vehicle);
   final symbol = CurrencyRatesService.symbolFor(vehicle.currencyCode);
   final amount = vehicle.dailyPrice == vehicle.dailyPrice.roundToDouble()
       ? vehicle.dailyPrice.toStringAsFixed(0)

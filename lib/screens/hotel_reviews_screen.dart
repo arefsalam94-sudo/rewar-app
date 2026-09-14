@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/hotel.dart';
 import '../models/nature_spot.dart';
+import '../services/firestore_hotel_reviews_service.dart';
 import '../services/hotel_reviews_service.dart';
 import '../services/nature_spots_service.dart';
 import '../services/user_profile_service.dart';
@@ -34,7 +35,7 @@ class HotelReviewsScreen extends StatelessWidget {
     return NatureReviewsScreen(
       spot: subject,
       natureSpotsService:
-          reviewService ?? PreviewHotelReviewService(subject: subject),
+          reviewService ?? FirestoreHotelReviewsService(subject: subject),
       userProfileService: userProfileService,
       backgroundFallbackAsset: backgroundAsset,
       // The hotel's own photograph belongs to the detail page's gallery; this

@@ -289,17 +289,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Use at least 8 characters'), findsOneWidget);
 
-    // Long enough, but no special character.
+    // Long enough, but no number. A special character is deliberately NOT
+    // required — the four rules here mirror the live Firebase Auth password
+    // policy exactly (SECURITY.md 6.1b).
     await tester.enterText(fields.first, 'Abcdefgh');
     await tester.tap(find.text('Update Password'));
     await tester.pumpAndSettle();
-    expect(find.text('Add at least one special character'), findsOneWidget);
+    expect(find.text('Add at least one number'), findsOneWidget);
 
     // No uppercase.
-    await tester.enterText(fields.first, 'abcdefg!');
+    await tester.enterText(fields.first, 'abcdefg1');
     await tester.tap(find.text('Update Password'));
     await tester.pumpAndSettle();
     expect(find.text('Add at least one uppercase letter'), findsOneWidget);
+
+    // No lowercase.
+    await tester.enterText(fields.first, 'ABCDEFG1');
+    await tester.tap(find.text('Update Password'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add at least one lowercase letter'), findsOneWidget);
   });
 
   testWidgets('Reset Password requires the two passwords to match', (
@@ -309,8 +317,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final fields = find.byType(TextFormField);
-    await tester.enterText(fields.first, 'Abcdefg!');
-    await tester.enterText(fields.last, 'Abcdefg?');
+    await tester.enterText(fields.first, 'Abcdefg1');
+    await tester.enterText(fields.last, 'Abcdefg2');
     await tester.tap(find.text('Update Password'));
     await tester.pumpAndSettle();
 
@@ -406,44 +414,6 @@ void main() {
     expect((sun.center.dy - toggle.center.dy).abs(), lessThan(1.0));
     expect((moon.center.dy - toggle.center.dy).abs(), lessThan(1.0));
   });
-
-  testWidgets(
-    'Full reset flow navigates: Send Code → Verify → Reset Password',
-    (WidgetTester tester) async {
-      // Firebase is not configured in tests, so the service runs in preview
-      // mode — exactly what the app does on a dev machine before setup.
-      expect(PasswordResetService.isPreviewMode, isTrue);
-
-      await tester.pumpWidget(_host(const ForgetPasswordScreen()));
-      await tester.pumpAndSettle();
-
-      // Nothing selected yet → Send Code must not navigate.
-      await tester.tap(find.text('Send Code'));
-      await tester.pumpAndSettle();
-      expect(find.text('Choose phone or email first'), findsOneWidget);
-      expect(find.byType(VerificationCodeScreen), findsNothing);
-
-      // Pick the phone option, then send.
-      await tester.tap(find.text('Phone number'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Send Code'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(VerificationCodeScreen), findsOneWidget);
-      expect(find.text('Verification Code'), findsOneWidget);
-
-      // Enter 6 digits and verify.
-      await tester.enterText(find.byType(TextField), '152537');
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Verify'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Verify'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(ResetPasswordScreen), findsOneWidget);
-      expect(find.text('New Password'), findsOneWidget);
-    },
-  );
 
   testWidgets('Register screen shows every field and control', (
     WidgetTester tester,

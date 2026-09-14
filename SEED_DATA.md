@@ -21,17 +21,19 @@ don't mark it seeded until it's really there and confirmed rendering.
 | nature_spots | Rawanduz Canyon (highlighted), Sami Abdulrahman Park, Erbil Citadel — seed with `node tool/seed_explore_nature.js` | ✅ **SEEDED** 2026-08-17 — 3 docs. `imageUrls` still empty |
 | nature_spots/{id}/reviews | 7 visitor reviews — 3 for Rawanduz (Elena P., Hassan S., Priya N.), 2 each for the other places. Same script | ✅ **SEEDED** 2026-08-17 — 7 docs. **Scores still absent — `syncNatureReviewAggregates` is not deployed (needs Blaze)** |
 | nature_spots/{id}/reviews/{id}/votes | n/a — written only by a signed-in user tapping the heart | N/A (not seeded by hand) |
-| hotels | Divan Hotel (Iraq, Erbil, 40m Street) | NOT SEEDED — Where to Stay and the **Hotel Details** screen both read `PreviewHotelService`, not Firestore. Its three review hotels (Divan Erbil, Ramada Sulaimani, Duhok Palace) are typed mock data only. Divan carries the full detail set — a five-entry gallery built from **existing bundled photographs** (no per-hotel photos exist yet), fifteen facilities across nine categories, six Erbil nearby places, a five-category review breakdown, two room types, three rates and full policies. Ramada carries a partial set, and Duhok Palace is deliberately bare (no gallery, no coordinates, no facilities, no nearby, no aggregate) so the hidden sections and empty states stay reviewable. **None of it is a claim about these properties** |
-| hotels/{id}/rooms | Ocean View Suite | NOT SEEDED — two preview room types exist in Dart (Deluxe King, Twin City View) purely to give the guest counters a published `maxOccupancy` to enforce |
-| hotels/{id}/offers | n/a | NOT SEEDED — three preview rates exist in Dart with invented prices, taxes, fees, breakfast, cancellation and prepayment values. Nothing on the Hotel Details page displays a price; they exist so the Room Selection screen has a shape to build against |
-| hotels/{id}/reviews | Sarah — "The views are incredible! Highly recommend." | NOT SEEDED — the Hotel Details page's Ratings & Comments card and its full reviews page read `PreviewHotelReviewService`, an **in-memory** store (three sample reviews for Divan, one for Ramada). Reviews written in preview mode survive until the app is closed and reach no database |
-| cars | Tesla Model 3 (GreenWheels Rentals) | NOT SEEDED — the Car Rental and Car Rental Results screens read `PreviewCarRentalService`, not Firestore. Its five review vehicles (Tesla Model 3, Ford Mustang, Toyota Corolla, Range Rover, BMW X5 — ABC Cars / Paradise Rent A Car) are typed mock data only; seed real docs when a rental provider or the `cars` collection is wired up. The Car Rental **Details** screen reads the same mock data: five gallery entries per car (the single `journey-car.png` asset repeated, so the carousel can be exercised) and six add-ons per car with invented prices. `conditions` is left **entirely empty** on all five — fuel policy, mileage, deposit, excess, cancellation deadline, minimum age and required documents are contractual terms and are never invented for review data, so the Rental Conditions card stays hidden until a supplier feed fills them |
+| hotels | Divan Erbil, Ramada Sulaimani, Duhok Palace — seed with `flutter test tool/export_hotels.dart && node tool/seed_hotels.js` | ✅ **SEEDED** 2026-09-13 — 3 docs. Rules deployed (public read, admin-only write). `imageUrls` empty and **no rating aggregates**, same rule as nature_spots/tours. Now carries the approved `highlighted` + `active` (all three `active: true`, all three `highlighted: true` — preserved from the preview data). **Where to Stay, Hotel Details, Room Selection and the reviews pages all read Firestore first**, with the preview catalogue as fallback |
+| hotels/{id}/rooms | Garden View + King Room (Divan), Garden View (Ramada) | ✅ **SEEDED** 2026-09-13 — 3 docs, generated from `PreviewHotelService`. `imageUrls` empty |
+| hotels/{id}/offers | four Divan rates (king/garden × flex/room-only) | ✅ **SEEDED** 2026-09-13 — 4 docs with prices, taxes, fees, `taxesIncluded`, cancellation and `availableQuantity`. Invented review figures, not real rates |
+| hotels/{id}/reviews | 4 guest reviews — 3 for Divan, 1 for Ramada, none for Duhok Palace | ✅ **SEEDED** 2026-09-13 — 4 docs under `seed-*` placeholder uids (the id IS the author's uid; replace once real accounts exist). **No `helpfulCount`** and no aggregates — both server-owned |
+| cars | Tesla Model 3, Ford Mustang, Toyota Corolla, Range Rover, BMW X5 — seed with `flutter test tool/export_cars.dart && node tool/seed_cars.js` | ✅ **SEEDED** 2026-09-13 — 5 docs, all **USD** (the currency the preview data establishes; no IQD price was fabricated). Rules deployed: public read, admin-only write, `currencyCode` restricted to USD/IQD. **`conditions` deliberately absent** on all five — fuel policy, deposit, excess, cancellation, minimum age and documents are contractual terms and are never invented, so the Rental Conditions card stays hidden. `imageUrls` empty |
+| rental_locations | 6 pickup/drop-off branches (Erbil Airport, Sulaymaniyah Airport, Duhok Centre, Wavy Avenue, Dream City, Gulan Street) | ✅ **SEEDED** 2026-09-13 — 6 docs, all `active: true`. New collection added 2026-09-13: branches are shared across vehicles and searched independently, which a geopoint on a car could not support |
 | tours | Gali Alibag Waterfall (highlighted + trending), Gali Sherana (trending), Korek Mountain Day Trip (highlighted) — seed with `node tool/seed_explore_tours.js` | ✅ **SEEDED** 2026-08-17 — 3 docs, both queries verified live. `imageUrls` still empty |
-| tours — `minAge` | **Gali Sherana only**, `minAge: 18`; the other two omit the field so "absent = no restriction" is exercised too | ⚠️ **NOT RE-SEEDED** — added to `tool/seed_explore_tours.js` on 2026-08-18 for the Traveler Info age gate. Re-run the script to push it |
-| tours — `features` | Re-tagged on 2026-08-20 to the Explore Tours reference: Gali Alibag `guide, activity, wifi, food, electricity`; Gali Sherana `campfire, tent, wifi, swimming`; Korek `guide, food, transport, photography, activity` | ⚠️ **NOT RE-SEEDED** — the four new ids (`activity`, `wifi`, `electricity`, `tent`) are additive, so the seeded docs still load; they just draw the old four icons until `node tool/seed_explore_tours.js` is re-run |
+| tours — `minAge` | **Gali Sherana only**, `minAge: 18`; the other two omit the field so "absent = no restriction" is exercised too | ✅ **RE-SEEDED** 2026-09-10 — read back live: `gali-sherana` carries `18`, the other two have no `minAge`, so the Traveler Info age gate exercises both branches |
+| tours — `features` | Re-tagged on 2026-08-20 to the Explore Tours reference: Gali Alibag `guide, activity, wifi, food, electricity`; Gali Sherana `campfire, tent, wifi, swimming`; Korek `guide, food, transport, photography, activity` | ✅ **RE-SEEDED** 2026-09-10 — read back live; all three now carry the re-tagged ids including `activity`, `wifi`, `electricity`, `tent` |
 | tours/{id}/reviews | 5 traveller reviews — 3 for Gali Alibag, 2 for Gali Sherana, **none for Korek on purpose**. Same script | ✅ **SEEDED** 2026-08-17 — 5 docs. **Scores still absent — `syncTourReviewAggregates` is not deployed (needs Blaze)** |
 | currency_rates | `latest` — USD base, IQD and EUR — seed with `node tool/seed_currency_rates.js` | ✅ **SEEDED** 2026-08-17 — 1 doc (`USD:1, IQD:1310, EUR:0.92`). Nothing refreshes it |
-| flights | Astra Airlines, Erbil (EBL) → Istanbul | NOT SEEDED |
+| flights | — | **NOT SEEDED, and cannot be from the current source.** `MockFlightResultsService` **manufactures route and dates from the user's own search**: only airline, a departure minute-of-day, duration, price, stops and flight number are fixed; origin, destination and both dates come from `FlightSearchCriteria`. Its five entries are display templates, not inventory — seeding them would publish invented routes under real airline names. Waits on a provider feed or a hand-authored set of genuine offers. `flights` also still has **no rule in `firestore.rules`**, so it stays closed by the catch-all |
+| help_topics | the ten Help & Support categories — **confirmed live source** in `DATA_MODEL.md` | ✅ **SEEDED** 2026-09-13 — 10 docs, 43 questions (English only). Rules deployed: public `get`, `list` denied, admin-only write. Seed with `dart run tool/export_help_topics.dart && node tool/seed_help_topics.js`. `contact_support` is intentionally empty so the row keeps its "Coming soon" state |
 | users | (your own test account, created via the Auth screen) | NOT SEEDED |
 | bookings | one per type — hotel, flight, car, tour (upcoming + completed) — seed with `node tool/seed_bookings.js <uid>` | NOT SEEDED (needs a Firebase project) |
 | favorites | one saved stay + one saved nature spot, written by tapping the heart on Where to Stay / Explore Nature while signed in | NOT SEEDED — **nothing seeds this by hand.** Rows carry a denormalized snapshot (`title`, `locationLabel`, `imageRef`) captured at the moment the heart is tapped, so a hand-written row would not match what the app produces. The Favorites screen is verified by saving from the two source screens, not from a script |
@@ -43,6 +45,37 @@ don't mark it seeded until it's really there and confirmed rendering.
 > proof is an **end-to-end run**: request a code, receive the real SMS/email,
 > and verify it against the deployed Cloud Function. That can't happen until
 > `FIREBASE_SETUP.md` is finished.
+
+### help_topics (Help & Support screen)
+
+Two commands, in this order:
+
+```
+dart run tool/export_help_topics.dart
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json node tool/seed_help_topics.js
+```
+
+**The Dart bundled content is the single source of truth.** `bundledHelpFaqs`
+in `lib/models/help_faq.dart` is what the app falls back to, and
+`tool/export_help_topics.dart` regenerates `tool/help_topics_seed.json` from
+it. Node cannot read Dart, so without that exporter the forty-three Q&A pairs
+would have to be transcribed into the seed script by hand — which is exactly
+how two copies start disagreeing. **Never edit `tool/help_topics_seed.json`
+directly**; edit the Dart content and re-run the exporter.
+
+A Dart test reads that generated file back through the app's own parser and
+asserts it yields the bundled content exactly, so a drift between what was
+seeded and what the screen can read fails the suite rather than showing an
+empty help topic in production.
+
+The seeder refuses to run if the ids do not match `HelpTopic.docId`, if an
+order is duplicated, or if any question/answer is blank — a seed script that
+writes malformed data is worse than one that stops.
+
+> Only `content.en` is written, because English is all the bundled copy has.
+> A missing locale falls back to `en` in the app, the same rule as
+> `legal_documents`. Kurdish and Arabic Q&A can be added to the same documents
+> later without a schema change or an app release.
 
 ### featured + nature_spots (Home screen)
 

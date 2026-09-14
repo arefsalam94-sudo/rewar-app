@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/favorite_item.dart';
 import '../models/hotel.dart';
 import '../services/favorites_service.dart';
+import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
 import '../services/nature_spots_service.dart';
 import '../theme/app_colors.dart';
@@ -42,7 +43,7 @@ class FavoritesScreen extends StatefulWidget {
     this.isGuest = false,
     this.service,
     this.natureSpotsService,
-    this.hotelService = const PreviewHotelService(),
+    this.hotelService,
     this.showBottomNav = false,
   });
 
@@ -66,7 +67,10 @@ class FavoritesScreen extends StatefulWidget {
   /// Resolves a saved stay. Still the preview catalogue: `hotels` is not
   /// seeded and Where to Stay reads `PreviewHotelService` (`SEED_DATA.md`),
   /// so a stay saved today resolves against typed data, not Firestore.
-  final HotelService hotelService;
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final HotelService? hotelService;
 
   /// Favorites is a bar destination rather than a Nature/Hotel/Car/Tour/Flight
   /// screen, so it takes the shared non-category photograph — the same one
@@ -79,6 +83,9 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
+  late final HotelService _resolvedHotelService =
+      widget.hotelService ?? FirestoreHotelService();
+
   late final FavoritesService _service = widget.service ?? FavoritesService();
   late final NatureSpotsService _natureService =
       widget.natureSpotsService ?? NatureSpotsService();
@@ -217,7 +224,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               builder: (_) => HotelDetailScreen(
                 hotel: hotel,
                 criteria: _defaultStayCriteria(),
-                service: widget.hotelService,
+                service: _resolvedHotelService,
               ),
             ),
           );
@@ -231,7 +238,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<Hotel?> _findHotel(String id) async {
-    final hotels = await widget.hotelService.trendingHotels();
+    final hotels = await _resolvedHotelService.trendingHotels();
     for (final hotel in hotels) {
       if (hotel.id == id) return hotel;
     }

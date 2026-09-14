@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 
 import '../models/registration.dart';
 import 'firebase_bootstrap.dart';
-import 'preview_identity.dart';
 
 /// Why a registration attempt failed. Screens map these to localized
 /// strings — a raw Firebase message is never shown to the user.
@@ -15,6 +14,10 @@ enum AuthErrorKind {
   weakPassword,
   network,
   tooManyRequests,
+  /// Sign-in only. Covers wrong password *and* unknown account as one kind,
+  /// on purpose — see [AuthService.signIn].
+  invalidCredentials,
+  userDisabled,
   unknown,
 }
 
@@ -45,45 +48,50 @@ class AuthService {
   FirebaseFirestore get _firestore =>
       _firestoreOverride ?? FirebaseFirestore.instance;
 
-  /// Debug-only stand-in so the Register flow can be walked before Firebase
-  /// exists. Same guard as [PasswordResetService.isPreviewMode]: gated on
-  /// [kDebugMode], so a release build can never create a fake account.
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
-  /// The one hard-coded account that exists **only** in preview mode, so the
-  /// app can be walked and reviewed before a Firebase project exists.
+  /// Signs an existing user in with email + password (`SECURITY.md` 6.1).
   ///
-  /// ## This is not a real account, and it must never become one.
+  /// The password goes straight to Firebase Auth. It is never written to
+  /// Firestore, never logged, and never placed on a model object — the same
+  /// absolute rule as 6.1b, and as card data in section 5.1.
   ///
-  /// It is gated on [isPreviewMode] — `kDebugMode && !FirebaseBootstrap.isReady`
-  /// — so it disappears the moment either a release build is made *or* Firebase
-  /// is configured. A hard-coded credential that could survive into a shipped
-  /// binary would be a backdoor; this one cannot, on two independent counts.
+  /// ## Why a wrong password and an unknown account are one error
   ///
-  /// `SECURITY.md` 6.1 governs real sign-in: email + password against Firebase
-  /// Auth, with email verification and a second factor. None of that is
-  /// simulated here — this only unlocks the UI for design review.
-  static const String previewUsername = 'kurdistan';
-  static const String previewPassword = r'Asd!@3';
-
-  /// The display name shown in the drawer and Settings for [previewUsername].
-  static const String previewDisplayName = 'Kurdistan';
-
-  /// Checks the preview credentials. Returns false for anything else.
+  /// This project has Firebase's email-enumeration protection enabled, so the
+  /// backend answers both with `invalid-credential`. This method preserves
+  /// that collapse rather than trying to undo it. Reporting them separately
+  /// would turn the Login screen into an account-enumeration oracle — the
+  /// exact property `SECURITY.md` 6.1a forbids for the password-reset
+  /// endpoint, and it is no more acceptable here.
   ///
-  /// Throws if called outside preview mode, rather than returning false: a
-  /// caller reaching this in a real build is a bug worth surfacing loudly, not
-  /// a failed login worth showing the user.
-  bool checkPreviewCredentials(String username, String password) {
-    if (!isPreviewMode) {
-      throw StateError(
-        'checkPreviewCredentials called outside preview mode. Real sign-in '
-        'must go through Firebase Auth — see SECURITY.md 6.1.',
-      );
+  /// Returns the account's display name, or null when Firebase holds none —
+  /// the caller decides what to show in its place.
+  Future<String?> signIn({
+    required String email,
+    required String password,
+  }) async {
+    if (!FirebaseBootstrap.isReady) {
+      throw AuthException(AuthErrorKind.backendUnavailable);
     }
-    // Case-insensitive on the username only. Passwords are always exact.
-    return username.trim().toLowerCase() == previewUsername &&
-        password == previewPassword;
+
+    final UserCredential credential;
+    try {
+      credential = await _auth.signInWithEmailAndPassword(
+        // Trimmed because keyboards add trailing spaces. The password is
+        // never trimmed — whitespace can be a deliberate part of it.
+        email: email.trim(),
+        password: password,
+      );
+    } on FirebaseAuthException catch (e) {
+      throw _mapAuthError(e);
+    } catch (e) {
+      throw AuthException(AuthErrorKind.unknown, '$e');
+    }
+
+    final user = credential.user;
+    if (user == null) {
+      throw AuthException(AuthErrorKind.unknown, 'No user after sign-in.');
+    }
+    return user.displayName;
   }
 
   /// Creates the account and its profile document.
@@ -94,14 +102,6 @@ class AuthService {
     required RegistrationDetails details,
     required String password,
   }) async {
-    if (isPreviewMode) {
-      debugPrint(
-        'PREVIEW MODE: pretending to register '
-        '${details.email}. No account was created.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return;
-    }
     if (!FirebaseBootstrap.isReady) {
       throw AuthException(AuthErrorKind.backendUnavailable);
     }
@@ -166,14 +166,6 @@ class AuthService {
   /// who haven't seen the current version. A timestamp alone can't answer
   /// that question.
   Future<void> recordTermsAcceptance(int version) async {
-    if (isPreviewMode) {
-      debugPrint(
-        'PREVIEW MODE: pretending to record acceptance of terms '
-        'version $version.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      return;
-    }
     if (!FirebaseBootstrap.isReady) {
       throw AuthException(AuthErrorKind.backendUnavailable);
     }
@@ -193,17 +185,7 @@ class AuthService {
   }
 
   /// Signs the current user out. Used by the Home screen's side drawer.
-  ///
-  /// Clears the locally-remembered preview identity in both branches, so the
-  /// next person to use this device does not inherit the previous one's name
-  /// and email on the account screens.
   Future<void> signOut() async {
-    await PreviewIdentity.clear();
-    if (isPreviewMode) {
-      debugPrint('PREVIEW MODE: pretending to sign out.');
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      return;
-    }
     await _auth.signOut();
   }
 
@@ -220,6 +202,17 @@ class AuthService {
         return AuthException(AuthErrorKind.network, e.message);
       case 'too-many-requests':
         return AuthException(AuthErrorKind.tooManyRequests, e.message);
+      // Sign-in. `invalid-credential` is what Firebase returns while email
+      // enumeration protection is on; the older split codes are kept so the
+      // mapping still holds if it is ever turned off. All four collapse to
+      // one kind deliberately — see [signIn].
+      case 'invalid-credential':
+      case 'invalid-login-credentials':
+      case 'user-not-found':
+      case 'wrong-password':
+        return AuthException(AuthErrorKind.invalidCredentials, e.message);
+      case 'user-disabled':
+        return AuthException(AuthErrorKind.userDisabled, e.message);
       default:
         return AuthException(AuthErrorKind.unknown, '${e.code}: ${e.message}');
     }

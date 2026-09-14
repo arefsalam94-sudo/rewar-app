@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/account_settings_service.dart';
-import '../services/preview_identity.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
@@ -67,9 +66,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _busy = true);
     try {
       await _service.updateProfile(fullName: name, image: _image);
-      // Keeps the preview stand-in in step with the edit, so the drawer does
-      // not keep showing the old name while Firebase is missing.
-      await PreviewIdentity.save(name: name);
       if (!mounted) return;
       _snack(l10n.profileUpdated);
       Navigator.of(context).pop(true);
@@ -506,10 +502,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
+    // Mirrors the live Firebase Auth password policy exactly: 8+ characters,
+    // uppercase, lowercase, a number. No special character (SECURITY.md 6.1b).
     if (_next.text.length < 8 ||
         !RegExp(r'[A-Z]').hasMatch(_next.text) ||
         !RegExp(r'[a-z]').hasMatch(_next.text) ||
-        !RegExp(r'[^A-Za-z0-9]').hasMatch(_next.text)) {
+        !RegExp(r'[0-9]').hasMatch(_next.text)) {
       _snack(l10n.passwordChangeRules);
       return;
     }

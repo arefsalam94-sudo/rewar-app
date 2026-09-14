@@ -36,7 +36,7 @@ class Hotel {
     required this.imageAsset,
     required this.starRating,
     required this.reviewScore,
-    required this.distanceFromCenterKm,
+    this.distanceFromCenterKm,
     required this.pricePerNight,
     required this.currencyCode,
     required this.amenities,
@@ -48,7 +48,7 @@ class Hotel {
     this.reviewCount = 0,
   }) : assert(starRating >= 0 && starRating <= 5),
        assert(reviewScore >= 0 && reviewScore <= 10),
-       assert(distanceFromCenterKm >= 0),
+       assert(distanceFromCenterKm == null || distanceFromCenterKm >= 0),
        assert(pricePerNight >= 0),
        assert(reviewCount >= 0);
 
@@ -64,7 +64,15 @@ class Hotel {
   /// **0–10**, matching `DESIGN_SYSTEM.md` 13's numeric score badge and the
   /// rest of the app. The reference screenshot's 4.2/5 is not this app's scale.
   final double reviewScore;
-  final double distanceFromCenterKm;
+
+  /// Distance from the city centre, or null when no verified value exists.
+  ///
+  /// Nullable on purpose (DATA_MODEL.md): `hotels` deliberately has no such
+  /// field, because no collection holds a city-centre coordinate to derive it
+  /// from. The card HIDES the "N km from centre" line when this is absent
+  /// rather than defaulting to 0, which would be a false claim about a named
+  /// real property.
+  final double? distanceFromCenterKm;
   final double pricePerNight;
   final String currencyCode;
   final Set<HotelAmenity> amenities;

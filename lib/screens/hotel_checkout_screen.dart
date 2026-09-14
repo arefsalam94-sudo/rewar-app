@@ -14,6 +14,7 @@ import '../widgets/hotel_parts.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
+import '../services/release_gate.dart';
 import 'hotel_booking_confirmation_screen.dart';
 import 'hotel_assets.dart';
 
@@ -75,8 +76,15 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
     super.dispose();
   }
 
+  /// False in release: there is no booking backend, so nothing here may tell
+  /// the user a room was reserved.
+  bool get _bookingAvailable => ReleaseGate.previewFeaturesAllowed;
+
   Future<void> _confirm() async {
     if (_processing) return;
+    // Belt and braces — the button is already disabled below. A release build
+    // must not be able to reach the confirmation screen by any route.
+    if (!_bookingAvailable) return;
     final l10n = AppLocalizations.of(context);
     final contact = BookingContact(
       fullName: _name.text,
@@ -175,7 +183,11 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
               const SizedBox(height: 12),
               _TitleCard(title: l10n.hotelCompleteBooking),
               const SizedBox(height: 12),
-              _Notice(text: l10n.hotelMockPaymentNotice),
+              _Notice(
+                text: _bookingAvailable
+                    ? l10n.hotelMockPaymentNotice
+                    : l10n.hotelBookingComingSoonNotice,
+              ),
               const SizedBox(height: 12),
               _summary(l10n),
               const SizedBox(height: 12),
@@ -194,10 +206,14 @@ class _HotelCheckoutScreenState extends State<HotelCheckoutScreen> {
         minimum: const EdgeInsets.fromLTRB(20, 8, 20, 12),
         child: PrimaryButton(
           key: hotelCheckoutConfirmKey,
-          label: _processing
+          label: !_bookingAvailable
+              ? l10n.hotelBookingComingSoon
+              : _processing
               ? l10n.hotelRechecking
               : l10n.hotelConfirmMockBooking,
-          onTap: _processing ? null : _confirm,
+          // A disabled button that says "Booking is coming soon" is the whole
+          // message: the page stays readable, nothing pretends to reserve.
+          onTap: (_processing || !_bookingAvailable) ? null : _confirm,
         ),
       ),
     );

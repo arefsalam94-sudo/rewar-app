@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:flutter/foundation.dart';
 
 import 'firebase_bootstrap.dart';
 
@@ -31,8 +30,6 @@ class ProfileSetupService {
       _firestoreOverride ?? FirebaseFirestore.instance;
   FirebaseStorage get _storage => _storageOverride ?? FirebaseStorage.instance;
 
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
   /// Largest profile picture accepted, matching the ceiling enforced in
   /// `storage.rules`. Checked here too so the user gets a fast, clear error
   /// instead of a failed upload.
@@ -46,14 +43,6 @@ class ProfileSetupService {
     required String displayName,
     File? imageFile,
   }) async {
-    if (isPreviewMode) {
-      debugPrint(
-        'PREVIEW MODE: pretending to save profile "$displayName"'
-        '${imageFile == null ? '' : ' with a picture'}. Nothing was saved.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-      return null;
-    }
     if (!FirebaseBootstrap.isReady) {
       throw StateError('Firebase is not configured — see FIREBASE_SETUP.md');
     }
@@ -84,11 +73,6 @@ class ProfileSetupService {
   /// Replaces just the profile photo, for the Home screen's side drawer —
   /// unlike [completeSetup], the display name is left untouched.
   Future<String> updateProfilePhoto(File imageFile) async {
-    if (isPreviewMode) {
-      debugPrint('PREVIEW MODE: pretending to update the profile photo.');
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      return '';
-    }
     if (!FirebaseBootstrap.isReady) {
       throw StateError('Firebase is not configured — see FIREBASE_SETUP.md');
     }

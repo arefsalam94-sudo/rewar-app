@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../l10n/locale_controller.dart';
 import '../services/app_permissions.dart';
+import '../widgets/permission_blocked_prompt.dart';
 import '../services/auth_service.dart';
 import '../services/settings_preferences.dart';
 import '../services/user_profile_service.dart';
@@ -32,7 +33,11 @@ class SettingsScreen extends StatefulWidget {
   final UserProfileService? userProfileService;
   final AuthService? authService;
   final SettingsPreferences? preferences;
-  final Future<bool> Function()? requestNotificationPermission;
+
+  /// Injectable for tests. Returns the OUTCOME, not a bool: a bool cannot
+  /// tell a plain denial apart from a permanent one, and the two lead to
+  /// different journeys.
+  final Future<PermissionOutcome> Function()? requestNotificationPermission;
 
   static const String backgroundAsset = PolicyScreen.backgroundAsset;
 
@@ -46,7 +51,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final AuthService _authService = widget.authService ?? AuthService();
   late final SettingsPreferences _preferences =
       widget.preferences ?? const SettingsPreferences();
-  late final Future<bool> Function() _requestNotificationPermission =
+  late final Future<PermissionOutcome> Function()
+  _requestNotificationPermission =
       widget.requestNotificationPermission ??
       AppPermissions.requestNotifications;
 
@@ -157,11 +163,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _notificationBusy = true);
 
     if (enabled) {
-      final granted = await _requestNotificationPermission();
+      final outcome = await _requestNotificationPermission();
       if (!mounted) return;
-      if (!granted) {
+      if (!outcome.isGranted) {
         setState(() => _notificationBusy = false);
-        _snack(l10n.notificationsPermissionDenied);
+        // Distinct paths: a plain denial just reports itself, a permanent one
+        // offers the only route that can actually change it.
+        if (outcome.needsSettings) {
+          await showPermissionBlockedPrompt(
+            context,
+            reason: l10n.notificationsPermissionDenied,
+          );
+        } else {
+          _snack(l10n.notificationsPermissionDenied);
+        }
         return;
       }
     }

@@ -100,7 +100,7 @@ class AppLocalizations {
       'passwordTooShort': 'Use at least 8 characters',
       'passwordNeedsUppercase': 'Add at least one uppercase letter',
       'passwordNeedsLowercase': 'Add at least one lowercase letter',
-      'passwordNeedsSpecial': 'Add at least one special character',
+      'passwordNeedsNumber': 'Add at least one number',
       'confirmPasswordRequired': 'Please re-enter the new password',
       'passwordsDontMatch': 'The two passwords do not match',
       'passwordUpdated': 'Password updated. Please log in.',
@@ -120,8 +120,7 @@ class AppLocalizations {
       'alreadyHaveAccount': 'Already have an Account? ',
       'logInHere': 'Log In here',
       'passwordHint':
-          'At least 8 characters, with uppercase, lowercase and special '
-          'character.',
+          'At least 8 characters, with uppercase, lowercase and a number.',
       'acceptTerms': 'I agree to the Terms of Service and Privacy Policy',
       'termsRequired': 'Please accept the Terms and Privacy Policy',
       'fullNameRequired': 'Please enter your full name',
@@ -133,6 +132,12 @@ class AppLocalizations {
       'selectCountryCode': 'Country code',
       'accountCreated': 'Account created. Please log in.',
       'registerFailed': "We couldn't create your account. Please try again.",
+      // Deliberately does not say which of the two was wrong. Firebase has
+      // email-enumeration protection on, and SECURITY.md 6.1a requires the
+      // app not become an account-enumeration oracle either.
+      'invalidCredentials': 'Incorrect email or password',
+      'accountDisabled': 'This account has been disabled. Contact support.',
+      'loginFailed': "We couldn't sign you in. Please try again.",
       'emailInUse': 'An account already exists with this email',
       'phoneInUse': 'An account already exists with this phone number',
       'verifyNumberSubtitle':
@@ -170,6 +175,10 @@ class AppLocalizations {
       'profileSaveFailed': "We couldn't save your profile. Please try again.",
       'cameraPermissionDenied':
           'Camera access is off. Turn it on in Settings to take a photo.',
+      'permissionBlocked':
+          'This permission is blocked. It can only be turned back on in your '
+          'device settings.',
+      'permissionOpenSettings': 'Open Settings',
       'galleryPermissionDenied':
           'Photo access is off. Turn it on in Settings to choose a picture.',
       // --- Register Complete screen ---
@@ -311,6 +320,10 @@ class AppLocalizations {
       'hotelBookingConsent':
           'I agree to the displayed rate and cancellation conditions.',
       'hotelConfirmMockBooking': 'Confirm preview booking',
+      'hotelBookingComingSoon': 'Booking is coming soon',
+      'hotelBookingComingSoonNotice':
+          'Rooms cannot be reserved in the app yet. Nothing on this page '
+          'holds a room or takes a payment.',
       'hotelMockBookingComplete': 'Preview Booking Complete',
       'hotelMockBookingCompleteBody':
           'No room was held with a hotel and no payment was charged.',
@@ -509,6 +522,10 @@ class AppLocalizations {
       'flightTotalPrice': 'Total price',
       'flightPerTraveler': 'Per traveler',
       'flightResultsLoadFailed': "Couldn't load flights",
+      'flightComingSoonTitle': 'Flight booking is coming soon',
+      'flightComingSoonBody':
+          'We are still connecting a live airline feed. Flight search will '
+          'open here once real fares can be shown.',
       'flightResultsEmptyTitle': 'No flights found',
       'flightResultsEmptyBody':
           'Try another date or change your search filters.',
@@ -609,7 +626,8 @@ class AppLocalizations {
       'verifyAndSave': 'Verify & Save',
       'invalidVerificationCode': 'The verification code is invalid.',
       'passwordChangeRules':
-          'Use at least 8 characters, one uppercase letter, and one symbol.',
+          'Use at least 8 characters, with an uppercase letter, a lowercase '
+          'letter and a number.',
       'kilometers': 'Kilometers (km)',
       'miles': 'Miles (mi)',
       'milesShort': 'mi',
@@ -1141,7 +1159,7 @@ class AppLocalizations {
       'passwordTooShort': 'لانیکەم ٨ پیت بەکاربهێنە',
       'passwordNeedsUppercase': 'لانیکەم یەک پیتی گەورە زیاد بکە',
       'passwordNeedsLowercase': 'لانیکەم یەک پیتی بچووک زیاد بکە',
-      'passwordNeedsSpecial': 'لانیکەم یەک هێمای تایبەت زیاد بکە',
+      'passwordNeedsNumber': 'لانیکەم یەک ژمارە زیاد بکە',
       'confirmPasswordRequired': 'تکایە وشەی نهێنییە نوێیەکە دووبارە بنووسە',
       'passwordsDontMatch': 'هەردوو وشەی نهێنییەکە وەک یەک نین',
       'passwordUpdated': 'وشەی نهێنی نوێکرایەوە. تکایە بچۆرە ژوورەوە.',
@@ -1161,8 +1179,7 @@ class AppLocalizations {
       'genderOptional': 'ڕەگەز (ئارەزوومەندانە)',
       'alreadyHaveAccount': 'پێشتر هەژمارت هەیە؟ ',
       'logInHere': 'لێرە بچۆرە ژوورەوە',
-      'passwordHint':
-          'لانیکەم ٨ پیت، بە پیتی گەورە و پیتی بچووک و هێمایەکی تایبەت.',
+      'passwordHint': 'لانیکەم ٨ پیت، بە پیتی گەورە و پیتی بچووک و ژمارەیەک.',
       'acceptTerms': 'ڕازیم بە مەرجەکانی بەکارهێنان و سیاسەتی تایبەتمەندی',
       'termsRequired': 'تکایە ڕەزامەندی بدە بە مەرجەکان و سیاسەتی تایبەتمەندی',
       'fullNameRequired': 'تکایە ناوی تەواوت بنووسە',
@@ -1175,6 +1192,10 @@ class AppLocalizations {
       'accountCreated': 'هەژمارەکە دروستکرا. تکایە بچۆرە ژوورەوە.',
       'registerFailed':
           'نەمانتوانی هەژمارەکەت دروست بکەین. تکایە دووبارە هەوڵ بدەوە.',
+      'invalidCredentials': 'ئیمەیڵ یان وشەی نهێنی هەڵەیە',
+      'accountDisabled':
+          'ئەم هەژمارە لەکارخراوە. پەیوەندی بە پشتگیری بکە.',
+      'loginFailed': 'نەمانتوانی بتخەینە ژوورەوە. تکایە دووبارە هەوڵ بدەوە.',
       'emailInUse': 'هەژمارێک بەم ئیمەیڵە هەیە',
       'phoneInUse': 'هەژمارێک بەم ژمارە مۆبایلە هەیە',
       'verifyNumberSubtitle':
@@ -1216,6 +1237,10 @@ class AppLocalizations {
           'نەمانتوانی پرۆفایلەکەت پاشەکەوت بکەین. تکایە دووبارە هەوڵ بدەوە.',
       'cameraPermissionDenied':
           'دەستڕاگەیشتن بە کامێرا کوژاوەتەوە. لە ڕێکخستنەکان بیکەوە.',
+      'permissionBlocked':
+          'ئەم مۆڵەتە بلۆک کراوە. تەنها لە ڕێکخستنەکانی ئامێرەکەت '
+          'دەتوانرێت بکرێتەوە.',
+      'permissionOpenSettings': 'کردنەوەی ڕێکخستنەکان',
       'galleryPermissionDenied':
           'دەستڕاگەیشتن بە وێنەکان کوژاوەتەوە. لە ڕێکخستنەکان بیکەوە.',
       // --- Register Complete screen ---
@@ -1350,6 +1375,10 @@ class AppLocalizations {
       'hotelBookingConsent':
           'ڕازیم بە نرخ و مەرجەکانی هەڵوەشاندنەوەی پیشاندراو.',
       'hotelConfirmMockBooking': 'پشتڕاستکردنەوەی حجزی پێشبینین',
+      'hotelBookingComingSoon': 'حجزکردن بەم زووانە',
+      'hotelBookingComingSoonNotice':
+          'هێشتا ناتوانرێت ژوور لە ئەپەکەدا حجز بکرێت. هیچ شتێک لەم پەڕەیەدا '
+          'ژوور ناگرێت و پارە وەرناگرێت.',
       'hotelMockBookingComplete': 'حجزی پێشبینین تەواو بوو',
       'hotelMockBookingCompleteBody':
           'هیچ ژوورێک لە هوتێل نەگیرا و هیچ پارەیەک وەرنەگیرا.',
@@ -1548,6 +1577,10 @@ class AppLocalizations {
       'flightTotalPrice': 'نرخی گشتی',
       'flightPerTraveler': 'بۆ هەر گەشتیارێک',
       'flightResultsLoadFailed': 'نەتوانرا فڕینەکان باربکرێن',
+      'flightComingSoonTitle': 'حجزی فڕین بەم زووانە',
+      'flightComingSoonBody':
+          'هێشتا سەرچاوەیەکی ڕاستەقینەی فڕین پەیوەست دەکەین. گەڕان لێرە '
+          'دەکرێتەوە کاتێک نرخی ڕاستەقینە نیشان بدرێت.',
       'flightResultsEmptyTitle': 'هیچ فڕینێک نەدۆزرایەوە',
       'flightResultsEmptyBody': 'بەروارێکی تر یان فلتەرەکان بگۆڕە.',
       'flightRetry': 'دووبارە هەوڵبدەوە',
@@ -1648,7 +1681,7 @@ class AppLocalizations {
       'verifyAndSave': 'پشتڕاستکردنەوە و پاشەکەوتکردن',
       'invalidVerificationCode': 'کۆدی پشتڕاستکردنەوە هەڵەیە.',
       'passwordChangeRules':
-          'لانیکەم ٨ پیت، پیتێکی گەورە و هێمایەک بەکاربهێنە.',
+          'لانیکەم ٨ پیت، پیتێکی گەورە و پیتێکی بچووک و ژمارەیەک بەکاربهێنە.',
       'kilometers': 'کیلۆمەتر (km)',
       'miles': 'مایل (mi)',
       'milesShort': 'mi',
@@ -2163,7 +2196,7 @@ class AppLocalizations {
       'passwordTooShort': 'استخدم ٨ أحرف على الأقل',
       'passwordNeedsUppercase': 'أضف حرفًا كبيرًا واحدًا على الأقل',
       'passwordNeedsLowercase': 'أضف حرفًا صغيرًا واحدًا على الأقل',
-      'passwordNeedsSpecial': 'أضف رمزًا خاصًا واحدًا على الأقل',
+      'passwordNeedsNumber': 'أضف رقمًا واحدًا على الأقل',
       'confirmPasswordRequired': 'يرجى إعادة إدخال كلمة المرور الجديدة',
       'passwordsDontMatch': 'كلمتا المرور غير متطابقتين',
       'passwordUpdated': 'تم تحديث كلمة المرور. يرجى تسجيل الدخول.',
@@ -2182,7 +2215,7 @@ class AppLocalizations {
       'genderOptional': 'الجنس (اختياري)',
       'alreadyHaveAccount': 'لديك حساب بالفعل؟ ',
       'logInHere': 'سجّل الدخول من هنا',
-      'passwordHint': '٨ أحرف على الأقل، مع حرف كبير وحرف صغير ورمز خاص.',
+      'passwordHint': '٨ أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.',
       'acceptTerms': 'أوافق على شروط الخدمة وسياسة الخصوصية',
       'termsRequired': 'يرجى الموافقة على الشروط وسياسة الخصوصية',
       'fullNameRequired': 'يرجى إدخال اسمك الكامل',
@@ -2194,6 +2227,9 @@ class AppLocalizations {
       'selectCountryCode': 'رمز الدولة',
       'accountCreated': 'تم إنشاء الحساب. يرجى تسجيل الدخول.',
       'registerFailed': 'تعذّر إنشاء حسابك. يرجى المحاولة مرة أخرى.',
+      'invalidCredentials': 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+      'accountDisabled': 'تم تعطيل هذا الحساب. يرجى التواصل مع الدعم.',
+      'loginFailed': 'تعذّر تسجيل دخولك. يرجى المحاولة مرة أخرى.',
       'emailInUse': 'يوجد حساب بهذا البريد الإلكتروني بالفعل',
       'phoneInUse': 'يوجد حساب بهذا الرقم بالفعل',
       'verifyNumberSubtitle':
@@ -2230,6 +2266,9 @@ class AppLocalizations {
       'profileSaveFailed': 'تعذّر حفظ ملفك الشخصي. يرجى المحاولة مرة أخرى.',
       'cameraPermissionDenied':
           'الوصول إلى الكاميرا مُعطّل. فعّله من الإعدادات لالتقاط صورة.',
+      'permissionBlocked':
+          'هذا الإذن محظور. لا يمكن تفعيله إلا من إعدادات جهازك.',
+      'permissionOpenSettings': 'فتح الإعدادات',
       'galleryPermissionDenied':
           'الوصول إلى الصور مُعطّل. فعّله من الإعدادات لاختيار صورة.',
       // --- Register Complete screen ---
@@ -2358,6 +2397,10 @@ class AppLocalizations {
       'hotelRoomSubtotal': 'المجموع الفرعي للغرفة',
       'hotelBookingConsent': 'أوافق على السعر وشروط الإلغاء المعروضة.',
       'hotelConfirmMockBooking': 'تأكيد حجز المعاينة',
+      'hotelBookingComingSoon': 'الحجز قريبًا',
+      'hotelBookingComingSoonNotice':
+          'لا يمكن حجز الغرف في التطبيق بعد. لا شيء في هذه الصفحة يحجز غرفة '
+          'أو يتقاضى أي مبلغ.',
       'hotelMockBookingComplete': 'اكتمل حجز المعاينة',
       'hotelMockBookingCompleteBody':
           'لم يتم حجز غرفة لدى الفندق ولم يتم تحصيل أي مبلغ.',
@@ -2553,6 +2596,10 @@ class AppLocalizations {
       'flightTotalPrice': 'السعر الإجمالي',
       'flightPerTraveler': 'لكل مسافر',
       'flightResultsLoadFailed': 'تعذّر تحميل الرحلات',
+      'flightComingSoonTitle': 'حجز الطيران قريبًا',
+      'flightComingSoonBody':
+          'ما زلنا نربط مصدرًا مباشرًا لأسعار الطيران. سيُفتح البحث هنا بمجرد '
+          'إمكانية عرض أسعار حقيقية.',
       'flightResultsEmptyTitle': 'لم يتم العثور على رحلات',
       'flightResultsEmptyBody': 'جرّب تاريخًا آخر أو غيّر عوامل البحث.',
       'flightRetry': 'إعادة المحاولة',
@@ -2647,7 +2694,8 @@ class AppLocalizations {
       // 'verificationCode' and 'sendCode' already exist earlier in this map.
       'verifyAndSave': 'تحقق واحفظ',
       'invalidVerificationCode': 'رمز التحقق غير صالح.',
-      'passwordChangeRules': 'استخدم 8 أحرف على الأقل وحرفًا كبيرًا ورمزًا.',
+      'passwordChangeRules':
+          'استخدم ٨ أحرف على الأقل، مع حرف كبير وحرف صغير ورقم.',
       'kilometers': 'كيلومترات (km)',
       'miles': 'أميال (mi)',
       'milesShort': 'mi',
@@ -3166,6 +3214,9 @@ class AppLocalizations {
   String get selectCountryCode => _t('selectCountryCode');
   String get accountCreated => _t('accountCreated');
   String get registerFailed => _t('registerFailed');
+  String get invalidCredentials => _t('invalidCredentials');
+  String get accountDisabled => _t('accountDisabled');
+  String get loginFailed => _t('loginFailed');
   String get emailInUse => _t('emailInUse');
   String get phoneInUse => _t('phoneInUse');
 
@@ -3198,6 +3249,8 @@ class AppLocalizations {
   String get imagePickFailed => _t('imagePickFailed');
   String get profileSaveFailed => _t('profileSaveFailed');
   String get cameraPermissionDenied => _t('cameraPermissionDenied');
+  String get permissionBlocked => _t('permissionBlocked');
+  String get permissionOpenSettings => _t('permissionOpenSettings');
   String get galleryPermissionDenied => _t('galleryPermissionDenied');
 
   // --- Terms of Service screen ---
@@ -3248,7 +3301,7 @@ class AppLocalizations {
   String get passwordTooShort => _t('passwordTooShort');
   String get passwordNeedsUppercase => _t('passwordNeedsUppercase');
   String get passwordNeedsLowercase => _t('passwordNeedsLowercase');
-  String get passwordNeedsSpecial => _t('passwordNeedsSpecial');
+  String get passwordNeedsNumber => _t('passwordNeedsNumber');
   String get confirmPasswordRequired => _t('confirmPasswordRequired');
   String get passwordsDontMatch => _t('passwordsDontMatch');
   String get passwordUpdated => _t('passwordUpdated');
@@ -3399,6 +3452,9 @@ class AppLocalizations {
   String get hotelRoomSubtotal => _t('hotelRoomSubtotal');
   String get hotelBookingConsent => _t('hotelBookingConsent');
   String get hotelConfirmMockBooking => _t('hotelConfirmMockBooking');
+  String get hotelBookingComingSoon => _t('hotelBookingComingSoon');
+  String get hotelBookingComingSoonNotice =>
+      _t('hotelBookingComingSoonNotice');
   String get hotelMockBookingComplete => _t('hotelMockBookingComplete');
   String get hotelMockBookingCompleteBody => _t('hotelMockBookingCompleteBody');
   String get hotelViewReservations => _t('hotelViewReservations');
@@ -3623,6 +3679,8 @@ class AppLocalizations {
   String get flightTotalPrice => _t('flightTotalPrice');
   String get flightPerTraveler => _t('flightPerTraveler');
   String get flightResultsLoadFailed => _t('flightResultsLoadFailed');
+  String get flightComingSoonTitle => _t('flightComingSoonTitle');
+  String get flightComingSoonBody => _t('flightComingSoonBody');
   String get flightResultsEmptyTitle => _t('flightResultsEmptyTitle');
   String get flightResultsEmptyBody => _t('flightResultsEmptyBody');
   String get flightRetry => _t('flightRetry');

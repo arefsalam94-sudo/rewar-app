@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
+import '../services/currency_rates_service.dart';
+import '../services/user_profile_service.dart';
 import '../services/car_rental_service.dart';
+import '../services/firestore_car_rental_service.dart';
 import '../services/device_location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
@@ -35,13 +38,23 @@ class CarRentalResultsScreen extends StatefulWidget {
   const CarRentalResultsScreen({
     super.key,
     required this.criteria,
-    this.service = const PreviewCarRentalService(),
+    this.service,
+    this.currencyRatesService,
+    this.userProfileService,
     this.locationService = const DeviceLocationService(),
     this.onVehicleSelected,
   });
 
   final CarRentalSearchCriteria criteria;
-  final CarRentalService service;
+
+  /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
+  /// falls back to the bundled preview data when Firebase is unavailable.
+  /// Nullable because a Firestore-backed service cannot be a `const` default.
+  final CarRentalService? service;
+
+  /// Injectable for tests; both default to the live services.
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
   final DeviceLocationService locationService;
   final ValueChanged<CarRentalSelection>? onVehicleSelected;
 
@@ -50,6 +63,42 @@ class CarRentalResultsScreen extends StatefulWidget {
 }
 
 class _CarRentalResultsScreenState extends State<CarRentalResultsScreen> {
+  late final CarRentalService _resolvedService =
+      widget.service ?? FirestoreCarRentalService();
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // --- display currency -------------------------------------------------
+  //
+  // A vehicle stores one authoritative price in its supplier's currency; this
+  // converts it for display only (DATA_MODEL.md). Both loads are allowed to
+  // fail silently — a car list that refused to draw because a rate table was
+  // missing would be a far worse bug than an unconverted price.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  RentalPricing get _pricing =>
+      RentalPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
+
   List<RentalVehicle>? _cars;
   Object? _error;
   DeviceLocation? _deviceLocation;
@@ -61,6 +110,7 @@ class _CarRentalResultsScreenState extends State<CarRentalResultsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDisplayCurrency();
     _load();
     _loadLocation();
   }
@@ -71,7 +121,7 @@ class _CarRentalResultsScreenState extends State<CarRentalResultsScreen> {
       _error = null;
     });
     try {
-      final cars = await widget.service.searchCars(widget.criteria);
+      final cars = await _resolvedService.searchCars(widget.criteria);
       if (mounted) setState(() => _cars = cars);
     } catch (error, stackTrace) {
       // The user sees a friendly message; the details go to the log only.
@@ -118,6 +168,7 @@ class _CarRentalResultsScreenState extends State<CarRentalResultsScreen> {
           child: Stack(
             children: [
               _ResultsBody(
+                pricing: _pricing,
                 cars: cars,
                 error: _error,
                 deviceLocation: _deviceLocation,
@@ -205,7 +256,12 @@ class _ResultsBody extends StatelessWidget {
     required this.onRetry,
     required this.onModifySearch,
     required this.onSelect,
+    this.pricing = RentalPricing.unconverted,
   });
+
+  /// Passed straight through to each card, so every price on the screen is
+  /// rendered in the same currency.
+  final RentalPricing pricing;
 
   final List<RentalVehicle>? cars;
   final Object? error;
@@ -252,6 +308,7 @@ class _ResultsBody extends StatelessWidget {
         itemBuilder: (context, index) {
           final car = cars[index];
           return CarResultCard(
+            pricing: pricing,
             vehicle: car,
             deviceLocation: deviceLocation,
             selected: car.id == selectedVehicleId,
@@ -271,7 +328,13 @@ class CarResultCard extends StatelessWidget {
     required this.deviceLocation,
     required this.onTap,
     this.selected = false,
+    this.pricing = RentalPricing.unconverted,
   });
+
+  /// How to render this vehicle's stored price in the user's chosen currency.
+  /// Defaults to [RentalPricing.unconverted], which shows the supplier's own
+  /// currency — the honest state before the rate table has loaded.
+  final RentalPricing pricing;
 
   final RentalVehicle vehicle;
   final DeviceLocation? deviceLocation;
@@ -328,7 +391,7 @@ class CarResultCard extends StatelessWidget {
       rentalPaymentLabel(l10n, vehicle.paymentOption),
       branch,
       if (distance != null) l10n.distanceFromCurrentLocation(distance),
-      l10n.carPricePerDay(rentalPriceAmount(vehicle)),
+      l10n.carPricePerDay(rentalPriceAmount(vehicle, pricing)),
     ].join(', ');
 
     // Large selectable card (Design_system_CANONICAL.md §16): stays real
@@ -343,112 +406,99 @@ class CarResultCard extends StatelessWidget {
       borderRadius: radius,
       onTap: onTap,
       child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  // The photo keeps roughly the reference's third-of-the-card
-                  // proportion, but never squeezes the information column on a
-                  // small phone or grows past it on a large one.
-                  final imageWidth = (constraints.maxWidth * 0.34).clamp(
-                    96.0,
-                    134.0,
-                  );
-                  return Row(
+        padding: const EdgeInsets.all(12),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // The photo keeps roughly the reference's third-of-the-card
+            // proportion, but never squeezes the information column on a
+            // small phone or grows past it on a large one.
+            final imageWidth = (constraints.maxWidth * 0.34).clamp(96.0, 134.0);
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: imageWidth,
+                  height: imageWidth * 1.65,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: RentalVehicleImage(
+                      asset: vehicle.images.first,
+                      // Thumbnail budget: the card never needs the full
+                      // frame, and this keeps a long list cheap.
+                      cacheWidth: (imageWidth * 3).round(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        width: imageWidth,
-                        height: imageWidth * 1.65,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: RentalVehicleImage(
-                            asset: vehicle.images.first,
-                            // Thumbnail budget: the card never needs the full
-                            // frame, and this keeps a long list cheap.
-                            cacheWidth: (imageWidth * 3).round(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.heading(context),
-                                          fontSize: 20,
-                                          height: 1.25,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      Text(
-                                        '($modelYear)',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: AppColors.secondaryTextV3(
-                                            context,
-                                          ),
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
+                                Text(
+                                  name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.heading(context),
+                                    fontSize: 20,
+                                    height: 1.25,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                RentalCompanyBadge(
-                                  company: vehicle.company,
-                                  maxWidth: 150,
-                                  iconSize: 28,
-                                  fontSize: 13,
-                                  // Nested inside this card's own visible
-                                  // canonical glass surface.
-                                  layer: GlassLayer.embedded,
+                                Text(
+                                  '($modelYear)',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: AppColors.secondaryTextV3(context),
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 8,
-                              children: facilities,
-                            ),
-                            const SizedBox(height: 10),
-                            RentalFacility(
-                              icon: Icons.credit_card,
-                              label: rentalPaymentLabel(
-                                l10n,
-                                vehicle.paymentOption,
-                              ),
-                              iconSize: 30,
-                              fontSize: 12,
-                            ),
-                            const SizedBox(height: 10),
-                            _LocationAndPrice(
-                              vehicle: vehicle,
-                              branch: branch,
-                              distance: distance,
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(width: 8),
+                          RentalCompanyBadge(
+                            company: vehicle.company,
+                            maxWidth: 150,
+                            iconSize: 28,
+                            fontSize: 13,
+                            // Nested inside this card's own visible
+                            // canonical glass surface.
+                            layer: GlassLayer.embedded,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(spacing: 10, runSpacing: 8, children: facilities),
+                      const SizedBox(height: 10),
+                      RentalFacility(
+                        icon: Icons.credit_card,
+                        label: rentalPaymentLabel(l10n, vehicle.paymentOption),
+                        iconSize: 30,
+                        fontSize: 12,
+                      ),
+                      const SizedBox(height: 10),
+                      _LocationAndPrice(
+                        vehicle: vehicle,
+                        branch: branch,
+                        distance: distance,
                       ),
                     ],
-                  );
-                },
-              ),
-            ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
     );
 
     return Semantics(
@@ -460,10 +510,7 @@ class CarResultCard extends StatelessWidget {
           ? Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius),
-                border: Border.all(
-                  color: AppColors.accent(context),
-                  width: 2,
-                ),
+                border: Border.all(color: AppColors.accent(context), width: 2),
               ),
               child: content,
             )

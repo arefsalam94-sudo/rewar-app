@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
+import 'package:kurdistan_paradise_travel_guide/models/hotel.dart';
+import 'package:kurdistan_paradise_travel_guide/models/hotel_detail.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/hotel_screen.dart';
+<<<<<<< HEAD
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
+=======
+import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
+>>>>>>> ab113c6 (Latest app update)
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 
-Widget _app({Locale locale = const Locale('en')}) => MaterialApp(
-  locale: locale,
-  supportedLocales: AppLocalizations.supportedLocales,
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
-  home: const HotelScreen(),
-);
+Widget _app({Locale locale = const Locale('en'), HotelService? service}) =>
+    MaterialApp(
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      home: HotelScreen(service: service),
+    );
 
 void main() {
   /// Opens the Date filter panel and then one of its two visible fields.
@@ -348,6 +355,73 @@ void main() {
       expect(tester.getTopLeft(find.byType(GlassBackButton)).dx, lessThan(40));
       expect(tester.takeException(), isNull);
     },
+  );
+
+  testWidgets('a hotel with no verified distance hides that line', (
+    tester,
+  ) async {
+    // Every Firestore-backed hotel is in this state: `distanceFromCenterKm`
+    // was declined for the schema (DATA_MODEL.md), so the card must draw the
+    // city alone rather than a fabricated "0.0 km from centre".
+    tester.view.physicalSize = const Size(430, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app(service: const _NoDistanceHotelService()));
+    await tester.pumpAndSettle();
+
+    _expectNoDistanceText(tester);
+    // The card itself still renders — the line is hidden, not the hotel.
+    expect(find.text('Erbil'), findsWidgets);
+  });
+}
+
+/// A hotel with no verified distance, as every Firestore-backed hotel is:
+/// `distanceFromCenterKm` was declined for the `hotels` schema (DATA_MODEL.md).
+class _NoDistanceHotelService implements HotelService {
+  const _NoDistanceHotelService();
+
+  static const _hotel = Hotel(
+    id: 'no-distance',
+    name: HotelText(en: 'Divan Erbil', ku: 'دیڤان', ar: 'ديفان'),
+    city: HotelText(en: 'Erbil', ku: 'هەولێر', ar: 'أربيل'),
+    imageAsset: 'assets/images/journey-stay.png',
+    starRating: 5,
+    reviewScore: 0,
+    // The point of this fixture.
+    distanceFromCenterKm: null,
+    pricePerNight: 120,
+    currencyCode: 'USD',
+    amenities: {HotelAmenity.wifi},
+    highlighted: true,
+  );
+
+  @override
+  Future<List<Hotel>> trendingHotels() async => const [_hotel];
+
+  @override
+  Future<List<Hotel>> searchHotels(HotelSearchCriteria criteria) async =>
+      const [_hotel];
+
+  @override
+  Future<List<HotelDestination>> searchDestinations(String query) async =>
+      const [];
+
+  @override
+  Future<HotelDetail?> fetchDetail(String hotelId) async => null;
+}
+
+void _expectNoDistanceText(WidgetTester tester) {
+  // The localized string is "N km from centre"; with no value there must be
+  // no such line at all rather than a fabricated 0.0.
+  final texts = tester
+      .widgetList<Text>(find.byType(Text))
+      .map((widget) => widget.data ?? '')
+      .where((value) => value.toLowerCase().contains('km from'));
+  expect(
+    texts,
+    isEmpty,
+    reason: 'a hotel with no verified distance must not draw the line',
   );
 }
 

@@ -59,7 +59,14 @@ void main() {
     tester.view.physicalSize = const Size(430, 2600);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(await _app());
+    // Built through runAsync, not a bare await: _app() reaches
+    // PreviewHotelService.fetchDetail, which sleeps 220ms unconditionally (the
+    // delay: Duration.zero override on PreviewHotelBookingService does not
+    // reach it). Awaiting that inside testWidgets before the first pump
+    // deadlocks — the fake clock only advances when the tester pumps, and the
+    // tester is not pumping yet. runAsync runs it on the real clock instead.
+    final app = await tester.runAsync(_app);
+    await tester.pumpWidget(app!);
     await tester.pumpAndSettle();
 
     expect(find.text('Complete Your Booking'), findsOneWidget);
@@ -75,7 +82,14 @@ void main() {
     tester.view.physicalSize = const Size(430, 2800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(await _app());
+    // Built through runAsync, not a bare await: _app() reaches
+    // PreviewHotelService.fetchDetail, which sleeps 220ms unconditionally (the
+    // delay: Duration.zero override on PreviewHotelBookingService does not
+    // reach it). Awaiting that inside testWidgets before the first pump
+    // deadlocks — the fake clock only advances when the tester pumps, and the
+    // tester is not pumping yet. runAsync runs it on the real clock instead.
+    final app = await tester.runAsync(_app);
+    await tester.pumpWidget(app!);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(hotelCheckoutConsentKey));

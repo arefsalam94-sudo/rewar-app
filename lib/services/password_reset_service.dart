@@ -76,18 +76,6 @@ class PasswordResetService {
   FirebaseFunctions get _functions =>
       _functionsOverride ?? FirebaseFunctions.instance;
 
-  /// **Debug-only** stand-in for the backend, so the reset flow can be walked
-  /// end to end before Firebase exists (see `FIREBASE_SETUP.md`).
-  ///
-  /// While active: no code is really sent, **any** 6-digit code is accepted,
-  /// and no password is really changed. Screens surface this loudly rather
-  /// than letting it look like a working backend.
-  ///
-  /// Guarded by [kDebugMode] as well as the Firebase check, so a release
-  /// build can never take this path — a misconfigured release still fails
-  /// closed instead of silently accepting any code.
-  static bool get isPreviewMode => kDebugMode && !FirebaseBootstrap.isReady;
-
   /// Set by the phone flow; required to build the SMS credential later.
   String? _verificationId;
 
@@ -99,14 +87,6 @@ class PasswordResetService {
   ///
   /// Throws [ResetException] on failure.
   Future<void> sendCode(ResetTarget target) async {
-    if (isPreviewMode) {
-      debugPrint(
-        'PREVIEW MODE: pretending to send a code to '
-        '${target.maskedValue}. No message was actually sent.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      return;
-    }
     if (!FirebaseBootstrap.isReady) {
       throw ResetException(ResetErrorKind.backendUnavailable);
     }
@@ -167,11 +147,6 @@ class PasswordResetService {
   ///
   /// Throws [ResetException] on failure.
   Future<VerifiedReset> verifyCode(ResetTarget target, String code) async {
-    if (isPreviewMode) {
-      debugPrint('PREVIEW MODE: accepting code "$code" without checking it.');
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      return const VerifiedReset(emailResetToken: 'preview-token');
-    }
     if (!FirebaseBootstrap.isReady) {
       throw ResetException(ResetErrorKind.backendUnavailable);
     }
@@ -241,15 +216,6 @@ class PasswordResetService {
     required VerifiedReset verified,
     required String newPassword,
   }) async {
-    if (isPreviewMode) {
-      // Deliberately does not log the password.
-      debugPrint(
-        'PREVIEW MODE: pretending to update the password. '
-        'Nothing was changed.',
-      );
-      await Future<void>.delayed(const Duration(milliseconds: 400));
-      return;
-    }
     if (!FirebaseBootstrap.isReady) {
       throw ResetException(ResetErrorKind.backendUnavailable);
     }

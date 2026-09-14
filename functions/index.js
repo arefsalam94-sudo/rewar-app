@@ -729,17 +729,24 @@ async function stampPasswordChange(uid) {
 }
 
 /**
- * Server-side copy of the policy shown on the Reset Password screen:
- * 8+ characters, an uppercase letter, a lowercase letter, a special
- * character. The client validates the same rules for fast feedback, but this
- * is the one that actually counts (SECURITY.md section 7).
+ * Server-side copy of the **live Firebase Auth password policy**: 8+
+ * characters, an uppercase letter, a lowercase letter and a number. A special
+ * character is NOT required.
+ *
+ * These four checks must stay identical to the policy configured in the
+ * Firebase Console (Authentication -> Settings -> Password policy, currently
+ * minLength 8 + lower + upper + numeric, enforcement ON) and to the three
+ * client validators that mirror it — Register, Reset Password and Change
+ * Password. The client validates for fast feedback; this is the one that
+ * actually counts (SECURITY.md section 7), because the reset flow sets the
+ * password through the Admin SDK, which bypasses the Auth policy entirely.
  */
 function isStrongEnough(password) {
   return (
     password.length >= 8 &&
     /[A-Z]/.test(password) &&
     /[a-z]/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
+    /[0-9]/.test(password)
   );
 }
 

@@ -2260,97 +2260,1175 @@ trending-hotel card.
 6. The reference draws the back button and the title on separate lines, which
    is what was built (matching My Bookings); the written brief said "same row".
 
-## Canonical paired date behaviour — app-wide rollout (2026-09-13) — HOTEL APPROVED, REST AWAITING ANDROID VERIFICATION
+## Real sign-in — Firebase Auth wired (2026-09-12) — AWAITING APPROVAL
 
-Hotel Search's Check-in / Check-out interaction was verified on a real Android
-device and approved. It is now the reference for every start/end date pair in
-the app, and this entry records the rollout.
+Firebase Authentication was enabled on `rewar-app-1c10e` (Email/Password), and
+the Login screen now signs in for real. Verified live before and after.
 
-### The approved interaction
+### What was built
 
-Two visible start/end fields are **two separate single-date steps**, never one
-two-tap range:
+`AuthService.signIn` calls `signInWithEmailAndPassword` and returns the
+account's display name. The password goes to the SDK and nowhere else — never
+to Firestore, never logged, never on a model object (`SECURITY.md` 6.1b).
+`login_screen.dart` lost its `_notWired` placeholder on the Log in button and
+gained the same `_submitting` / `_errorText` / `_messageFor` idiom the Register
+screen already uses, so the button disables while a request is in flight and a
+localized error renders under the form.
 
-- **Start field** — opens the canonical calendar with the current start
-  selected, asks for one date, Done writes only the start. No path is drawn and
-  a second date is never demanded.
-- **End field** — opens the same calendar with the start passed as `stayStart`,
-  rendered selected and immovable; choosing one end date immediately draws the
-  whole period as one continuous path; Done writes only the end.
+**No design change.** The disabled button state is `PrimaryButton`'s own
+`disabledBackgroundColor`, and the error `Text` matches Register's exactly.
+`PreviewModeBanner` already renders nothing once Firebase is configured.
+
+### Wrong password and unknown account are one error, deliberately
+
+The project has email-enumeration protection on, so Firebase answers both with
+`invalid-credential`. `AuthErrorKind.invalidCredentials` preserves that
+collapse rather than undoing it — reporting them separately would make Login an
+account-enumeration oracle, the property `SECURITY.md` 6.1a forbids for
+password reset for the same reason. Confirmed live: both return
+`INVALID_LOGIN_CREDENTIALS`, byte-identical.
+
+Three localized strings added in en/ku/ar: `invalidCredentials`,
+`accountDisabled`, `loginFailed`.
+
+### Flow verified end to end against live Firebase Auth
+
+Register → login → logout → login again, run against the real REST backend with
+the app's own shipped API key. All passed, including a second sign-in issuing a
+fresh `idToken`. Both throwaway test accounts were deleted afterwards.
+
+### Still open
+
+1. **`enforcementState: "OFF"` on the password policy.** Configured at 8
+   characters but not enforced — a 6-character `accounts:signUp` succeeded.
+   Client and Cloud Function both require 8, so the normal path is fine; a
+   modified client is not. Recorded in `SECURITY.md` 6.1b. **User action.**
+2. **The preview account should now be deleted** per `SECURITY.md` 1b. It is
+   already unreachable on a configured device, but the code is still there.
+3. **Apple / Gmail buttons remain `_notWired`** — those providers are not
+   configured in the console. They say so rather than failing silently.
+4. **Not seen on Android hardware** — verified by REST against the same
+   backend, not by tapping the button on a device.
+5. **Registration still cannot complete**, for reasons outside this change:
+   the email-code step needs Cloud Functions, which need the Blaze plan.
+
+### Test run
+
+677 passed, 13 failed — **every failure pre-existing and unrelated**, each
+confirmed by re-running against a stashed working tree: three 0-byte
+placeholder test files that cannot load, `login_preview_signin_test.dart`'s
+"Too many elements" drawer finder, two `car_rental_service_test` cases, and
+`hotel_checkout_screen_test` 10-minute timeouts. `flutter analyze lib/` is
+clean.
+
+## Password policy aligned to live Firebase Auth (2026-09-12)
+
+The Firebase Console policy was set to **enforce**: 8+ characters, uppercase,
+lowercase, number, **no special character**. The app did not match it, in two
+opposite directions at once.
+
+### The bug this fixed
+
+All three client validators required a **special character Firebase does not
+require**, and **none of them required the number Firebase does**. Both halves
+were real defects:
+
+- `Abcdefg1` — valid per Firebase — was **rejected by the app**, so a user
+  could not register with a password the backend would have accepted.
+- `Abcdefg!` — no digit — was **accepted by the client** and then rejected by
+  Firebase at submit, surfacing as a generic "weak password" with nothing on
+  screen explaining which rule was missed.
+
+`isStrongEnough()` in `functions/index.js` had the same shape, and matters more
+than it looks: the reset flow sets the password through the **Admin SDK, which
+bypasses the Auth policy entirely**, so that function is the only boundary on
+that path.
+
+### Changed
+
+Four validators, now byte-identical (`length >= 8`, `[A-Z]`, `[a-z]`, `[0-9]`):
+
+- `_validatePassword` in `register_screen.dart`
+- `_validatePassword` in `reset_password_screen.dart`
+- the inline check in `ChangePasswordScreen._save` (`account_edit_screens.dart`)
+- `isStrongEnough()` in `functions/index.js`
+
+Localization: `passwordNeedsSpecial` → `passwordNeedsNumber`, and both visible
+policy descriptions (`passwordHint` on Register, `passwordChangeRules` as the
+Change Password subtitle) reworded — all three languages.
+
+**Login was deliberately left alone.** It checks non-empty only. Applying the
+policy there would lock out any account whose password predates it — a login
+screen validates identity, not password quality.
+
+`SECURITY.md` 6.1b now carries the policy as a table plus the list of all five
+places that encode it, since they drifted once already.
+
+### Verified live against `rewar-app-1c10e`
+
+Every case run through real `accounts:signUp`; client rule and Firebase agreed
+on all five, and the created account was deleted afterwards.
+
+| case | password | client | Firebase |
+|---|---|---|---|
+| fewer than 8 | `Ab1cdef` | reject | reject |
+| no uppercase | `abcdefg1` | reject | reject |
+| no lowercase | `ABCDEFG1` | reject | reject |
+| no number | `Abcdefgh` | reject | reject |
+| satisfies all four | `Abcdefg1` | accept | **accept** |
+
+### Still open
+
+1. **`functions/index.js` is not deployed** — needs Blaze. The corrected
+   `isStrongEnough()` is source-only, so the reset path still has no live
+   server-side policy check.
+2. The four validators remain **four copies**. They drifted once; a single
+   shared constant would prevent a repeat. Not done — out of scope for this
+   change, worth doing.
+
+### Test run
+
+`flutter analyze lib/` clean, `node --check functions/index.js` clean. Auth,
+l10n and account-screen tests pass. Two failures
+(`login_preview_signin_test.dart` drawer finder, `settings_screen_test.dart`
+inline-choices) confirmed **pre-existing** by re-running against a stashed
+tree.
+
+## Firestore security rules deployed (2026-09-12)
+
+`firestore.rules` is now live and byte-identical to the repo copy. Deployed
+ruleset `c034b0c9-003b-4162-b25b-6a9436800057`, replacing the 2026-08-17
+ruleset that predated the Favorites screen.
+
+The only functional difference was the **favorites hardening** — `validLocaleMap`
+(keys restricted to en/ku/ar, English required, 200 chars per string),
+`itemType` narrowed from five values to `nature_spot | hotel`, and a 1000-char
+cap on `imageRef`. Every change tightened access; nothing was opened.
+
+### Audited before deploying
+
+Every `match` block reviewed against `SECURITY.md` and `DATA_MODEL.md`. `users`
+excludes all seven server-owned fields from its allow-list (`role`,
+`emailVerified`, `phoneVerified`, `mfaEnrolled`, `mfaMethods`,
+`hasPaymentMethod`, `passwordChangedAt`) and grants no `list`. `bookings` is
+`create, update, delete: if false`. Reviews are keyed by author uid; `votes`
+denies `list`. All four server-only collections are `read, write: if false`.
+The catch-all is `if false`.
+
+### 50 live allow/deny tests, all passed
+
+Run against the deployed rules with two real throwaway Auth users, covering
+users field escalation, favorites shape/size limits, bookings, reviews, votes,
+catalog writes, public reads, server-only collections and the catch-all. Both
+users and every document written were deleted; the collection counts were
+confirmed back to their pre-test values.
+
+`SECURITY.md` 1a and 1c no longer say "not yet run" — those verification
+procedures have now actually been executed.
+
+### Unresolved
+
+1. **`storage.rules` is not deployed and cannot be.** The bucket does not
+   exist — Firebase Storage was never initialized on this project. Recorded at
+   the top of `SECURITY.md` section 2 with the fix order. Blocks the Account
+   Setup avatar upload.
+2. **The Firebase CLI cannot deploy with this service account.** It preflights
+   `serviceusage.services.get`, which the Admin SDK key lacks, so
+   `firebase deploy` fails before touching rules. The deploy went through the
+   Firebase Rules REST API instead. Granting the key
+   `roles/serviceusage.serviceUsageConsumer` would make the documented command
+   work.
+3. Functions still not deployed (Blaze), unchanged and deliberately untouched.
+
+## Firestore rules regression suite (2026-09-12)
+
+`rules_test/` — 201 emulator-based tests over `firestore.rules`, green three
+runs in a row, ~6s. Run with `cd rules_test && npm test`.
+
+No production access: the suite uses a `demo-`-prefixed project id, which the
+Firebase tooling treats as fake — the emulator runs offline, no credentials are
+read, and the `secrets/` key is never loaded. Admin paths are covered with a
+**simulated** `admin: true` custom claim, so no real account was granted admin.
+
+### Coverage
+
+Unauthenticated access; the `users` field allow-list (all seven server-owned
+fields rejected on create *and* update, email pinned, no `list`, no client
+delete); cross-user reads and writes; favorites ownership, the two permitted
+item types, locale-map keys and every string bound (200/200/1000, with
+boundary cases at exactly 200 and 1000); bookings owner-read with all three
+client writes denied; reviews for **both** `nature_spots` and `tours` — uid-keyed
+ids, half-step rating validation including 3.7 and 0.3, comment and userName
+bounds, `helpfulCount` and `createdAt` protection; votes; the four server-only
+collections closed to guest, user and admin alike; public catalog reads that
+must keep working; admin-only writes succeeding only with the simulated claim;
+and the catch-all over six unruled collections plus a nested unknown path.
+
+### No security issue found
+
+Every assertion matched the intended behaviour on the first green run.
+`firestore.rules` was **not modified** — verified clean in git afterwards.
+
+A `mutation-check.js` script confirms the suite has teeth: it loads a
+deliberately loosened copy of the rules *in memory* (adds `car` back to
+`favorites.itemType`; adds `role` to the `users` allow-list) and confirms the
+outcome flips in both cases. So the deny assertions are pinned to the rule
+text, not passing for incidental reasons.
+
+### Two harness traps, both fixed and documented
+
+Three tests failed on the first run and a different three on the second. Both
+were the harness, not the rules:
+
+1. **Parallel files sharing one project id.** `node --test` runs files
+   concurrently against one emulator, so one file's `clearFirestore()` deleted
+   another's seed mid-test. Surfaced as `Null value error` / `NOT_FOUND`, which
+   reads exactly like a rules bug. Fixed by giving each file its own
+   `demo-kurdistan-<name>` namespace — which also cut the run from 47s to 6s.
+2. **Clear and seed split across two hooks.** Ambiguous ordering between an
+   outer and inner `beforeEach`. Each describe now owns one `reset()`.
+
+Both are written up in `rules_test/README.md` so the next person does not
+rediscover them.
+
+### Still open
+
+- The suite covers `firestore.rules` only. `storage.rules` has no tests
+  because the bucket does not exist (blocked by Blaze).
+- Not wired into CI — there is no CI in this repo yet.
+
+## Preview authentication removed (2026-09-12)
+
+Real Firebase sign-in exists, so the preview/demo authentication scaffolding is
+gone — `SECURITY.md` 1b required its deletion at exactly this point, and the
+pre-launch checklist item is now ticked.
+
+### Removed
+
+Files deleted: `lib/services/preview_identity.dart`,
+`lib/widgets/preview_mode_banner.dart`,
+`test/screens/login_preview_signin_test.dart`,
+`test/services/preview_identity_test.dart`,
+`test/services/email_verification_service_test.dart`.
+
+From `AuthService`: `previewUsername`, `previewPassword`, `previewDisplayName`,
+`checkPreviewCredentials`, `isPreviewMode`, and the preview branches in
+`register`, `recordTermsAcceptance` and `signOut`.
+
+From the Login screen: the preview fallback, `_signInWithPreviewAccount`, the
+banner, and the validator exception that allowed a bare username where an email
+is required. The banner also came off Register, Reset Password, Verification
+Code and Account Setup.
+
+Preview branches also removed from `PasswordResetService`,
+`EmailVerificationService`, `AccountSettingsService`, `ProfileSetupService` and
+`UserProfileService`. `BookingsService.currentUserId` no longer returns a
+fabricated `'preview-user'` uid.
+
+### The password was not the worst of it
+
+`EmailVerificationService.isPreviewMode` accepted **any six digits** as a valid
+email verification code. That is a verification bypass, not a convenience
+account. `Asd!@3` would at least have been rejected by the app's own 8-character
+policy; the code bypass had no such backstop.
+
+### Kept on purpose
+
+The line drawn: **a preview path may supply content, never an identity or a
+credential.** So the bundled-content fallbacks stay — `featured`,
+`nature_spots`, `tours`, `currency_rates`, `legal_documents`, `favorites`, the
+bundled booking fixtures — as do `PreviewHotelService`,
+`PreviewCarRentalService` and `MockFlightResultsService` behind the unfinished
+Hotels, Cars and Flights screens. None of them authenticates anyone.
+
+`UserProfileService.bundledProfile()` was kept but no longer reads
+`PreviewIdentity`; it now returns the guest placeholder directly, which is what
+Settings actually uses it for.
+
+### Verified
+
+`flutter analyze lib/` and `flutter analyze test/` both clean.
+`test/widget_test.dart` 157/157, including Log Out and the Register/Login
+screens. Live Firebase re-run of register → login → logout → login again: all
+passed, wrong password and unknown account still indistinguishable, test
+account deleted. No hard-coded credential remains anywhere in `lib/` or
+`test/`.
+
+### One regression found and fixed
+
+`widget_test.dart`'s "Reset Password rejects a password that breaks the policy"
+was still asserting the **old** policy ("Add at least one special character").
+That was broken by the 2026-09-12 password-policy change, not by this cleanup —
+the earlier search for affected tests looked for the l10n key
+`passwordNeedsSpecial` rather than the literal English string, so it was missed.
+Updated to the current four rules and extended with a lowercase case.
+
+## Flutter test suite green (2026-09-13)
+
+**709 passed, 0 failed**, in ~37 seconds. Previously 655 passed / 14 failed in
+just over 20 minutes. `flutter analyze lib/` and `test/` clean; the 201
+Firestore rules tests still pass.
+
+### One real app bug — a regression from the preview cleanup
+
+`UserProfileService.fetchProfile()` threw `[core/no-app]` whenever Firebase was
+not initialised. Removing the preview branch the day before also removed the
+only thing standing between the method and `FirebaseAuth.instance`, so a
+service documented to "return null for a guest" started throwing instead. It
+broke `choose_room_screen_test` and `hotel_reviews_screen_test`, both of which
+render `HotelCheckoutScreen`, whose `initState` prefills from this call.
+
+Fixed with the guard the rest of the codebase already uses —
+`if (!FirebaseBootstrap.isReady) return null;` — matching
+`favorites_service._uid` and `bookings_service.currentUserId`. `updateCurrency`
+and `updateLanguage` had the same exposure and now throw the intended
+`StateError` rather than a raw `FirebaseException`.
+
+This matters beyond tests: `FirebaseBootstrap` deliberately lets the app run
+when init fails, so on a device with a broken Firebase config the account
+surfaces would have crashed instead of degrading.
+
+### A 20-minute deadlock, fixed
+
+`hotel_checkout_screen_test` hung for 10 minutes per test. `_app()` awaits
+`PreviewHotelService.fetchDetail`, which sleeps 220 ms unconditionally — the
+`delay: Duration.zero` override on `PreviewHotelBookingService` never reaches
+it. Awaiting a timer inside `testWidgets` *before* the first pump deadlocks,
+because the fake clock only advances when the tester pumps. Now built through
+`tester.runAsync`, which uses the real clock. Both tests run in ~1 second.
+Production was not changed; the unconditional delay is preview data, not a bug.
+
+### Outdated tests
+
+`car_rental_service_test` asserted three vehicles and `byCity.single`. The
+catalogue grew to five, and Erbil now has four branches. Re-anchored to
+`PreviewCarRentalService.vehicles.length` so it cannot go stale again, and
+split the location test into city-match and airport-code cases.
+
+`widget_test.dart`'s reset-password policy test still asserted the removed
+"special character" rule (noted in the previous entry).
+
+### Incorrect finder
+
+`settings_screen_test` asserted `find.byType(ModalBarrier), findsNothing` to
+prove the choices expand inline. Every `ModalRoute` builds a barrier as its own
+overlay entry, so a bare `MaterialApp` already contains one — the assertion
+could never hold. Verified with a throwaway probe, then replaced with
+`Dialog`/`BottomSheet` finders, which actually distinguish an overlay from
+inline expansion.
+
+### Placeholder files
+
+Six 0-byte files had no `main` and so always failed. Four became real tests —
+`airport_test` (13), `airport_search_service_test` (8),
+`flight_search_criteria_test` and `flight_results_service_test` (17 together),
+`flight_airport_field_test` (5, including debounce and the error branch).
+`rental_details_parts_test` was deleted as redundant with
+`car_rental_details_screen_test`. `firebase_options_test` became a real config
+guard (9 tests) catching a regenerated file pointing at the wrong project.
+`account_settings_service_test` was deleted: it registered zero tests, and the
+service is almost entirely Firebase calls that cannot be covered without adding
+a mocking dependency.
+
+Seven `void main() {}` placeholders remain. They register no tests but do **not**
+fail, so they were left alone: `nature_detail_test`,
+`account_edit_screens_test`, `place_weather_service_test`,
+`app_recessed_glass_field_test`, `glass_panel_test`,
+`recessed_liquid_glass_field_test`, `theme_mode_toggle_test`.
+
+### Note on earlier "loading" failures
+
+Several files were previously reported as failing to load under a full parallel
+run but passed alone. That was load pressure, not a defect — the fixed suite
+now runs clean at default concurrency.
+
+## help_topics wired to Firestore (2026-09-13) — AWAITING APPROVAL
+
+The Help & Support screen now reads `help_topics` as its primary source, with
+the bundled English copy as the fallback for every failure path.
+
+### Schema (exactly as DATA_MODEL.md approved)
 
 ```
-Start = 15, End = 18   →   [15]━━━━16━━━━17━━━━[18]
+help_topics/{docId}
+  order    number   1..10, ascending display order
+  active   boolean
+  content  map      { en: { questions: [{question, answer}] } }
 ```
 
-`showCanonicalStayDatePicker` is the one entry point for this.
+Ten fixed ids from `HelpTopic.docId`. Only `content.en` was written — English
+is all the bundled copy has; a missing locale falls back to `en`, the same rule
+as `legal_documents`. `updatedAt` is stamped server-side by the seeder.
 
-### The zero-height band bug
+### Rules
 
-The band halves rendered at `24.6 × 0.0` and were invisible on device, while
-every widget-counting test passed: a childless `ColoredBox` under the default
-`CrossAxisAlignment.center` gets loose vertical constraints and collapses to
-`constraints.smallest`. `_DayCell`'s band `Row` now carries
-`crossAxisAlignment: CrossAxisAlignment.stretch`, and the tests assert the
-**rendered rect** (non-zero height, edge-to-edge width, contiguity) rather than
-the widget count. Do not remove either.
+Public `get`, `list` denied, admin-only write via `isAdmin()` — the
+`legal_documents` pattern DATA_MODEL asked for. `list` is denied because every
+id is fixed in the enum, so the app fetches by known id and never enumerates.
+Deployed as ruleset `c16ae134-b53a-47d2-b40f-6b082c54c853`; verified byte-identical
+to the repo copy afterwards.
 
-### One canonical range visual
+Public read is the most open rule in the database, and deliberately: someone
+who cannot sign in is exactly the person who needs the help centre. The write
+side is the opposite — support answers are the app's own voice, so a client
+that could write here could publish "call this number to verify your card" to
+every user. That is a phishing surface, not an editorial one, and the rules
+test says so out loud.
 
-The band was 0.16 in both themes — invisible over the glass sheet. It is now
-navy `0.38` in Light and mint `0.27` in Dark, promoted to the shared default via
-`canonicalRangeBandColor()`. The Hotel-only `CanonicalRangeBandOpacity` override
-introduced while tuning this is gone; no screen can tune the band.
+### Seeded
 
-### Migrated
+10 topics, 43 questions. `contact_support` is seeded with an **empty**
+questions array on purpose — it is a route to a human, and the screen draws its
+"Coming soon" state from exactly that emptiness. Seeding filler there would
+have changed the screen's behaviour.
 
-| Screen | Class | Rule preserved |
+`tool/export_help_topics.dart` generates `tool/help_topics_seed.json` from
+`bundledHelpFaqs`, and `tool/seed_help_topics.js` writes that. Nothing was
+transcribed by hand, so the fallback copy and Firestore cannot disagree. The
+seeder refuses to run on an id mismatch, a duplicate order, or a blank
+question/answer.
+
+### Is it genuinely reading Firestore?
+
+The code path is Firestore-first, and three things back that up: the ten
+documents are readable live by an unauthenticated client (verified over REST,
+`list` and write both 403), the seeded shape parses back to the bundled content
+through the app's own parser (a Dart test asserts this per topic), and the
+service only falls back when Firebase is absent, the document is missing, or
+parsing fails.
+
+**Not yet seen rendering on a device.** Under `flutter test` Firebase is never
+initialised, so every widget test exercises the fallback — which is why the
+screen's eighteen existing tests still pass unchanged. Confirming the live read
+on hardware remains outstanding, like the rest of the app.
+
+### UI unchanged
+
+No design change. `_HelpTopicDetails` became a `FutureBuilder` that draws the
+bundled copy immediately and swaps in live answers when they arrive — no
+spinner, so the accordion's height stays stable and the layout tests that pin
+row positions keep passing.
+
+### Totals
+
+Flutter: **728 passed, 0 failed** (up from 709 — 19 new service tests).
+Rules: **221 passed, 0 failed** (up from 201 — 20 new help_topics tests).
+`flutter analyze lib/` and `test/` both clean.
+
+### Unresolved
+
+1. **Only English content exists.** Kurdish and Arabic rows show localized
+   titles with English Q&A, as before. Adding `content.ku` / `content.ar`
+   needs no schema change or release.
+2. **`active: false` cannot hide a row.** The row list comes from the enum, so
+   a disabled topic renders the empty "Coming soon" state instead of
+   disappearing. Hiding properly requires the row list to move to Firestore,
+   which is blocked on the unsettled title question (DATA_MODEL.md).
+3. **Row titles and previews remain app strings** — still an open question in
+   DATA_MODEL.md, deliberately not decided here.
+4. `storage.rules` still undeployed (no bucket, Blaze) — unchanged.
+
+## Admin custom-claim mechanism (2026-09-13)
+
+Built and tested; **no account holds the claim.** Zero users exist in the live
+project, so nothing production-side was touched.
+
+### How it works
+
+`tool/admin_claim.js` — a Node CLI over the Firebase Admin SDK with three
+commands: `inspect <uid>`, `grant <uid> --yes`, `revoke <uid> --yes`.
+
+`SECURITY.md` 3 asks for a Cloud Function. The binding part of that bullet is
+its parenthetical — *never set directly from a client* — and a local operator
+script satisfies it more strictly than a callable would: there is no deployed
+endpoint to attack or forget to protect, and running it requires already
+holding a service-account key. It is also the only option on Spark. Recorded as
+a deliberate deviation in SECURITY.md 3.1, along with the note that the first
+admin must always be created this way even once a callable exists, because that
+bootstrap cannot be done by an endpoint that requires an admin to call it.
+
+Design choices worth keeping:
+
+- **UID only** — email and display name are rejected as selectors. `inspect`
+  prints email/name/disabled so the operator can confirm before writing.
+- **Claims are merged, never replaced**, so a future `region` or `tier` claim
+  survives. Revoke deletes the `admin` key rather than setting it false.
+- **Mutations refuse to run without `--yes`** and print before/after.
+- `firebase-admin` is required lazily inside `main()`, so the exported helpers
+  are testable against an emulator instance without the SDK resolving from
+  `tool/`.
+
+### Token refresh is the sharp edge
+
+A claim only reaches the rules when the ID token is reissued. Granting means
+the new admin must re-login. **Revoking leaves the ex-admin with admin access
+until their current token expires — up to an hour.** `revoke` calls
+`revokeRefreshTokens`, which stops them getting a *new* token but cannot
+invalidate the one they hold. Documented with the instruction to disable the
+account outright when the revoke is a security response.
+
+### The bypass question, answered by test
+
+`isAdmin()` reads `request.auth.token.admin`, and `firestore.rules` performs
+**no `get()`/`exists()` lookup at all** — no document can influence an access
+decision. `rules_test/admin_bypass.test.js` pins this two ways: a static check
+that no document lookup has appeared in the rules, and behavioural tests that
+plant seven impostor shapes (`role: "admin"`, `admin: true`, `isAdmin: true`,
+`claims.admin`, `token.admin`, `customClaims.admin`, `permissions: ["admin"]`)
+on a user profile — first confirming the client cannot even write them, then
+planting them with rules disabled and confirming every admin-only write is
+still refused across all six admin-gated collections. A control test confirms a
+real token claim *does* grant those same writes, so the denials cannot pass
+vacuously.
+
+### Totals
+
+Flutter **728 passed, 0 failed**. Rules **258 passed, 0 failed** (up from 221 —
+20 merge/emulator tests for the claim tool, 17 bypass tests).
+`flutter analyze lib/` and `test/` clean.
+
+### Unresolved
+
+1. **No `admin_activity_log`.** SECURITY.md lists it as "ideally"; the script
+   prints an auditable before/after but persists nothing. Adding it needs a new
+   collection in DATA_MODEL.md first.
+2. **The revoke window** above is inherent to Firebase ID tokens, not fixable
+   in the tool.
+3. The Cloud Function form of this remains blocked on Blaze.
+
+## Hotels — rules, tests and seed done; app wiring BLOCKED (2026-09-13)
+
+Backend layers complete and live. **The screens still read
+`PreviewHotelService`** — the swap is blocked on a schema decision only you can
+make, described below. Nothing in `lib/` was changed, so the app is exactly as
+it was and all 728 Flutter tests still pass.
+
+### Done
+
+**Rules** for `hotels`, `/rooms`, `/offers`, `/reviews` and `/reviews/*/votes`.
+Catalog: public `get` + `list` (Where to Stay queries the collection, Room
+Selection enumerates rooms and offers), admin-only write via `isAdmin()`.
+Reviews are byte-for-byte the `nature_spots` rules — uid-keyed ids, half-step
+rating validation, `helpfulCount` off the author allow-list, `createdAt`
+pinned. Deployed as `ac7c7ad0-5e17-4e35-a9a1-4e67d03d1f9b`, verified identical
+to the repo copy.
+
+The offer rules are a **payment-adjacent** control, not an editorial one:
+`nightlyPrice` is what a checkout quotes and `availableQuantity` is the only
+source for "Only N rooms left". Both have explicit tests that a normal user
+cannot quote itself a cheaper price or manufacture scarcity.
+
+**59 new emulator tests** (317 total). **Seeded** 3 hotels, 3 rooms, 4 offers,
+4 reviews, generated from `PreviewHotelService` by
+`tool/export_hotels.dart` so the fallback and Firestore cannot drift. No rating
+aggregates and no `helpfulCount` were written — both server-owned. `imageUrls`
+is empty, matching nature_spots and tours.
+
+Live verified: unauthenticated reads of hotels/rooms/offers return 200, the
+filtered review query returns 3 for Divan, and unauthenticated create/update
+are both 403.
+
+### Why the wiring stopped
+
+Two fields the Where to Stay UI reads on every card are **absent from the
+approved `hotels` schema**:
+
+| field | used at | why it cannot be defaulted |
 |---|---|---|
-| Hotel Search | paired | `end.isAfter(start)` — reference, unchanged |
-| Hotel Detail / Change Stay | paired | `end.isAfter(start)` |
-| Hotel Detail / stay editor | paired | `end.isAfter(start)` |
-| Car Rental | paired | same-day allowed, `end <= start + 1y`, time validation untouched |
-| Flight, Round Trip | paired | same-day return allowed |
-| Flight, One-Way | single | left alone — no path, ever |
-| Explore Tours | true range | interaction unchanged, band now shared |
-| Register / Traveler DOB | single | left alone |
+| `highlighted` | `hotel_screen.dart:195` | drives the trending carousel. Defaulting to false empties the top section of the screen |
+| `distanceFromCenterKm` | `hotel_screen.dart:513, 1275` | drawn unconditionally as "N km from centre". Defaulting to 0 publishes a false claim about a named real property |
 
-### Still open
+Both `nature_spots` and `tours` carry `highlighted`; `hotels` does not, which
+looks like an omission rather than a decision. `distanceFromCenterKm` cannot be
+derived either — computing it from `location` needs a city-centre coordinate
+that no collection holds.
 
-1. **Only Hotel has been seen on Android.** Car Rental, Round Trip, Hotel
-   Detail and Explore Tours are verified by test only.
-2. `UI_TRANSFER_PACKAGE` picker + docs are synced; the admin repo has no date
-   pickers, so nothing was copied there.
-3. Thirteen unrelated suite failures predate this work (six are 0-byte
-   placeholder test files identical to HEAD; the rest are Settings, login
-   drawer, preview-car counts and Hotel Checkout timeouts).
+The instruction was explicit — *do not invent new fields that are not in
+DATA_MODEL.md* — and CLAUDE.md requires proposing a schema change and getting
+approval before writing code against it. Shipping either default would have
+produced a visibly wrong screen, so the wiring waits on a decision.
 
-## Time picker — Light-mode readability (2026-09-13) — AWAITING ANDROID VERIFICATION
+**Proposed**, for approval:
 
-The Light-mode time wheel still resolved its digits to `AppColors.heading` —
-navy — which read as low-contrast over the glass sheet, the same problem the
-calendar content had before it went white.
+- `highlighted` — boolean, optional, default false. Identical to the field on
+  `nature_spots` and `tours`.
+- `active` — boolean, for consistency with the sibling catalogs (not currently
+  read by any hotel screen, but the same admin need applies).
+- `distanceFromCenterKm` — number, optional. **Or** drop the line from the card
+  when absent, which is a UI change and therefore your call.
 
-**Audit.** `lib/` has exactly **one** user-selectable time field: Car Rental's
-pick-up / drop-off time, already on `showCanonicalTimePicker`. No
-`showTimePicker`, no `CupertinoTimerPicker`, no custom time sheet, no
-screen-specific time design. Everything else matching `TimeOfDay` is
-`formatTimeOfDay` display (flight departure/arrival, rental details) or weather
-hourly data — read-only, not selection.
+### Unresolved
 
-**Change.** `CanonicalCupertinoDatePicker` now takes its text colour from a new
-`_wheelPrimary()`, which delegates to `_calendarPrimary()` rather than
-repeating `Colors.white`, so the wheel and the calendar cannot drift apart. One
-`dateTimePickerTextStyle` covers hours, minutes and AM/PM together. The Light
-`w600` bump, the selection band, Dark, and all 12h/24h, locale and validation
-behaviour are untouched.
+1. The schema decision above — everything else in Hotels waits on it.
+2. **No rating aggregates**, so every hotel shows no score until
+   `syncHotelReviewAggregates` exists. That function is not written and needs
+   Blaze.
+3. `imageUrls` empty — hotel cards fall back to the bundled asset.
+4. Review ids are `seed-*` placeholders, not real Auth uids.
+5. Checkout still reads preview data, and `bookings` remains client-write-denied
+   — a rules test asserts that explicitly.
 
-**Verified at runtime**, not just in the theme: every `Text` the wheel renders
-resolves to `#FFFFFFFF` — Light at w600, Dark at the ambient weight.
+## Hotels — Firestore wiring complete (2026-09-13) — AWAITING APPROVAL
 
-### Still open
+The schema decision was approved, so the blocker in the previous entry is
+resolved and the wiring is finished.
 
-1. Not yet seen on Android in either theme.
-2. `04_COMPONENT_CATALOG.md` said *"Never switch Light text to white"* and
-   `01_DESIGN_SYSTEM_CANONICAL.md` listed Light picker content as navy — both
-   stale since the calendar went white in an earlier session. Corrected to
-   match shipped code while updating the wheel rules; no code changed by it.
+### Schema additions (approved)
+
+`highlighted` and `active`, both boolean, both documented in DATA_MODEL.md.
+`distanceFromCenterKm` was **declined** — DATA_MODEL.md now records that
+refusal and the reason, so it cannot be quietly re-added.
+
+### The one approved UI change
+
+`Hotel.distanceFromCenterKm` is now `double?`, and both render sites in
+`hotel_screen.dart` are conditional: the carousel card drops the "• N km from
+centre" half and the list card omits the line entirely. Nothing is defaulted to
+0. Every Firestore-backed hotel is in this state, so the line is currently
+hidden everywhere — which is the honest rendering, not a regression.
+
+### Firestore-first
+
+`FirestoreHotelService` backs the list, search, destinations and detail;
+`FirestoreHotelReviewsService` backs the reviews. Both fall back to the preview
+data when Firebase is unavailable or a live read fails — Firebase absent,
+offline, permission denied, malformed document all land on the bundled copy,
+because a stale hotel is a smaller harm than an error page.
+
+`active: false` is filtered in `_activeHotels()`, in one place, so no screen
+can forget to. An inactive hotel stays readable by direct id — hiding it from
+the list is a product decision, not a security boundary, and the rules stay
+simple.
+
+Rooms and offers reach Room Selection through `PreviewHotelBookingService`,
+which now receives the Firestore-backed hotel service and derives availability
+from its `fetchDetail`. **No booking is created** — `bookings` is still
+client-write-denied, with a rules test asserting it.
+
+### Seeded
+
+3 hotels, 3 rooms, 4 offers, 4 reviews — re-seeded with `highlighted` and
+`active`. All three hotels are `active: true` and `highlighted: true`, carried
+through from the preview data so the trending carousel shows exactly what it
+showed before. Verified live: the `active == true` query returns all three and
+no document carries `distanceFromCenterKm`.
+
+### Totals
+
+Flutter **748 passed, 0 failed** (was 728 — 20 new). Rules **322 passed, 0
+failed** (was 317 — 5 new for highlighted/active). `flutter analyze lib/` and
+`test/` clean.
+
+### One thing worth recording
+
+While writing the service I gave `searchDestinations` a two-character minimum,
+which `PreviewHotelService` does not have. A test caught it. That would have
+silently changed the destination picker — a one-character query stopped
+matching — so the guard was removed and two tests now pin the preview
+semantics (one character matches; an empty query lists everything).
+
+### Unresolved
+
+1. **No rating aggregates.** `reviewScore` / `ratingCount` / `ratingBreakdown`
+   / `categoryScores` are server-owned and no Cloud Function derives them, so
+   every hotel shows no score and `HotelDetail.reviewSummary` is null. Needs
+   Blaze.
+2. **`imageUrls` empty** — cards fall back to a bundled asset.
+3. **Review ids are `seed-*` placeholders**, not real Auth uids.
+4. **Not seen on hardware.** Under `flutter test` Firebase is never
+   initialised, so every widget test exercises the fallback path; the live
+   reads were verified over REST.
+5. `region`/`country` remain absent from the seeded documents — the preview
+   data has no verified values for them.
+
+## Cars wired to Firestore (2026-09-13) — AWAITING APPROVAL
+
+### Schema decisions taken
+
+`currencyCode` was ruled on explicitly. The other five were my recommendations,
+taken as approved from "continue with all the other Cars schema decisions
+already approved" — flagged at the time so they are cheap to correct:
+
+- `name` — plain string → `map<lang,string>`
+- `company` map `{id, name{en,ku,ar}}` — replaces the flat `rentalCompany` +
+  `companyTag`, which could not carry a localized company name
+- `currencyCode` — added, restricted to **USD | IQD**, enforced in the rules
+- `featured`, `active` — booleans, matching the sibling catalogs
+- `locationId` + a new **`rental_locations`** collection — replaces the bare
+  `location` geopoint, which could not support the branch search the screen
+  already performs (name / city / country / airport code). Erbil alone has four
+  branches, and they are shared across vehicles.
+
+### Price and currency
+
+One authoritative pair per vehicle: `pricePerDay` + `currencyCode`. **No
+duplicate `priceUSD`/`priceIQD`** — two stored prices drift the moment a rate
+moves, with no way to tell which one a supplier honours. Conversion happens at
+render time through `CurrencyRatesService`.
+
+Nothing assumes USD. A vehicle whose `currencyCode` is missing or unsupported
+is **dropped rather than defaulted**: reading 85000 IQD as USD misprices by
+~1300x, which is worse than showing no card. The rules reject the same values,
+so a bad document cannot be written in the first place. The UI needed no change
+— it already read `vehicle.currencyCode` and `symbolFor` falls back to the ISO
+code, so IQD renders as `IQD 85000`.
+
+All five preview cars are USD, and no IQD price was fabricated.
+
+### Firestore-first
+
+`FirestoreCarRentalService` backs the Car Rental search screen and the Results
+screen; the Details screen receives a `RentalVehicle` and needs no service.
+`active: false` is filtered in `_activeCars()`, in one place. Branches are
+loaded first and joined by `locationId` — a vehicle whose branch cannot be
+resolved is dropped rather than drawn with a blank pickup row.
+
+Search behaviour is unchanged: `searchCars` returns the whole active catalogue
+for any criteria, exactly as the preview did, and `searchLocations` keeps the
+two-character minimum.
+
+### Seeded
+
+5 cars (5 USD) and 6 branches, generated from `PreviewCarRentalService` by
+`tool/export_cars.dart`. `conditions` written on none of them — contractual
+terms are never invented — and `imageUrls` empty, matching the other catalogs.
+
+### Verified live
+
+Unauthenticated reads of `cars` and `rental_locations` return 200 and the
+`active == true` query returns all five with correct prices and currencies.
+Denied (403): create a car, lower a price, switch a currency to IQD, create a
+branch, delete a car.
+
+### Totals
+
+Flutter **772 passed, 0 failed** (was 748 — 24 new). Rules **358 passed, 0
+failed** (was 322 — 36 new). `flutter analyze lib/` and `test/` clean.
+
+### Unresolved
+
+1. **`conditions` is empty on every vehicle**, so the Rental Conditions card is
+   hidden everywhere. Correct until a supplier feed exists.
+2. **`imageUrls` empty** — cards fall back to `journey-car.png`.
+3. **Cars are not favoritable** — `favorites.itemType` is
+   `['nature_spot', 'hotel']`. Unchanged; no work was needed.
+4. **No car booking exists** and none was added; `bookings` stays
+   client-write-denied, asserted by a rules test.
+5. **Not seen on hardware** — live reads verified over REST.
+6. `RentalCompany.logoAsset` has no schema field. Nothing renders it today, so
+   nothing was invented for it.
+
+## Cars — two verifications (2026-09-13)
+
+### 1. `locationId` — justified, nothing changed
+
+The preview data **does** establish a per-vehicle branch explicitly, so the
+relationship was not fabricated:
+
+```
+lib/services/car_rental_service.dart
+  217  location: wavyAvenue,     // Tesla Model 3
+  239  location: dreamCity,      // Ford Mustang
+  261  location: wavyAvenue,     // Toyota Corolla
+  279  location: wavyAvenue,     // Range Rover
+  301  location: gulanStreet,    // BMW X5
+```
+
+`RentalVehicle.location` is a **required, non-nullable** field
+(`car_rental.dart:191`), and the UI renders it at four sites — the branch name
+on the result card and the featured card, plus distance-from-device on both:
+
+```
+car_rental_results_screen.dart:294  vehicle.location.name.forLanguage(language)
+car_rental_results_screen.dart:295  rentalDistanceText(vehicle.location, deviceLocation)
+car_rental_screen.dart:1044         rentalDistanceText(vehicle.location, deviceLocation)
+car_rental_screen.dart:1170         vehicle.location.name.forLanguage(language)
+```
+
+So a car genuinely has a home branch; three vehicles share Wavy Avenue, which
+is what a real fleet looks like. `rental_locations` stays an independent
+collection and pickup/drop-off remain search criteria — those are unaffected.
+
+On dropping a vehicle whose branch cannot be resolved: that is **forced by the
+model**, not a choice. `location` is non-nullable, so a `RentalVehicle` cannot
+be constructed without one. It can only trigger if a car references a missing
+or inactive branch, which the seeder already prevents by checking referential
+integrity before writing.
+
+### 2. USD/IQD conversion — was NOT working, now fixed
+
+The car UI called `CurrencyRatesService.symbolFor` only. It rendered the
+**stored** currency and never converted to the user's Settings choice — a user
+with IQD selected saw `$56`. Explore Tours had the full pattern; cars had none
+of it.
+
+Added `RentalPricing` in `rental_car_parts.dart`, mirroring `TourPricing` and
+reusing its `formatMoney`, so a price on a car card and the same figure at
+checkout cannot be formatted two different ways. Both list screens now load
+`currency_rates/latest` and `users.preferredCurrency` and thread the result
+into their cards; both loads fail silently, because a car list that refused to
+draw over a missing rate table would be a worse bug than an unconverted price.
+
+**No rate was changed or invented** — the tests use the bundled table
+`CurrencyRatesService` already ships. **No price is duplicated in Firestore**:
+the document still holds one authoritative `pricePerDay` + `currencyCode`, and
+conversion happens at render time.
+
+Converted figures carry the `≈` prefix; an unconverted one must not (a test
+pins that). When the table cannot reach a currency, the price falls back to the
+supplier's own — an unconverted true price beats a converted invented one.
+
+### Totals
+
+Flutter **788 passed, 0 failed** (was 772 — 16 new). Rules **358 passed, 0
+failed**, unchanged. `flutter analyze lib/` and `test/` clean.
+
+### Note
+
+The Details screen still renders its price rows unconverted
+(`rentalFormatAmount`), including deposit, damage excess and mileage extras.
+Those read `conditions`, which is empty on every seeded vehicle, so nothing is
+currently drawn wrongly — but the same `RentalPricing.format` should be wired
+there when a supplier feed fills those fields.
+
+## Cars — conditions currency conversion (2026-09-13)
+
+### Did the schema already define the currency? Partially.
+
+`depositAmount` carried the note **"in the vehicle's `currencyCode`"**.
+`damageExcess` and `mileagePolicy.extraKilometrePrice` had **blank notes** —
+the currency was implied, not stated.
+
+Not treated as a blocking mismatch, because there is exactly one possible
+reading: `cars` has no second currency field, and the implementation already
+bound all three to `vehicle.currencyCode`
+(`car_rental_details_screen.dart:448`). Rather than proceed on an inference,
+`DATA_MODEL.md` now states the currency **explicitly on every monetary row**,
+plus a note that these are all the vehicle's own currency and that the user's
+Settings choice is display-only. An unstated currency on a deposit is exactly
+the ambiguity that ends with a renter quoted 200 of the wrong unit.
+
+### Changed
+
+Every monetary value on the Details screen now goes through
+`RentalPricing.format`, the same path the list cards already used:
+
+- `conditions.depositAmount`
+- `conditions.damageExcess`
+- `conditions.mileagePolicy.extraKilometrePrice`
+- the price-summary rows and the per-day line
+- add-on extras (`RentalOptionRow`) — same screen, same currency; leaving them
+  unconverted would have shown one screen in two currencies
+
+`grep rentalFormatAmount` now returns only its own definition: no monetary site
+renders unconverted.
+
+The screen loads `currency_rates/latest` and `users.preferredCurrency` the same
+way the list screens and Explore Tours do, and both loads fail silently.
+
+Non-monetary conditions — fuel policy, mileage cap, free-cancellation date,
+minimum driver age, required documents, guaranteed model — were not touched.
+
+### Contract held
+
+`pricePerDay` + `currencyCode` remains the authoritative supplier price.
+Nothing is duplicated in Firestore, no rate was invented or changed (the tests
+use the bundled table the app already ships), and conversion is display-only.
+Converted figures carry `≈`; same-currency ones do not; when the rate table
+cannot make the conversion the supplier's own currency and value are shown,
+because an unconverted true figure beats a converted invented one — and a
+deposit is money a renter is actually held to.
+
+### Totals
+
+Flutter **800 passed, 0 failed** (was 788 — 12 new). Rules **358 passed, 0
+failed**, unchanged. `flutter analyze lib/` and `test/` clean.
+
+`conditions` is still empty on all five seeded vehicles, so none of these rows
+draws yet — the path is correct and tested for when a supplier feed fills them.
+
+## Flights — audit, airport fix, schema revision (2026-09-14)
+
+### Seeding STOPPED — the mock service generates inventory
+
+`MockFlightResultsService` does not hold five fixed offers. Its five
+`_MockOfferSpec` entries fix only airline, departure minute-of-day, duration,
+price, stops and flight number. Route and dates are manufactured from the
+user's search:
+
+```dart
+originCode      = _codeFor(criteria.origin)
+destinationCode = _codeFor(criteria.destination)
+departure       = _atMinute(criteria.departureDate, spec.departureMinute)
+```
+
+Searching Erbil→Dubai on 12 March produces "Astra Airlines AS 204,
+Erbil→Dubai, 12 March" — a route that carrier may not fly. Writing these to
+Firestore would turn demo templates into apparently real inventory under real
+airline names, so **nothing was seeded, no rules were added and no wiring was
+done**. Recorded in `SEED_DATA.md`.
+
+### Airport search — regression fixed
+
+The bundled fallback fired only when Firebase was ABSENT. Once Firebase was
+configured (an earlier turn of mine), the picker began calling `searchAirports`
+— **verified live: HTTP 404, not deployed** — so origin and destination could
+not be chosen at all on device.
+
+`FirebaseAirportSearchService` now splits callable failures in two:
+
+- `unreachableCodes` (`not-found`, `unavailable`, `deadline-exceeded`,
+  `internal`) → serve the bundled catalogue.
+- `refusedCodes` (`permission-denied`, `unauthenticated`, `invalid-argument`,
+  `resource-exhausted`, `failed-precondition`) → **throw**. Quietly answering
+  with five bundled airports would hide a misconfigured App Check, a revoked
+  key or a rejected token behind a screen that looks like it is working.
+
+An unrecognised code also surfaces rather than degrading. Works on Spark with
+no function deployed. A test asserts the two sets never overlap.
+
+### Schema revised (approved)
+
+`flights` is now documented as **priced offers, not airline schedules**. Flat
+leg fields replaced by `outbound` + optional `returnSegment`, each carrying its
+own `stops` and `flightNumber`; added `currencyCode` (USD|IQD), `priceIsTotal`
+and `active`. No duplicated flat `returnDepartTime`/`returnArriveTime`, and no
+duplicated USD/IQD prices.
+
+### Fare conversion — was missing, now working
+
+Flights had the same bug Cars did: `symbolFor(offer.currency)` with no
+conversion. Added `FlightPricing`, mirroring `TourPricing`/`RentalPricing` and
+reusing the same `formatMoney`, and wired the results screen to load
+`currency_rates/latest` and `users.preferredCurrency`.
+
+### Totals
+
+Flutter **830 passed, 0 failed** (was 800 — 30 new). Rules **358 passed, 0
+failed**, unchanged — no flight rules were added. Analyzers clean.
+
+### Waiting on a decision
+
+Seeding, `flights` rules and Firestore-first results all wait on a genuine
+offer source. Everything else for Flights that can be done on Spark is done.
+
+## Crashlytics wired (2026-09-14)
+
+`SECURITY.md` 10 asked for it; 5.1 and 6.1b constrain what may reach it.
+**Free on Spark** — no Blaze involved.
+
+### Files
+
+Added `lib/services/crash_reporter.dart` and
+`test/services/crash_reporter_test.dart`. Changed `pubspec.yaml`
+(`firebase_crashlytics ^5.0.4`), `lib/main.dart`,
+`android/settings.gradle.kts`, `android/app/build.gradle.kts`, `SECURITY.md`
+(new 10.1 + checklist ticked).
+
+### Captured
+
+Flutter framework errors (`FlutterError.onError`), uncaught async and platform
+errors (`PlatformDispatcher.instance.onError`), and native Android crashes via
+the Gradle plugin. Collection is off in debug, so no developer crash reaches
+the dashboard and no test run can post.
+
+### Scrubbed
+
+Nothing is forwarded verbatim — the report carries the exception TYPE plus
+redacted text. Passwords, PANs/CVV/expiry, 6-digit codes, JWTs and token keys,
+emails and E.164 phone numbers are all rewritten. Stack traces go unmodified;
+frames carry no values.
+
+The redaction tests caught two real defects in my own first cut:
+`Authorization: Bearer <token>` lost only the word "Bearer", and a `+964…`
+phone number was being claimed by the card pattern, which both mislabelled it
+and ate the spacing. Both fixed and pinned.
+
+### Verified
+
+`flutter build apk --debug` **succeeds** with the Crashlytics Gradle plugin on
+this project's pinned AGP 9.0.1 — that was the real risk and it is checked, not
+assumed. The KGP warnings in that build are pre-existing and name five plugins
+that were already present.
+
+### Totals
+
+Flutter **861 passed, 0 failed** (was 830 — 31 new). Rules **358 passed, 0
+failed**. Analyzers clean.
+
+### Manual step outstanding
+
+Firebase Console → Crashlytics → **Get started**. Nothing reaches the dashboard
+until that page is opened once.
+
+## permission_handler 12.0.3 → 13.0.2 (2026-09-14)
+
+`SECURITY.md` 8 dependency hygiene. A major bump, so it was inspected before
+being applied.
+
+### The one required change
+
+13.0.0's breaking change is `compileSdkVersion 37`. The first build attempt
+**failed** with `Dependency ':permission_handler_android' requires ...
+compileSdk of at least 37`, so `android/app/build.gradle.kts` now pins
+`compileSdk = 37` instead of deferring to `flutter.compileSdkVersion`.
+`android-37.0` was already installed locally.
+
+That pin raises the compile SDK for **every** plugin, not just this one — a
+wider blast radius than the dependency itself, which is why it was verified
+with a full `flutter build apk --debug` (succeeds) rather than assumed. This
+project has fragile pinned Android deps (AGP 9 legacy-Kotlin, maplibre 0.26.2
+with a do-not-upgrade note), and none of them broke.
+
+### No permission behaviour changed
+
+`app_permissions.dart` was **not touched** — `git diff` on it is empty. Every
+API it uses is unchanged in 13.x: `Permission.camera` / `photos` / `storage` /
+`locationWhenInUse` / `notification`, `request()`, `isGranted`, `isLimited`.
+
+No permission was added, and nothing is requested earlier than before — the
+up-front `requestAll()` on Account Setup open is exactly as it was (still the
+App Store risk recorded in 6.1e, still unchanged here). The manifest was not
+edited; it already declares CAMERA, READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE
+(`maxSdkVersion="32"`), COARSE/FINE location and POST_NOTIFICATIONS.
+
+### One behavioural note worth carrying forward
+
+13.0.2 changes permanently-denied detection on Android: `status` can no longer
+distinguish it and `request()` must be called. **This app already used exactly
+that pattern**, so nothing had to change — but a future `status`-based check
+would now be wrong.
+
+### Pre-existing gap surfaced, not fixed
+
+The app has **no permanently-denied recovery path and never calls
+`openAppSettings()`**. A user who declines twice cannot get back from inside
+the app. Not a regression and not in scope here; recorded in `SECURITY.md` 8.
+
+### Totals
+
+Flutter **861 passed, 0 failed**. Analyzers clean. Android debug build
+succeeds. Rules suite untouched at 358.
+
+---
+
+## Permanently-denied permission recovery — 2026-09-14
+
+Closes the gap the `permission_handler` 13 upgrade recorded rather than fixed:
+a user who declined a permission for good had no route back from inside the
+app.
+
+### Denied and permanently denied are now different things
+
+`AppPermissions` used to answer `bool`, which flattened "refused this time"
+and "refused for good" into the same answer — and those need opposite advice.
+It now returns a `PermissionOutcome`: `granted`, `denied`,
+`permanentlyDenied`, or `unavailable` (no such permission on this platform,
+never surfaced to the user as a refusal). Only `permanentlyDenied` reports
+`needsSettings`, so nobody is sent to Settings when the OS will simply ask
+again next time.
+
+The outcome is read from the **result of `request()`**, never from a prior
+`status` check — that is what 13.x requires on Android, and a `status`-based
+check would now silently mis-report. iOS `restricted` (parental controls) maps
+to `permanentlyDenied` too: the user cannot grant it in-app there either.
+
+### What the user sees
+
+At the point of use, a permanent denial keeps the message the screen already
+showed and adds one sentence explaining *why* asking again will not help,
+plus an **Open Settings** action on the same SnackBar the screen already used.
+No new design, no new component, no dialog.
+
+**Nothing opens Settings on its own.** `openAppSettings()` runs only from that
+tap; ignoring or swiping the offer away leaves the user exactly where they
+were. `AppPermissions.openSettings()` also swallows platform failures and
+returns false — a recovery path that crashes is worse than none.
+
+### Which permissions gained it
+
+| Permission | Point of use | Recovery |
+| --- | --- | --- |
+| Camera | Account Setup → avatar → Take photo | Yes |
+| Photos / storage | Account Setup → avatar → Choose picture | Yes |
+| Notifications | Settings → Notifications toggle | Yes |
+| Location | `DeviceLocationService` (**Geolocator**, not `permission_handler`) | No — by design |
+
+Location is deliberately excluded: it does not go through
+`permission_handler` at all, and the service already returns `null` on
+`deniedForever` so the card hides its Distance row. A nag there would
+contradict that documented behaviour.
+
+### Request timing is unchanged
+
+`requestAll()` still runs one sweep on Account Setup open, still fires the
+same four requests in the same order, and still returns plain booleans — a
+recovery prompt belongs where a permission is actually needed, not as four
+"open settings" nudges on screen open. `_requestPhotos` still makes at most
+the same two requests it always did. No permission was added. The 6.1e
+permission-timing decision remains open and separate.
+
+### Tests
+
+`test/screens/permission_recovery_test.dart` — 12 new, covering granted,
+normal denial, permanent denial, choosing Open Settings (asserted against a
+mocked `flutter.baseflow.com/permissions/methods` channel, so "asked the OS"
+is distinguishable from "did not"), and declining and staying in the app.
+`settings_screen_test.dart` migrated to the new injected type, 12/12.
+
+### Totals
+
+Flutter **873 passed, 0 failed** (was 861). `flutter analyze lib/ test/`
+clean. Rules suite untouched at 358.
+
+---
+
+## Release-gating the two simulated flows — 2026-09-14
+
+The two release-risk findings from the launch-readiness audit, and nothing
+else. No Blaze, Storage, Functions, payment or flight-provider work.
+
+### The shared gate
+
+`lib/services/release_gate.dart` — `ReleaseGate.previewFeaturesAllowed`,
+`kDebugMode` unless a test says otherwise. The override is applied inside an
+`assert` body, which Dart strips from release builds, so
+`debugSetPreviewFeaturesAllowed` compiles to an empty method there and the
+shipped answer is always false. That is the whole reason the seam is safe to
+put in production code.
+
+### Flights
+
+`MockFlightResultsService` gained `isAvailable` (false in release) and
+`search()` now throws `FlightResultsUnavailable` rather than returning
+invented offers. The throw is a backstop — the screen checks `isAvailable`
+first — so a caller added later cannot leak fake inventory either.
+
+The exception type exists because an empty list would have been a different
+lie: "no flights match your dates" and "we do not sell flights yet" must stay
+distinguishable. `FlightSearchResultsScreen` renders a coming-soon state with
+**no retry button**, since there is nothing to retry.
+
+Nothing was seeded, and the Flights schema is unchanged.
+
+### Hotel checkout
+
+`_confirm()` returns early in release, the confirm button is disabled and
+reads "Booking is coming soon", and the notice explains that nothing on the
+page holds a room or takes a payment. `addSessionPreviewBooking` now has a
+real runtime check instead of the stripped assert.
+
+`firestore.rules` was not touched: `bookings` still denies client
+create/update/delete outright.
+
+### Tests
+
+`test/screens/release_gating_test.dart` — 17 new. All 7 gating assertions were
+**mutation-checked**: with the three gates reverted they go red, and every
+"debug still works" test stays green. Three existing fakes in
+`flight_search_results_screen_test.dart` gained `isAvailable => true`.
+
+### Totals
+
+Flutter **890 passed, 0 failed** (was 873). Rules **358 passed, 0 failed**.
+`flutter analyze lib/` and `flutter analyze test/` both clean.

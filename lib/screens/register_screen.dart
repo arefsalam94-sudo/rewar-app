@@ -7,7 +7,6 @@ import '../models/reset_target.dart';
 import '../services/auth_service.dart';
 import '../services/email_verification_service.dart';
 import '../services/password_reset_service.dart';
-import '../services/preview_identity.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
@@ -16,7 +15,6 @@ import '../widgets/glass_back_button.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/social_auth_button.dart';
 import 'terms_of_service_screen.dart';
@@ -161,8 +159,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  /// Same policy as the Reset Password screen, and the same one enforced
-  /// server-side in `functions/index.js`.
+  /// Mirrors the **live Firebase Auth password policy** exactly: 8+
+  /// characters, an uppercase letter, a lowercase letter and a number. A
+  /// special character is *not* required (`SECURITY.md` 6.1b).
+  ///
+  /// Kept identical to the Reset Password screen, the Change Password screen
+  /// and `isStrongEnough()` in `functions/index.js`. Any rule the client
+  /// enforces that Firebase does not would reject a password the backend
+  /// would accept; any rule Firebase enforces that the client does not turns
+  /// into an unexplained failure at submit.
   String? _validatePassword(String? value, AppLocalizations l10n) {
     final password = value ?? '';
     if (password.length < 8) return l10n.passwordTooShort;
@@ -172,8 +177,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!RegExp(r'[a-z]').hasMatch(password)) {
       return l10n.passwordNeedsLowercase;
     }
-    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
-      return l10n.passwordNeedsSpecial;
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return l10n.passwordNeedsNumber;
     }
     return null;
   }
@@ -199,6 +204,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         return l10n.tooManyAttempts;
       case AuthErrorKind.backendUnavailable:
         return 'Firebase is not configured yet — see FIREBASE_SETUP.md';
+      // Sign-in outcomes. Unreachable from this screen, which only creates
+      // accounts, but the enum is shared so the switch stays exhaustive.
+      case AuthErrorKind.invalidCredentials:
+      case AuthErrorKind.userDisabled:
       case AuthErrorKind.unknown:
         return l10n.registerFailed;
     }
@@ -238,15 +247,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _authService.register(
         details: details,
         password: _passwordController.text,
-      );
-      // Records what was entered so the side drawer and Settings can show this
-      // user rather than the built-in stand-in profile. Preview-mode only —
-      // once Firebase exists, `users/{uid}` is the source of truth. Never
-      // includes the password.
-      await PreviewIdentity.save(
-        name: details.fullName,
-        email: details.email,
-        phone: details.phoneE164,
       );
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -439,11 +439,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // `text-heading` (Design_system_CANONICAL.md §11).
                         color: AppColors.heading(context),
                       ),
-                    ),
-                    const PreviewModeBanner(
-                      message:
-                          'Preview mode: no account will really be '
-                          'created.',
                     ),
                     const SizedBox(height: 24),
                     // Every input lives in one card; the title above and the

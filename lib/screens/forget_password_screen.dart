@@ -77,7 +77,6 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
       setState(() => _sending = false);
       // No SnackBar here on purpose: it renders at the bottom of the *next*
       // screen, directly over its Verify button, and swallows taps for four
-      // seconds. The Verification screen shows a PreviewModeBanner instead.
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) =>

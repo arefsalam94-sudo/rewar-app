@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/car_rental.dart';
+import '../services/currency_rates_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
@@ -25,6 +27,8 @@ class CarRentalDetailsScreen extends StatefulWidget {
     super.key,
     required this.selection,
     this.onApply,
+    this.currencyRatesService,
+    this.userProfileService,
   });
 
   final CarRentalSelection selection;
@@ -33,11 +37,45 @@ class CarRentalDetailsScreen extends StatefulWidget {
   /// shows the app's standard Coming Soon snackbar.
   final ValueChanged<CarRentalSelection>? onApply;
 
+  /// Injectable for tests; both default to the live services.
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
+
   @override
   State<CarRentalDetailsScreen> createState() => _CarRentalDetailsScreenState();
 }
 
 class _CarRentalDetailsScreenState extends State<CarRentalDetailsScreen> {
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // Display-only conversion. The supplier is still owed the stored figure in
+  // the stored currency; this never changes what is charged.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  RentalPricing get _pricing =>
+      RentalPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
+
   /// Quantity per extra id. A checkbox extra is 0 or 1; a quantity extra runs
   /// between its own min and max. Absent means zero.
   final Map<String, int> _quantities = <String, int>{};
@@ -48,6 +86,7 @@ class _CarRentalDetailsScreenState extends State<CarRentalDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDisplayCurrency();
     // Suppliers can require a minimum on an add-on; honour it as the starting
     // value rather than letting the row open below its own floor.
     for (final extra in _vehicle.extras) {
@@ -103,18 +142,23 @@ class _CarRentalDetailsScreenState extends State<CarRentalDetailsScreen> {
                   if (_vehicle.extras.isNotEmpty) ...[
                     const SizedBox(height: 14),
                     _AdditionalOptionsCard(
+                      pricing: _pricing,
                       vehicle: _vehicle,
                       quantities: _quantities,
                       onChanged: _setQuantity,
                     ),
                   ],
                   const SizedBox(height: 14),
-                  _PriceSummaryCard(vehicle: _vehicle, quote: quote),
+                  _PriceSummaryCard(
+                    vehicle: _vehicle,
+                    quote: quote,
+                    pricing: _pricing,
+                  ),
                   // Hides itself entirely until a supplier feed provides terms
                   // — the screen never invents a deposit or a deadline.
                   if (!_vehicle.conditions.isEmpty) ...[
                     const SizedBox(height: 14),
-                    _RentalConditionsCard(vehicle: _vehicle),
+                    _RentalConditionsCard(vehicle: _vehicle, pricing: _pricing),
                   ],
                   const SizedBox(height: 22),
                   PrimaryButton(label: l10n.carApply, onTap: _apply),
@@ -325,7 +369,12 @@ class _AdditionalOptionsCard extends StatelessWidget {
     required this.vehicle,
     required this.quantities,
     required this.onChanged,
+    this.pricing = RentalPricing.unconverted,
   });
+
+  /// Renders every monetary value in the user's chosen currency. Defaults to
+  /// [RentalPricing.unconverted], which shows the supplier's own currency.
+  final RentalPricing pricing;
 
   final RentalVehicle vehicle;
   final Map<String, int> quantities;
@@ -352,6 +401,7 @@ class _AdditionalOptionsCard extends StatelessWidget {
             RentalOptionRow(
               extra: extras[index],
               currencyCode: vehicle.currencyCode,
+              pricing: pricing,
               quantity: quantities[extras[index].id] ?? 0,
               onChanged: (value) => onChanged(extras[index], value),
             ),
@@ -368,7 +418,15 @@ class _AdditionalOptionsCard extends StatelessWidget {
 /// Labelled an estimate on purpose: taxes and supplier fees have no source in
 /// the data, so they are named as missing rather than silently folded in.
 class _PriceSummaryCard extends StatelessWidget {
-  const _PriceSummaryCard({required this.vehicle, required this.quote});
+  const _PriceSummaryCard({
+    required this.vehicle,
+    required this.quote,
+    this.pricing = RentalPricing.unconverted,
+  });
+
+  /// Renders every monetary value in the user's chosen currency. Defaults to
+  /// [RentalPricing.unconverted], which shows the supplier's own currency.
+  final RentalPricing pricing;
 
   final RentalVehicle vehicle;
   final RentalQuote quote;
@@ -378,7 +436,7 @@ class _PriceSummaryCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
 
     Widget amount(double value, {bool emphasised = false}) => Text(
-      rentalFormatAmount(value, quote.currencyCode),
+      pricing.format(value, quote.currencyCode),
       // Currency amounts read left-to-right even inside an RTL layout.
       textDirection: TextDirection.ltr,
       style: TextStyle(
@@ -402,7 +460,7 @@ class _PriceSummaryCard extends StatelessWidget {
           const SizedBox(height: 6),
           RentalDetailRow(
             label:
-                '${l10n.carPricePerDay(rentalPriceAmount(vehicle))} · '
+                '${l10n.carPricePerDay(rentalPriceAmount(vehicle, pricing))} · '
                 '${l10n.carRentalDays(quote.days)}',
             value: amount(quote.baseTotal),
           ),
@@ -435,7 +493,14 @@ class _PriceSummaryCard extends StatelessWidget {
 /// Supplier terms. Every row is conditional on real data being present — see
 /// [RentalConditions], where all of these fields are nullable by design.
 class _RentalConditionsCard extends StatelessWidget {
-  const _RentalConditionsCard({required this.vehicle});
+  const _RentalConditionsCard({
+    required this.vehicle,
+    this.pricing = RentalPricing.unconverted,
+  });
+
+  /// Renders every monetary value in the user's chosen currency. Defaults to
+  /// [RentalPricing.unconverted], which shows the supplier's own currency.
+  final RentalPricing pricing;
 
   final RentalVehicle vehicle;
 
@@ -475,13 +540,13 @@ class _RentalConditionsCard extends StatelessWidget {
         RentalDetailRow(
           label: l10n.carDeposit,
           icon: Icons.account_balance_wallet_outlined,
-          value: value(rentalFormatAmount(conditions.depositAmount!, currency)),
+          value: value(pricing.format(conditions.depositAmount!, currency)),
         ),
       if (conditions.damageExcess != null)
         RentalDetailRow(
           label: l10n.carDamageExcess,
           icon: Icons.shield_outlined,
-          value: value(rentalFormatAmount(conditions.damageExcess!, currency)),
+          value: value(pricing.format(conditions.damageExcess!, currency)),
         ),
       if (conditions.freeCancellationUntil != null)
         RentalDetailRow(
@@ -551,8 +616,7 @@ class _RentalConditionsCard extends StatelessWidget {
     final extra = policy.extraKilometrePrice;
     return [
       if (perDay != null) l10n.carMileagePerDay(perDay),
-      if (extra != null)
-        l10n.carMileageExtra(rentalFormatAmount(extra, currency)),
+      if (extra != null) l10n.carMileageExtra(pricing.format(extra, currency)),
     ].join(' · ');
   }
 }

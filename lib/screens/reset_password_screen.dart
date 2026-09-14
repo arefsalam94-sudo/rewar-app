@@ -8,7 +8,6 @@ import '../widgets/app_recessed_glass_field.dart';
 import '../widgets/glass_back_button.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
-import '../widgets/preview_mode_banner.dart';
 import '../widgets/primary_button.dart';
 
 /// Phase 1 — Reset Password screen (light mode only, all 3 languages).
@@ -57,12 +56,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
-  /// The rule stated on the screen itself: 8+ characters, with an uppercase
-  /// letter, a lowercase letter and a special character.
+  /// The rule stated on the screen itself, mirroring the **live Firebase Auth
+  /// password policy**: 8+ characters, with an uppercase letter, a lowercase
+  /// letter and a number. A special character is *not* required.
   ///
-  /// This is UX only — `SECURITY.md` 6.4 requires the same policy be
-  /// configured in Firebase Auth, which is the real boundary. A client can
-  /// always be bypassed.
+  /// This is UX only — `SECURITY.md` 6.1b requires the same policy be
+  /// configured in Firebase Auth, which is the real boundary (it is, and
+  /// enforcement is on). A client can always be bypassed.
   String? _validatePassword(String? value, AppLocalizations l10n) {
     final password = value ?? '';
     if (password.length < 8) return l10n.passwordTooShort;
@@ -72,8 +72,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (!RegExp(r'[a-z]').hasMatch(password)) {
       return l10n.passwordNeedsLowercase;
     }
-    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(password)) {
-      return l10n.passwordNeedsSpecial;
+    if (!RegExp(r'[0-9]').hasMatch(password)) {
+      return l10n.passwordNeedsNumber;
     }
     return null;
   }
@@ -197,11 +197,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                               height: 1.35,
                               color: AppColors.secondaryText(context),
                             ),
-                          ),
-                          const PreviewModeBanner(
-                            message:
-                                'Preview mode: the password will not '
-                                'really be changed.',
                           ),
                           const SizedBox(height: 40),
                           AppRecessedGlassField(
