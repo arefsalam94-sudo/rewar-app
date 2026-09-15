@@ -3432,3 +3432,241 @@ create/update/delete outright.
 
 Flutter **890 passed, 0 failed** (was 873). Rules **358 passed, 0 failed**.
 `flutter analyze lib/` and `flutter analyze test/` both clean.
+
+---
+
+## Hotels currency — the last ambiguous price path — 2026-09-15
+
+The Hotels half of the audit's currency finding, and nothing else. Featured
+cleanup was explicitly deferred.
+
+### Where USD was assumed
+
+Four places, all silent:
+
+1. `FirestoreHotelService._hotelFrom` wrote **`currencyCode: 'USD'` as a
+   literal** on every hotel. `pricePerNightFrom` was never denominated at all —
+   the field did not exist in the schema.
+2. `_offerFrom` read `data['currency']` but fell back to `'USD'` when it was
+   missing or not a string, and validated nothing when it was present.
+3. `_money()` in **both** `choose_room_screen.dart` and
+   `hotel_checkout_screen.dart` branched on `currency == 'USD'` for the `$`
+   glyph and rendered everything else as a bare `240 IQD` — a shape no other
+   screen in the app uses.
+4. `HotelSearchCriteria.currencyCode` defaulted to `'USD'`. Dead (nothing read
+   it), but it was a USD assumption sitting on the hotel search model, so it is
+   gone rather than left to be picked up later.
+
+`tool/export_hotels.dart` also listed `currencyCode` under "deliberately NOT
+exported", which is what left the seeded documents undenominated.
+
+### Was conversion already working?
+
+**No — it did not exist on the Hotel path.** This is the difference from what
+the audit found on Cars and Flights, where the conversion model was present and
+only the data needed tightening. Every hotel price printed its stored currency
+directly: `formatHotelPrice` called `symbolFor` and formatted inline, and the
+two `_money` helpers did their own thing. No screen in the hotel flow read
+`currency_rates/latest` or `users.preferredCurrency` at all.
+
+So the conversion model was **built**, not repaired: `HotelPricing` in
+`hotel_parts.dart`, mirroring `RentalPricing`/`TourPricing`/`FlightPricing` case
+for case and reusing their `formatMoney`, so the same figure cannot now be
+formatted four different ways. `HotelScreen` and `ChooseRoomScreen` load rates
+and the profile currency exactly as the Cars screens do, both failures silent.
+
+`HotelCheckoutScreen` deliberately does **not** convert. It prints the offer's
+own currency through the same `formatMoney`, which is the rule the tour
+checkout already follows: the amount on that page is what the hold was taken
+for and what a processor would settle (SECURITY.md 5).
+
+### Final schema
+
+`hotels`: `pricePerNightFrom` (number, authoritative) + **`currencyCode`,
+required, `USD` | `IQD`**. `hotels/{id}/offers`: `currency`, required, same two
+codes, denominating every money field on the offer. No duplicated
+`priceUSD`/`priceIQD` anywhere. Invalid or missing on either → the reader
+**drops the document**; it is never read as dollars.
+
+### Rules
+
+`firestore.rules` hotels block gained `validCurrency()` (required, in the set)
+and `validPrice()` (`pricePerNightFrom` a non-negative number); the `offers`
+block gained `validOfferCurrency()` and `validOfferPrices()`. Reads are
+untouched — Where to Stay stays browsable by a guest. Deployed to
+`rewar-app-1c10e` (ruleset `680d0376`).
+
+`firebase deploy --only firestore:rules` could not be used from here: it calls
+`serviceusage.services.get` before deploying, which the Admin SDK service
+account cannot do, so it 403s on an API that is already enabled.
+`tool/deploy_firestore_rules.js` was added — it drives the same firebaserules
+API in the same two steps (create ruleset → repoint the `cloud.firestore`
+release). The CLI stays the documented path.
+
+### Seed
+
+Re-seeded. The three existing hotels keep their real prices — 200 / 145 / 120 —
+now explicitly `currencyCode: "USD"`, and the four Divan offers likewise. **No
+IQD price was invented.** `tool/seed_hotels.js` now rejects a hotel or an offer
+whose currency is absent or outside the supported set, so an undenominated
+document cannot be written again.
+
+### Tests
+
+`test/widgets/hotel_pricing_test.dart` — 22 new, covering USD→IQD, IQD→USD,
+both same-currency cases, an unreachable display currency, an empty rate table
+falling back **in both directions** (the IQD-hotel case is the one that would
+catch a reintroduced USD default), and offer totals.
+
+`test/services/firestore_hotel_service_test.dart` — 23 new, covering a valid
+USD and a valid IQD document, six bad codes, a missing code, non-string codes,
+and the same set for offers.
+
+`rules_test/hotels.test.js` — 26 new.
+
+Both gates were **mutation-checked**. Relaxing `validCurrency`/
+`validOfferCurrency` to `true` turns 17 rules tests red and leaves every "an
+admin may still publish" test green. Restoring the old `?? 'USD'` fallbacks in
+the service turns 15 Dart tests red.
+
+### Two committed merge conflicts, unrelated
+
+`lib/screens/hotel_detail_screen.dart`, `lib/screens/login_screen.dart` and
+`test/screens/hotel_screen_test.dart` had **unresolved `<<<<<<<` markers
+committed** (from `ab113c6`, after the 2026-09-14 entry below). Nothing
+compiled and no test could run, so they had to be resolved to verify anything.
+Resolved on the evidence, not by preference: `_resolvedService` over the
+now-nullable `widget.service`; `HomeScreen.route(...)` — the API used elsewhere
+in that file — carrying the real `displayName` parameter, since
+`AuthService.previewDisplayName` does not exist; and the union of the three
+import lines, all of which are used. **Flagged for review** — they are not part
+of this change.
+
+### Totals
+
+Flutter **1074 passed, 0 failed**. Rules **384 passed, 0 failed** (was 358).
+`flutter analyze lib/` and `flutter analyze test/` both clean.
+
+### Not done
+
+Featured cleanup, as instructed. `PreviewHotelService`'s own `currencyCode:
+'USD'` entries stay — they are explicit authoritative preview values, the same
+as the Cars preview data, not fallbacks.
+
+---
+
+## Featured cleanup — three of four slides were placeholder — 2026-09-15
+
+The Featured half of the launch-readiness audit. Hotels currency was finished
+and approved first; the three unrelated merge-conflict resolutions were audited
+and confirmed correct before this started.
+
+### What was live
+
+| slide | type → referenceId | resolved? |
+|---|---|---|
+| `rawanduz-canyon` | `nature_spot` → `rawanduz-canyon` | ✅ real |
+| `greenwheels-rentals` | `car` → `greenwheels-rentals` | ❌ no such car |
+| `astra-ebl-ist` | `flight` → `astra-ebl-ist` | ❌ `flights` is empty |
+| `moraine-lake` | `tour` → `moraine-lake` | ❌ no such tour |
+
+All three audit findings confirmed, plus three the brief did not list:
+
+1. **`bundledFeatured()` was broken differently.** Preview mode served a fourth
+   invalid tour, `zagros-camp`, where the live collection had `moraine-lake`.
+   `SEED_DATA.md` says the two must be kept in sync; they had drifted, so
+   preview and production showed different — and both wrong — front pages.
+2. **`tool/seed_home_screen.js` would have corrupted live data.** It also
+   re-seeded `nature_spots/rawanduz-canyon` with the OLD flat schema
+   (plain-string `name`, hand-typed `rating`, `distanceLabel`). That document
+   moved to locale maps with server-owned aggregates months ago.
+3. **The surviving slide's ★4.8 was unbacked.** `nature_spots/rawanduz-canyon`
+   has no `rating`/`ratingCount` — aggregates are server-owned and the Cloud
+   Function is not deployed.
+
+"GreenWheels Rentals" was doubly fake: not a car id, and not a company either —
+the live companies are ABC Cars and Paradise Rent A Car.
+
+### What ships now — three slides
+
+| slide | type | → live document |
+|---|---|---|
+| `rawanduz-canyon` | `nature_spot` | `nature_spots/rawanduz-canyon` |
+| `gali-alibag-waterfall` | `tour` | `tours/gali-alibag-waterfall` |
+| `korek-mountain-day` | `tour` | `tours/korek-mountain-day` |
+
+Both tours already carry `highlighted: true` in their own documents, so the
+catalogue had already marked them feature-worthy — the carousel is not
+second-guessing it. Every title, subtitle and location is copied from the live
+document's own locale maps; the only authored token is the trailing category
+word ("Guided tour"), which is existing carousel copy.
+
+**Nothing replaced the car or flight slides.** Two decisions, both deliberate:
+
+* No live car or rental company matches the GreenWheels card, so there was
+  nothing to swap in that would not have been a fabrication.
+* **No flight slide, on purpose.** `flights` has zero documents and flights are
+  release-gated Coming Soon. The `flight` *type* stays legal in the schema for
+  when inventory exists; the seeder simply refuses to write one now.
+
+Four slides became three rather than inventing a fourth. **No slide carries a
+rating.**
+
+### Enforcement, split across three layers
+
+No single layer can prevent this recurring, so:
+
+* **Rules** — `featured` gained `validType()` (one of the five documented
+  values) and `validReference()` (non-empty string). Rules cannot read another
+  document, so that is their ceiling. Reads and admin-only writes unchanged.
+* **Seeder** — does the read the rules cannot: one `get()` per slide against the
+  collection its `type` names, failing the whole run on a missing or inactive
+  target. It gained `--prune`, which is how the three placeholders were deleted,
+  and it no longer writes `nature_spots` at all.
+* **Tests** — `featured_integrity_test.dart` resolves every bundled slide
+  against the bundled catalogues and pins seeder/bundle sync, which is the exact
+  drift that produced `zagros-camp` vs `moraine-lake`.
+
+### Navigation is unchanged, and now pinned
+
+Tapping Explore on a slide still reports "Coming soon" for every type — the
+carousel was never wired to the detail screens, and wiring it is its own
+approved piece of work. A test pins that, because every `referenceId` now
+resolving to a real document makes it tempting to assume navigation works.
+
+### UI
+
+`PageView.builder` and `_Dots` were already driven by `items.length`, so no
+layout change was needed — but nothing had proved it, since the data was always
+four slides. Tests now cover 1, 2, 3 and 0.
+
+### Tests
+
+`test/services/featured_integrity_test.dart` — 32 new: every reference resolves,
+no unsupported/missing type or id, no `flight` slide, unique ascending orders,
+the four removed placeholder names can never return, no unbacked rating,
+seeder/bundle sync, and `FeaturedItem.fromMap` rejecting each malformed shape.
+
+`rules_test/featured.test.js` — 31 new. **Mutation-checked**: relaxing
+`validType`/`validReference` to `true` turns 13 red, and every "an admin may
+still publish" test stays green.
+
+`widget_test.dart` — 8 new (1/2/3-slide layouts, the single-slide degenerate
+swipe, every-slide traversal, empty-fails-safely, and the Coming-soon tap);
+2 updated, which is where the old `GreenWheels Rentals` and 4-dot assertions
+lived. Two fixtures in `admin_bypass` / `catalog_and_closed` gained a valid
+`type`/`referenceId` — those tests are about who may write, not about shape.
+
+### Totals
+
+Flutter **1114 passed, 0 failed** (was 1074 — +40). Rules **415 passed, 0 failed**
+(was 384 — +31). `flutter analyze` clean across the project.
+
+### Live state
+
+`featured` re-seeded with `--prune`; verified by reading it back — 3 docs, all
+references resolve to active documents, no ratings, `flights` still empty, and
+no placeholder geography. Rules deployed (ruleset `3ec2164e`).
+
+`imageUrl` is still empty on all three — unchanged from before, and still the
+open item before the Home screen is "done".

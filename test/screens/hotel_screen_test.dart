@@ -4,12 +4,9 @@ import 'package:kurdistan_paradise_travel_guide/l10n/app_localizations.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel_detail.dart';
 import 'package:kurdistan_paradise_travel_guide/screens/hotel_screen.dart';
-<<<<<<< HEAD
+import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
 import 'package:kurdistan_paradise_travel_guide/theme/app_colors.dart';
 import 'package:kurdistan_paradise_travel_guide/widgets/canonical_date_time_picker.dart';
-=======
-import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
->>>>>>> ab113c6 (Latest app update)
 import 'package:kurdistan_paradise_travel_guide/widgets/glass_back_button.dart';
 
 Widget _app({Locale locale = const Locale('en'), HotelService? service}) =>

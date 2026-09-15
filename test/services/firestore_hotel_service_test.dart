@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel.dart';
+import 'package:kurdistan_paradise_travel_guide/models/hotel_detail.dart';
 import 'package:kurdistan_paradise_travel_guide/services/firestore_hotel_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
 
@@ -9,6 +10,8 @@ Map<String, dynamic> hotelDoc({
   bool active = true,
   Object? name = const {'en': 'Divan Erbil', 'ku': 'دیڤان', 'ar': 'ديفان'},
   Object? city = const {'en': 'Erbil'},
+  Object? currencyCode = 'USD',
+  Object? pricePerNightFrom = 120,
   Map<String, dynamic> extra = const {},
 }) => {
   'name': ?name,
@@ -16,9 +19,32 @@ Map<String, dynamic> hotelDoc({
   'highlighted': highlighted,
   'active': active,
   'starRating': 5,
-  'pricePerNightFrom': 120,
+  'pricePerNightFrom': ?pricePerNightFrom,
+  'currencyCode': ?currencyCode,
   'amenities': ['wifi', 'pool'],
   'imageUrls': <String>[],
+  ...extra,
+};
+
+Map<String, dynamic> offerDoc({
+  Object? currency = 'USD',
+  Object? nightlyPrice = 120,
+  Object? totalPrice = 240,
+  Object? roomTypeId = 'deluxe-king',
+  Map<String, dynamic> extra = const {},
+}) => {
+  'roomTypeId': ?roomTypeId,
+  'currency': ?currency,
+  'nightlyPrice': ?nightlyPrice,
+  'totalPrice': ?totalPrice,
+  'taxes': 24,
+  'fees': 5,
+  'taxesIncluded': false,
+  'breakfast': 'included',
+  'cancellationType': 'free',
+  'prepayment': 'none',
+  'paymentTiming': 'payLater',
+  'availableQuantity': 3,
   ...extra,
 };
 
@@ -114,6 +140,160 @@ void main() {
         FirestoreHotelService.hotelFrom('a', doc)!.amenities,
         {HotelAmenity.wifi},
       );
+    });
+  });
+
+  // --- currency (approved 2026-09-15) ------------------------------------
+  //
+  // `pricePerNightFrom` states no currency of its own. Before this, the reader
+  // hard-coded `currencyCode: 'USD'` on every hotel and defaulted an offer's
+  // missing `currency` to USD — so the first IQD property would have been
+  // drawn at roughly 1/1300th of its real rate. Nothing is defaulted now.
+
+  group('hotel currency — never assumed, never defaulted', () {
+    test('a USD hotel keeps its own price and code', () {
+      final hotel = FirestoreHotelService.hotelFrom(
+        'divan',
+        hotelDoc(currencyCode: 'USD', pricePerNightFrom: 120),
+      );
+      expect(hotel!.currencyCode, 'USD');
+      expect(hotel.pricePerNight, 120);
+    });
+
+    test('an IQD hotel keeps ITS own price and code', () {
+      // The whole point: 157200 IQD must not be read as 157200 USD, nor
+      // converted at store time.
+      final hotel = FirestoreHotelService.hotelFrom(
+        'divan',
+        hotelDoc(currencyCode: 'IQD', pricePerNightFrom: 157200),
+      );
+      expect(hotel!.currencyCode, 'IQD');
+      expect(hotel.pricePerNight, 157200);
+    });
+
+    for (final bad in ['EUR', 'GBP', 'usd', '', 'BTC', 'US']) {
+      test('a hotel priced in "$bad" is dropped rather than shown', () {
+        expect(
+          FirestoreHotelService.hotelFrom('a', hotelDoc(currencyCode: bad)),
+          isNull,
+        );
+      });
+    }
+
+    test('a MISSING currency does not silently become USD', () {
+      // The regression this whole change exists for: the old reader wrote
+      // `currencyCode: 'USD'` unconditionally, so this document rendered a
+      // price card. It must now render nothing at all.
+      final hotel = FirestoreHotelService.hotelFrom(
+        'a',
+        hotelDoc(currencyCode: null),
+      );
+      expect(hotel, isNull);
+    });
+
+    test('a non-string currency is dropped', () {
+      expect(
+        FirestoreHotelService.hotelFrom('a', hotelDoc(currencyCode: 1)),
+        isNull,
+      );
+      expect(
+        FirestoreHotelService.hotelFrom(
+          'a',
+          hotelDoc(currencyCode: const ['USD']),
+        ),
+        isNull,
+      );
+    });
+
+    test('a bad or missing pricePerNightFrom is dropped, not read as 0', () {
+      // A free hotel is a claim about a named real property, not a default.
+      expect(
+        FirestoreHotelService.hotelFrom('a', hotelDoc(pricePerNightFrom: null)),
+        isNull,
+      );
+      expect(
+        FirestoreHotelService.hotelFrom(
+          'a',
+          hotelDoc(pricePerNightFrom: '120'),
+        ),
+        isNull,
+      );
+      expect(
+        FirestoreHotelService.hotelFrom('a', hotelDoc(pricePerNightFrom: -1)),
+        isNull,
+      );
+    });
+  });
+
+  group('offer currency — never assumed, never defaulted', () {
+    test('a USD offer keeps its own prices and code', () {
+      final offer = FirestoreHotelService.offerFrom('flex', offerDoc());
+      expect(offer!.currencyCode, 'USD');
+      expect(offer.nightlyPrice, 120);
+      expect(offer.totalPrice, 240);
+    });
+
+    test('an IQD offer keeps ITS own prices and code', () {
+      final offer = FirestoreHotelService.offerFrom(
+        'flex',
+        offerDoc(currency: 'IQD', nightlyPrice: 157200, totalPrice: 314400),
+      );
+      expect(offer!.currencyCode, 'IQD');
+      expect(offer.totalPrice, 314400);
+    });
+
+    for (final bad in ['EUR', 'GBP', 'usd', '', 'BTC']) {
+      test('an offer priced in "$bad" is dropped rather than shown', () {
+        expect(
+          FirestoreHotelService.offerFrom('flex', offerDoc(currency: bad)),
+          isNull,
+        );
+      });
+    }
+
+    test('an offer with a MISSING currency does not become USD', () {
+      // This is the figure checkout quotes against, so a defaulted code here
+      // would be a wrong number on a charge, not just on a card.
+      expect(
+        FirestoreHotelService.offerFrom('flex', offerDoc(currency: null)),
+        isNull,
+      );
+    });
+
+    test('an offer with a non-string currency is dropped', () {
+      expect(
+        FirestoreHotelService.offerFrom('flex', offerDoc(currency: 1)),
+        isNull,
+      );
+    });
+
+    test('an offer with a bad or missing price is dropped', () {
+      expect(
+        FirestoreHotelService.offerFrom('f', offerDoc(nightlyPrice: null)),
+        isNull,
+      );
+      expect(
+        FirestoreHotelService.offerFrom('f', offerDoc(totalPrice: '240')),
+        isNull,
+      );
+      expect(
+        FirestoreHotelService.offerFrom('f', offerDoc(totalPrice: -5)),
+        isNull,
+      );
+    });
+
+    test('a valid offer still maps the rest of the schema', () {
+      // Guards against the currency gate short-circuiting the whole mapper.
+      final offer = FirestoreHotelService.offerFrom('flex', offerDoc());
+      expect(offer!.roomTypeId, 'deluxe-king');
+      expect(offer.taxesIncluded, isFalse);
+      expect(offer.availableQuantity, 3);
+      expect(offer.breakfast, BreakfastPolicy.included);
+      expect(offer.cancellationType, CancellationType.free);
+    });
+
+    test('the supported set is exactly the two the rules allow', () {
+      expect(FirestoreHotelService.supportedCurrencies, ['USD', 'IQD']);
     });
   });
 

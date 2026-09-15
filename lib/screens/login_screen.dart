@@ -105,16 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
   /// Continue as Guest.
   void _enterApp(String? displayName) {
     Navigator.of(context).pushReplacement(
-<<<<<<< HEAD
-      HomeScreen.route(
-        isGuest: false,
-        displayName: AuthService.previewDisplayName,
-=======
-      MaterialPageRoute<void>(
-        builder: (_) =>
-            HomeScreen(isGuest: false, displayName: displayName),
->>>>>>> ab113c6 (Latest app update)
-      ),
+      HomeScreen.route(isGuest: false, displayName: displayName),
     );
   }
 

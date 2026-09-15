@@ -17,13 +17,13 @@ don't mark it seeded until it's really there and confirmed rendering.
 | Collection | Example | Status |
 |---|---|---|
 | legal_documents | **all 7 policy documents** (en/ku/ar) — seed with `node tool/seed_legal_documents.js` | ✅ **SEEDED** 2026-08-17 — 7 docs. Still `legalReviewed:false` with [placeholders] |
-| featured | 4 carousel slides (nature spot, car, flight, tour) — seed with `node tool/seed_home_screen.js` | ✅ **SEEDED** 2026-08-17 — 4 docs. `imageUrl` still empty on all four |
+| featured | **3** carousel slides (1 nature spot, 2 tours) — seed with `node tool/seed_home_screen.js --prune` | ✅ **SEEDED** 2026-08-17, **cleaned + re-seeded 2026-09-15** — 3 docs, down from 4. Three placeholder slides were deleted (see below); every remaining `referenceId` is verified against its live collection by the seeder before it writes. **No ratings** — nothing backs one. `imageUrl` still empty on all three |
 | nature_spots | Rawanduz Canyon (highlighted), Sami Abdulrahman Park, Erbil Citadel — seed with `node tool/seed_explore_nature.js` | ✅ **SEEDED** 2026-08-17 — 3 docs. `imageUrls` still empty |
 | nature_spots/{id}/reviews | 7 visitor reviews — 3 for Rawanduz (Elena P., Hassan S., Priya N.), 2 each for the other places. Same script | ✅ **SEEDED** 2026-08-17 — 7 docs. **Scores still absent — `syncNatureReviewAggregates` is not deployed (needs Blaze)** |
 | nature_spots/{id}/reviews/{id}/votes | n/a — written only by a signed-in user tapping the heart | N/A (not seeded by hand) |
-| hotels | Divan Erbil, Ramada Sulaimani, Duhok Palace — seed with `flutter test tool/export_hotels.dart && node tool/seed_hotels.js` | ✅ **SEEDED** 2026-09-13 — 3 docs. Rules deployed (public read, admin-only write). `imageUrls` empty and **no rating aggregates**, same rule as nature_spots/tours. Now carries the approved `highlighted` + `active` (all three `active: true`, all three `highlighted: true` — preserved from the preview data). **Where to Stay, Hotel Details, Room Selection and the reviews pages all read Firestore first**, with the preview catalogue as fallback |
+| hotels | Divan Erbil, Ramada Sulaimani, Duhok Palace — seed with `flutter test tool/export_hotels.dart && node tool/seed_hotels.js` | ✅ **SEEDED** 2026-09-13, **re-seeded 2026-09-15** — 3 docs, all **USD** (`currencyCode`, added 2026-09-15; the existing prices 200/145/120 were preserved and simply labelled — no IQD price was fabricated). Rules re-deployed: `currencyCode` required and restricted to USD/IQD. Rules deployed (public read, admin-only write). `imageUrls` empty and **no rating aggregates**, same rule as nature_spots/tours. Now carries the approved `highlighted` + `active` (all three `active: true`, all three `highlighted: true` — preserved from the preview data). **Where to Stay, Hotel Details, Room Selection and the reviews pages all read Firestore first**, with the preview catalogue as fallback |
 | hotels/{id}/rooms | Garden View + King Room (Divan), Garden View (Ramada) | ✅ **SEEDED** 2026-09-13 — 3 docs, generated from `PreviewHotelService`. `imageUrls` empty |
-| hotels/{id}/offers | four Divan rates (king/garden × flex/room-only) | ✅ **SEEDED** 2026-09-13 — 4 docs with prices, taxes, fees, `taxesIncluded`, cancellation and `availableQuantity`. Invented review figures, not real rates |
+| hotels/{id}/offers | four Divan rates (king/garden × flex/room-only) | ✅ **SEEDED** 2026-09-13, **re-seeded 2026-09-15** — 4 docs with prices, taxes, fees, `taxesIncluded`, cancellation and `availableQuantity`, all **USD** (`currency` now restricted to USD/IQD in the rules and rejected by the reader when missing). Invented review figures, not real rates |
 | hotels/{id}/reviews | 4 guest reviews — 3 for Divan, 1 for Ramada, none for Duhok Palace | ✅ **SEEDED** 2026-09-13 — 4 docs under `seed-*` placeholder uids (the id IS the author's uid; replace once real accounts exist). **No `helpfulCount`** and no aggregates — both server-owned |
 | cars | Tesla Model 3, Ford Mustang, Toyota Corolla, Range Rover, BMW X5 — seed with `flutter test tool/export_cars.dart && node tool/seed_cars.js` | ✅ **SEEDED** 2026-09-13 — 5 docs, all **USD** (the currency the preview data establishes; no IQD price was fabricated). Rules deployed: public read, admin-only write, `currencyCode` restricted to USD/IQD. **`conditions` deliberately absent** on all five — fuel policy, deposit, excess, cancellation, minimum age and documents are contractual terms and are never invented, so the Rental Conditions card stays hidden. `imageUrls` empty |
 | rental_locations | 6 pickup/drop-off branches (Erbil Airport, Sulaymaniyah Airport, Duhok Centre, Wavy Avenue, Dream City, Gulan Street) | ✅ **SEEDED** 2026-09-13 — 6 docs, all `active: true`. New collection added 2026-09-13: branches are shared across vehicles and searched independently, which a geopoint on a car could not support |
@@ -87,12 +87,54 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json \
   node tool/seed_home_screen.js
 ```
 
-The same four slides are duplicated as `bundledFeatured()` in
+The same three slides are duplicated as `bundledFeatured()` in
 `lib/services/featured_service.dart`, which is what preview mode serves before
 Firebase exists — **keep the two in sync**, the same rule as the bundled
-Terms text.
+Terms text. `test/services/featured_integrity_test.dart` now enforces that
+automatically; the two had silently drifted (see below).
 
-> ⚠️ Every seeded slide has an **empty `imageUrl`**. Upload the four photos to
+### Cleaned 2026-09-15 — three placeholder slides removed
+
+The launch-readiness audit found **three of the four slides pointed at
+documents that do not exist**:
+
+| removed slide | why |
+|---|---|
+| `greenwheels-rentals` (car) | No such car. The live cars are all `preview-car-*`, and no live rental company is "GreenWheels Rentals" — they are ABC Cars and Paradise Rent A Car |
+| `astra-ebl-ist` (flight) | The `flights` collection is **empty**, and flights are release-gated as Coming Soon. **Do not add a flight slide back until there is real inventory** |
+| `moraine-lake` (tour) | No such tour — and Moraine Lake is in Banff, **Canada**. It must never ship as a Kurdistan destination |
+
+`bundledFeatured()` was broken in the same way but differently: it carried a
+fourth invalid tour, `zagros-camp` ("Zagros Highland Camp"), which is also not
+in `tours`. Preview mode and production were showing different — and both
+wrong — front pages.
+
+**The three kept slides are copied from live documents**, nothing authored:
+
+| slide | type | → resolves to |
+|---|---|---|
+| `rawanduz-canyon` | `nature_spot` | `nature_spots/rawanduz-canyon` |
+| `gali-alibag-waterfall` | `tour` | `tours/gali-alibag-waterfall` (`highlighted: true`) |
+| `korek-mountain-day` | `tour` | `tours/korek-mountain-day` (`highlighted: true`) |
+
+Three rather than four because only three live documents genuinely match a
+carousel card — the count was reduced instead of inventing a fourth. The
+carousel sizes itself to its data, and the tests cover 1, 2, 3 and 0 slides.
+
+**No slide carries a `rating` any more.** The old ones had hand-typed
+4.8/4.6/4.5/4.7 that no referenced document backs — rating aggregates are
+server-owned and the Cloud Function is not deployed. `FeaturedItem.rating` is
+null and the card hides the star pill, the same rule `nature_spots`, `tours`
+and `hotels` already follow.
+
+The seeder **verifies every reference before writing** (one `get()` per slide)
+and refuses the whole run on a dead or inactive reference. It no longer writes
+`nature_spots/rawanduz-canyon` at all: it was doing so with the *old* flat
+schema (plain-string `name`, hand-typed `rating`, `distanceLabel`), which would
+have corrupted the live document. That document belongs to
+`tool/seed_explore_nature.js`.
+
+> ⚠️ Every seeded slide has an **empty `imageUrl`**. Upload the three photos to
 > Firebase Storage and paste the download URLs in (or set them from the admin
 > panel) — with no URL the card falls back to a flat brand colour instead of
 > a photo. The page is not "done" until at least one slide renders with its
@@ -343,6 +385,7 @@ city: Erbil
 starRating: 5
 reviewScore: 8.9
 pricePerNightFrom: 200
+currencyCode: USD          # required — USD | IQD only
 amenities: [Pool, Bar, Restaurant, Parking]
 ```
 

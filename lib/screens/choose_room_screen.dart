@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
 import '../models/hotel_detail.dart';
+import '../services/currency_rates_service.dart';
 import '../services/hotel_booking_service.dart';
 import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
@@ -35,6 +37,8 @@ class ChooseRoomScreen extends StatefulWidget {
     required this.criteria,
     this.hotelService,
     this.bookingService,
+    this.currencyRatesService,
+    this.userProfileService,
   });
 
   final Hotel hotel;
@@ -44,6 +48,12 @@ class ChooseRoomScreen extends StatefulWidget {
   /// Nullable because a Firestore-backed service cannot be a `const` default.
   final HotelService? hotelService;
   final HotelBookingService? bookingService;
+
+  /// Injectable for tests; both default to the live services. They decide the
+  /// currency a rate is DRAWN in on this screen — never the one it is stored,
+  /// held or charged in, which stays the offer's own (see [HotelPricing]).
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
 
   @override
   State<ChooseRoomScreen> createState() => _ChooseRoomScreenState();
@@ -57,6 +67,40 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
       widget.bookingService ??
       PreviewHotelBookingService(hotelService: _resolvedHotelService);
 
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // --- display currency -------------------------------------------------
+  //
+  // Display only. Every offer keeps its own authoritative `currency`
+  // (DATA_MODEL.md), the hold and the booking are made in it, and checkout
+  // deliberately prints that currency unconverted. Both loads may fail
+  // silently: an unconverted rate is still a true rate.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  HotelPricing get _pricing =>
+      HotelPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
+
   ChooseRoomStatus _status = ChooseRoomStatus.loading;
   HotelAvailability? _availability;
   HotelRoomSelection? _selection;
@@ -64,6 +108,7 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDisplayCurrency();
     _load();
   }
 
@@ -230,6 +275,7 @@ class _ChooseRoomScreenState extends State<ChooseRoomScreen> {
             offers: _availability!.offersByRoom[room.id]!,
             selectedOfferId: _selection?.offer.id,
             nights: widget.criteria.nights,
+            pricing: _pricing,
             onSelect: (offer) => _select(room, offer),
             onDetails: () => _openRoomDetails(room),
           ),
@@ -379,12 +425,17 @@ class _RoomCard extends StatelessWidget {
     required this.nights,
     required this.onSelect,
     required this.onDetails,
+    this.pricing = HotelPricing.unconverted,
   });
 
   final HotelRoomType room;
   final List<HotelRoomOffer> offers;
   final String? selectedOfferId;
   final int nights;
+
+  /// Renders each rate in the user's chosen currency. Defaults to
+  /// [HotelPricing.unconverted], which shows the offer's own currency.
+  final HotelPricing pricing;
   final ValueChanged<HotelRoomOffer> onSelect;
   final VoidCallback onDetails;
 
@@ -470,6 +521,7 @@ class _RoomCard extends StatelessWidget {
                   _RateCard(
                     offer: offer,
                     nights: nights,
+                    pricing: pricing,
                     selected: offer.id == selectedOfferId,
                     onTap: () => onSelect(offer),
                   ),
@@ -524,10 +576,15 @@ class _RateCard extends StatelessWidget {
     required this.nights,
     required this.selected,
     required this.onTap,
+    this.pricing = HotelPricing.unconverted,
   });
 
   final HotelRoomOffer offer;
   final int nights;
+
+  /// Renders the total in the user's chosen currency. Defaults to
+  /// [HotelPricing.unconverted], which shows the offer's own currency.
+  final HotelPricing pricing;
   final bool selected;
   final VoidCallback onTap;
 
@@ -608,7 +665,7 @@ class _RateCard extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                _money(offer.totalPrice, offer.currencyCode),
+                pricing.format(offer.totalPrice, offer.currencyCode),
                 textDirection: TextDirection.ltr,
                 style: TextStyle(
                   fontSize: 27,
@@ -728,9 +785,3 @@ class _StateCard extends StatelessWidget {
   );
 }
 
-String _money(num amount, String currency) {
-  final value = amount == amount.roundToDouble()
-      ? amount.toStringAsFixed(0)
-      : amount.toStringAsFixed(2);
-  return currency == 'USD' ? '\$$value' : '$value $currency';
-}

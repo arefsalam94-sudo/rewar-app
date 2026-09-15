@@ -2398,17 +2398,29 @@ void main() {
       expect(find.textContaining('Dear User'), findsNothing);
     });
 
-    testWidgets('the featured slide shows its title, place and rating', (
+    testWidgets('the featured slide shows its title and place', (
       tester,
     ) async {
       await _pumpHome(tester);
 
       expect(find.text('Rawanduz Canyon'), findsOneWidget);
       expect(find.text('Erbil  •  Nature escape'), findsOneWidget);
-      // Star rating, not the reference's "FEATURED DESTINATION" pin label.
-      expect(find.text('4.8'), findsOneWidget);
-      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
       expect(find.text('FEATURED DESTINATION'), findsNothing);
+    });
+
+    testWidgets('no slide draws a star pill, because none is rated', (
+      tester,
+    ) async {
+      // Changed 2026-09-15. The slides used to carry hand-typed ratings
+      // (4.8/4.6/4.5/4.7) that no referenced document backed — nature_spots,
+      // tours and hotels all leave their aggregates to a Cloud Function that
+      // is not deployed. `FeaturedItem.rating` is null now, and null means
+      // "hide the pill" rather than "draw a zero", since an unrated place is
+      // not a badly rated one.
+      await _pumpHome(tester);
+
+      expect(find.byIcon(Icons.star_rounded), findsNothing);
+      expect(find.text('4.8'), findsNothing);
     });
 
     testWidgets('there is one dot per slide and swiping advances them', (
@@ -2416,8 +2428,11 @@ void main() {
     ) async {
       await _pumpHome(tester);
 
-      // Four bundled slides → four dots.
-      expect(_dotCount(tester), 4);
+      // THREE bundled slides → three dots. The count is read from the data,
+      // never assumed: the carousel dropped from four to three when the
+      // placeholder slides were removed (2026-09-15).
+      expect(_dotCount(tester), 3);
+      expect(_dotCount(tester), FeaturedService.bundledFeatured().length);
       expect(find.text('Rawanduz Canyon'), findsOneWidget);
 
       final carouselWidth = tester.getSize(find.byType(PageView)).width;
@@ -2427,9 +2442,77 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('GreenWheels Rentals'), findsOneWidget);
+      expect(find.text('Gali Alibag Waterfall'), findsOneWidget);
       expect(find.text('Rawanduz Canyon'), findsNothing);
-      expect(_dotCount(tester), 4);
+      expect(_dotCount(tester), 3);
+    });
+
+    // --- fewer than four slides -------------------------------------------
+    //
+    // The carousel shipped with exactly four slides and the tests asserted
+    // four, so nothing proved it sized itself to its data. Cleaning out the
+    // placeholder content (2026-09-15) took it to three, and the count will
+    // move again as the admin panel curates it. These pin that the layout is
+    // driven by the list, not by a constant.
+
+    for (final count in [1, 2, 3]) {
+      testWidgets('$count slide(s) draw $count dots and $count pages', (
+        tester,
+      ) async {
+        final items = FeaturedService.bundledFeatured().take(count).toList();
+        await _pumpHome(tester, featured: _FakeFeaturedService(items: items));
+
+        expect(_dotCount(tester), count);
+        expect(find.byType(PageView), findsOneWidget);
+        // The first slide is drawn whatever the total is.
+        expect(find.text(items.first.titles['en']!), findsOneWidget);
+        expect(find.text('Nothing is featured yet'), findsNothing);
+      });
+    }
+
+    testWidgets('a single slide still lays out and does not crash', (
+      tester,
+    ) async {
+      // The degenerate case: one page, one dot, nothing to swipe to.
+      final one = FeaturedService.bundledFeatured().take(1).toList();
+      await _pumpHome(tester, featured: _FakeFeaturedService(items: one));
+
+      expect(_dotCount(tester), 1);
+      expect(find.text('Rawanduz Canyon'), findsOneWidget);
+
+      // Dragging past the only slide must not throw or blank the card.
+      final carouselWidth = tester.getSize(find.byType(PageView)).width;
+      await tester.drag(
+        find.byType(PageView),
+        Offset(-carouselWidth * 0.75, 0),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rawanduz Canyon'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('every bundled slide can be swiped to in order', (
+      tester,
+    ) async {
+      final items = FeaturedService.bundledFeatured();
+      await _pumpHome(tester);
+
+      final carouselWidth = tester.getSize(find.byType(PageView)).width;
+      for (var index = 0; index < items.length; index++) {
+        expect(
+          find.text(items[index].titles['en']!),
+          findsOneWidget,
+          reason: 'slide $index should be visible',
+        );
+        if (index == items.length - 1) break;
+        await tester.drag(
+          find.byType(PageView),
+          Offset(-carouselWidth * 0.75, 0),
+        );
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('a failed load shows an error with a working retry', (
@@ -2453,6 +2536,24 @@ void main() {
     ) async {
       await _pumpHome(tester, featured: _FakeFeaturedService(items: const []));
       expect(find.text('Nothing is featured yet'), findsOneWidget);
+    });
+
+    testWidgets('empty featured data fails safely — no crash, no dots, and '
+        'the rest of the page still works', (tester) async {
+      // "Fails safely" is more than showing a message: the carousel must not
+      // throw, must not draw dots for slides that do not exist, and must not
+      // take the rest of the dashboard down with it. Removing placeholder
+      // slides made the empty case reachable in production for the first
+      // time — an admin can now deactivate the last real slide.
+      await _pumpHome(tester, featured: _FakeFeaturedService(items: const []));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Nothing is featured yet'), findsOneWidget);
+      expect(_dotCount(tester), 0);
+      expect(find.byType(PageView), findsNothing);
+
+      // The journey grid below the carousel is unaffected.
+      expect(find.text('120+ places'), findsOneWidget);
     });
 
     testWidgets('the place count comes from the live count()', (tester) async {
@@ -2515,6 +2616,33 @@ void main() {
       expect(find.textContaining('+ places'), findsNothing);
       // Both the carousel CTA and the Explore Nature button read "Explore".
       expect(find.text('Explore'), findsNWidgets(2));
+    });
+
+    testWidgets('tapping Explore on a slide reports Coming soon and does not '
+        'navigate — the intentional current behaviour', (tester) async {
+      // The detail screens exist now, but the carousel is deliberately NOT
+      // wired to them: `onExplore` reports "Coming soon" for every slide type
+      // (home_screen.dart), and wiring it is its own approved piece of work.
+      //
+      // Pinned because the 2026-09-15 cleanup made every referenceId resolve
+      // to a real document for the first time — which makes it tempting to
+      // assume navigation already works. It does not, and a silent change
+      // here would be a navigation regression nobody asked for.
+      await _pumpHome(tester);
+
+      // The carousel CTA, not the Explore Nature journey card below it.
+      final cta = find.descendant(
+        of: find.byType(PageView),
+        matching: find.text('Explore'),
+      );
+      expect(cta, findsOneWidget);
+
+      await tester.tap(cta);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coming soon'), findsOneWidget);
+      // Still on the dashboard — nothing was pushed.
+      expect(find.text('Rawanduz Canyon'), findsOneWidget);
     });
 
     testWidgets('the carousel draws no heart — saving moved off Home', (

@@ -26,6 +26,7 @@
       "active": true,
       "starRating": 5,
       "pricePerNightFrom": 200.0,
+      "currencyCode": "USD",
       "amenities": [
         "pool",
         "wifi",
@@ -554,6 +555,7 @@
       "active": true,
       "starRating": 4,
       "pricePerNightFrom": 145.0,
+      "currencyCode": "USD",
       "amenities": [
         "pool",
         "wifi",
@@ -720,6 +722,7 @@
       "active": true,
       "starRating": 4,
       "pricePerNightFrom": 120.0,
+      "currencyCode": "USD",
       "amenities": [
         "wifi",
         "restaurant",

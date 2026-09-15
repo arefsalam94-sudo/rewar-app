@@ -22,7 +22,7 @@ beforeEach(async () => {
   await seed(env, async (db) => {
     await setDoc(doc(db, 'nature_spots', 'rawanduz-canyon'), { name: { en: 'Rawanduz' }, active: true, highlighted: true });
     await setDoc(doc(db, 'tours', 'gali-sherana'), { name: { en: 'Gali Sherana' }, active: true, pricePerPerson: 50 });
-    await setDoc(doc(db, 'featured', 'slide-1'), { title: { en: 'Slide' }, order: 1 });
+    await setDoc(doc(db, 'featured', 'slide-1'), { title: { en: 'Slide' }, order: 1, type: 'tour', referenceId: 'gali-sherana' });
     await setDoc(doc(db, 'legal_documents', 'terms_of_service'), { version: 1, legalReviewed: false });
     await setDoc(doc(db, 'currency_rates', 'latest'), { base: 'USD', rates: { IQD: 1310 } });
     await setDoc(doc(db, 'bookings', 'bk1'), { userId: ALICE, status: 'confirmed', totalPrice: 100 });

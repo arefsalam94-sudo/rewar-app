@@ -15,6 +15,7 @@ import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
 import '../services/release_gate.dart';
+import 'explore_tours_screen.dart' show formatMoney;
 import 'hotel_booking_confirmation_screen.dart';
 import 'hotel_assets.dart';
 
@@ -563,9 +564,15 @@ class _PolicyLine extends StatelessWidget {
   );
 }
 
-String _money(num amount, String currency) {
-  final value = amount == amount.roundToDouble()
-      ? amount.toStringAsFixed(0)
-      : amount.toStringAsFixed(2);
-  return currency == 'USD' ? '\$$value' : '$value $currency';
-}
+/// Checkout prints the **offer's own currency, unconverted** — deliberately
+/// unlike the cards and the rate list, which draw the user's preferred
+/// currency through [HotelPricing].
+///
+/// This is the same rule the tour checkout already follows: the amount on this
+/// page is what the hold was taken for and what the processor will settle, so
+/// an "≈" figure derived from a rate table the app happens to have cached
+/// would be a different number from the one the guest is agreeing to
+/// (SECURITY.md 5). The previous helper branched on `currency == 'USD'`, which
+/// also meant an IQD rate was drawn in a shape no other screen used;
+/// [formatMoney] is the one formatter every price in the app goes through.
+String _money(num amount, String currency) => formatMoney(amount, currency);

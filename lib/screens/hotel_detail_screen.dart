@@ -120,16 +120,8 @@ class _HotelDetailScreenState extends State<HotelDetailScreen>
     super.dispose();
   }
 
-<<<<<<< HEAD
-  void _reload() {
-    setState(() {
-      _detail = widget.service.fetchDetail(widget.hotel.id);
-    });
-  }
-=======
   void _reload() =>
       setState(() => _detail = _resolvedService.fetchDetail(widget.hotel.id));
->>>>>>> ab113c6 (Latest app update)
 
   void _snack(String message) {
     ScaffoldMessenger.of(context)

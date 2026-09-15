@@ -29,7 +29,7 @@
 //   field as Storage URLs; writing asset paths into it would be a type-lie
 //   that the admin panel and any future CDN logic would both trip over.
 // * **Fields the Dart model has but the schema does not** —
-//   `distanceFromCenterKm`, `currencyCode` and `imageAsset`.
+//   `distanceFromCenterKm` and `imageAsset`.
 //   `distanceFromCenterKm` was explicitly declined (DATA_MODEL.md): there is no
 //   verified source for it, so the card hides that line instead.
 //   DATA_MODEL.md is the contract; inventing Firestore fields to match a Dart
@@ -38,6 +38,14 @@
 // * **`region` / `country`** — the schema has them, the preview data does not.
 //   Deriving them from the address string would be fabricating catalogue data
 //   about named real properties. Left absent.
+//
+// ## Currency
+//
+// `currencyCode` IS exported, and is required (approved 2026-09-15). It was
+// previously withheld, which left `pricePerNightFrom` denominated in nothing
+// and the reader defaulting it to USD — a silent 1300x mispricing waiting for
+// the first IQD property. The value written is whatever `PreviewHotelService`
+// states; no price is converted or invented here.
 import 'dart:convert';
 import 'dart:io';
 
@@ -47,8 +55,9 @@ import 'package:kurdistan_paradise_travel_guide/models/hotel.dart';
 import 'package:kurdistan_paradise_travel_guide/models/hotel_detail.dart';
 import 'package:kurdistan_paradise_travel_guide/services/hotel_reviews_service.dart';
 import 'package:kurdistan_paradise_travel_guide/services/hotel_service.dart';
+// `NatureReview` — the hotel reviews page reuses the nature-spot review model
+// through a service adapter (DATA_MODEL.md), so the exporter reads that type.
 import 'package:kurdistan_paradise_travel_guide/models/nature_detail.dart';
-import 'package:kurdistan_paradise_travel_guide/services/nature_spots_service.dart';
 
 Map<String, Object?> text(HotelText t) => {'en': t.en, 'ku': t.ku, 'ar': t.ar};
 
@@ -167,6 +176,9 @@ Future<void> export() async {
       'active': true,
       'starRating': hotel.starRating,
       'pricePerNightFrom': hotel.pricePerNight,
+      // The currency `pricePerNightFrom` is stated in. Required, never
+      // defaulted — see the header.
+      'currencyCode': hotel.currencyCode,
       'amenities': [for (final a in hotel.amenities) a.name],
     };
 
@@ -245,6 +257,6 @@ Future<void> export() async {
   );
   stdout.writeln(
     'Wrote ${file.path}: ${PreviewHotelService.hotels.length} hotels, '
-    '$roomCount rooms, $offerCount offers.',
+    '$roomCount rooms, $offerCount offers, $reviewCount reviews.',
   );
 }

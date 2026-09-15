@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/hotel.dart';
 import '../models/hotel_detail.dart';
+import '../screens/explore_tours_screen.dart' show formatMoney;
 import '../services/currency_rates_service.dart';
 import '../theme/app_colors.dart';
 import 'app_liquid_glass.dart';
@@ -247,13 +248,75 @@ String hotelAmenityLabel(AppLocalizations l10n, HotelAmenity amenity) =>
       HotelAmenity.beach => l10n.hotelBeach,
     };
 
-String formatHotelPrice(Hotel hotel) {
-  final symbol = CurrencyRatesService.symbolFor(hotel.currencyCode);
-  final value = hotel.pricePerNight == hotel.pricePerNight.roundToDouble()
-      ? hotel.pricePerNight.toStringAsFixed(0)
-      : hotel.pricePerNight.toStringAsFixed(2);
-  return symbol.length == 1 ? '$symbol$value' : '$symbol $value';
+/// Converts a hotel's or an offer's stored price into the currency the user
+/// chose in Settings, using the live `currency_rates` table.
+///
+/// A hotel stores **one authoritative starting price** in the property's own
+/// currency (`pricePerNightFrom` + `currencyCode`), and each offer stores its
+/// own rate in its own `currency` (DATA_MODEL.md). Neither is duplicated in
+/// Firestore as a second USD/IQD pair; the conversion happens here, at render
+/// time.
+///
+/// Mirrors `RentalPricing` and `TourPricing` deliberately, and reuses their
+/// `formatMoney`, so the same figure cannot be formatted three different ways
+/// across Cars, Tours and Hotels.
+///
+/// Conversions are **indicative**, never a quote: a charge is settled by the
+/// payment processor in the property's own currency, never at a rate this app
+/// stored (SECURITY.md 5). That is what the `≈` prefix discloses — and it is
+/// why checkout deliberately does NOT use this class, printing the offer's own
+/// currency instead.
+class HotelPricing {
+  const HotelPricing({required this.rates, required this.displayCurrency});
+
+  /// No rate table — every price renders in its own stored currency. This is
+  /// the honest state before `currency_rates/latest` has loaded.
+  static const HotelPricing unconverted = HotelPricing(
+    rates: CurrencyRates.empty,
+    displayCurrency: '',
+  );
+
+  final CurrencyRates rates;
+
+  /// The ISO code the user chose in Settings (`users.preferredCurrency`).
+  final String displayCurrency;
+
+  /// Whether a price quoted in [currency] would actually be converted — false
+  /// when it already matches the display currency, and false when the rate
+  /// table cannot do it.
+  bool isConverted(String currency) {
+    if (displayCurrency.isEmpty) return false;
+    if (currency.toUpperCase() == displayCurrency.toUpperCase()) return false;
+    return rates.convert(1, from: currency, to: displayCurrency) != null;
+  }
+
+  /// A hotel's "from" nightly price as drawn, e.g. `$120` or `≈ IQD 157,200`.
+  String perNight(Hotel hotel) =>
+      format(hotel.pricePerNight, hotel.currencyCode);
+
+  /// Any amount in [currency], converted for display when possible.
+  ///
+  /// Falls back to the stored currency whenever the conversion cannot be made
+  /// — an unconverted true price beats a converted invented one.
+  String format(num amount, String currency) {
+    if (!isConverted(currency)) return formatMoney(amount, currency);
+    final converted = rates.convert(
+      amount,
+      from: currency,
+      to: displayCurrency,
+    );
+    if (converted == null) return formatMoney(amount, currency);
+    return '≈ ${formatMoney(converted, displayCurrency)}';
+  }
 }
+
+/// A hotel card's nightly "from" price.
+///
+/// Without [pricing] it renders in the property's own stored currency, which
+/// is what every card shows before `currency_rates/latest` has loaded. There
+/// is no USD default on either path: the currency comes from the document.
+String formatHotelPrice(Hotel hotel, [HotelPricing? pricing]) =>
+    (pricing ?? HotelPricing.unconverted).perNight(hotel);
 
 /// Resolves a [HotelFacility.iconKey] to a glyph.
 ///

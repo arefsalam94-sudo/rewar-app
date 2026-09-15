@@ -52,6 +52,15 @@ const db = getFirestore();
 const SOURCE = path.join(__dirname, "hotels_seed.json");
 const COLLECTION = "hotels";
 
+/**
+ * The only currencies the app can display, mirroring `firestore.rules` and
+ * `FirestoreHotelService.supportedCurrencies`. A hotel or an offer quoted in
+ * anything else — or in nothing at all — is REJECTED here rather than written
+ * and silently read as USD later, which would misprice an IQD rate by roughly
+ * 1300x.
+ */
+const SUPPORTED_CURRENCIES = ["USD", "IQD"];
+
 /** Fields a client must never be able to seed — all server-owned. */
 const FORBIDDEN_HOTEL_FIELDS = [
   "reviewScore",
@@ -86,6 +95,20 @@ function validateHotel(id, hotel) {
       throw new Error(`${at} has a non-boolean ${flag}: ${hotel[flag]}`);
     }
   }
+  // Required, never defaulted (approved 2026-09-15). `pricePerNightFrom` means
+  // nothing without it.
+  if (!SUPPORTED_CURRENCIES.includes(hotel.currencyCode)) {
+    throw new Error(
+      `${at} has currencyCode "${hotel.currencyCode}". A hotel must state one ` +
+        `of ${SUPPORTED_CURRENCIES.join(" | ")}; a missing code would be read ` +
+        `as USD and misprice an IQD property by roughly 1300x.`
+    );
+  }
+  if (!Number.isFinite(hotel.pricePerNightFrom) || hotel.pricePerNightFrom < 0) {
+    throw new Error(
+      `${at} has a bad pricePerNightFrom: ${hotel.pricePerNightFrom}`
+    );
+  }
   if ("distanceFromCenterKm" in hotel) {
     throw new Error(
       `${at} carries distanceFromCenterKm, which was explicitly declined ` +
@@ -115,8 +138,13 @@ function validateOffer(at, offer) {
   if (!Number.isInteger(offer.availableQuantity) || offer.availableQuantity < 0) {
     throw new Error(`${at} has a bad availableQuantity`);
   }
-  if (typeof offer.currency !== "string" || offer.currency.length !== 3) {
-    throw new Error(`${at} has a bad currency`);
+  // Same rule as the hotel, and it matters more here: this is the figure a
+  // checkout quotes against.
+  if (!SUPPORTED_CURRENCIES.includes(offer.currency)) {
+    throw new Error(
+      `${at} has currency "${offer.currency}". An offer must state one of ` +
+        `${SUPPORTED_CURRENCIES.join(" | ")}.`
+    );
   }
 }
 

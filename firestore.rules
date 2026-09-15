@@ -221,10 +221,30 @@ service cloud.firestore {
     //
     // Admin-only write — this is catalog/marketing content, and a client
     // that could write it could put anything on the app's front page.
+    //
+    // `type` and `referenceId` are validated HERE as well as in the seeder
+    // (approved 2026-09-15, after the launch-readiness audit found three of
+    // the four slides pointing at documents that do not exist). The rules
+    // cannot check that the target document is real — that needs a read the
+    // seeder does — but they can stop a slide whose `type` names no
+    // collection at all, which is a card the app can never open.
     // -------------------------------------------------------------------
     match /featured/{itemId} {
+      function validType() {
+        return 'type' in request.resource.data.keys()
+          && request.resource.data.type in
+               ['nature_spot', 'hotel', 'car', 'tour', 'flight'];
+      }
+
+      function validReference() {
+        return 'referenceId' in request.resource.data.keys()
+          && request.resource.data.referenceId is string
+          && request.resource.data.referenceId.size() > 0;
+      }
+
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, update: if isAdmin() && validType() && validReference();
+      allow delete: if isAdmin();
     }
 
     // -------------------------------------------------------------------
@@ -486,10 +506,34 @@ service cloud.firestore {
     // The rating aggregates (`reviewScore`, `ratingCount`, `ratingBreakdown`,
     // `categoryScores`) are server-owned and covered by this same admin-only
     // write, exactly as on nature_spots and tours.
+    //
+    // `currencyCode` is REQUIRED here and validated in the rules, not only in
+    // the client (approved 2026-09-15, matching `cars`). `pricePerNightFrom`
+    // states no currency of its own, so a document without a code is a price
+    // denominated in nothing — and a reader that filled the gap with USD would
+    // misprice an IQD property by roughly 1300x. USD and IQD are the two the
+    // app supports (DATA_MODEL.md).
     // -------------------------------------------------------------------
     match /hotels/{hotelId} {
+      function validCurrency() {
+        return 'currencyCode' in request.resource.data.keys()
+          && request.resource.data.currencyCode in ['USD', 'IQD'];
+      }
+
+      // Prices are stored, never inferred, and must be real non-negative
+      // numbers — a string "120" would render as a price and compare as text.
+      function validPrice() {
+        return !('pricePerNightFrom' in request.resource.data.keys())
+          || (request.resource.data.pricePerNightFrom is number
+              && request.resource.data.pricePerNightFrom >= 0);
+      }
+
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      // Admin-only, AND still shape-checked: an admin panel bug must not be
+      // able to publish a hotel priced in a currency the app cannot display,
+      // or in no currency at all.
+      allow create, update: if isAdmin() && validCurrency() && validPrice();
+      allow delete: if isAdmin();
 
       // ----------------------------------------------------------------
       // rooms — permanent room data. Public read, admin-only write.
@@ -507,10 +551,32 @@ service cloud.firestore {
       // rooms left" (DATA_MODEL.md). A client that could write it could
       // manufacture scarcity; one that could write `nightlyPrice` could
       // quote itself any figure. Both stay admin-only.
+      //
+      // `currency` is REQUIRED and restricted to USD | IQD, for the same
+      // reason as the hotel's `currencyCode` — and it matters more here,
+      // because this is the figure a checkout quotes against and the one a
+      // booking is written in.
       // ----------------------------------------------------------------
       match /offers/{offerId} {
+        function validOfferCurrency() {
+          return 'currency' in request.resource.data.keys()
+            && request.resource.data.currency in ['USD', 'IQD'];
+        }
+
+        function validOfferPrices() {
+          return (!('nightlyPrice' in request.resource.data.keys())
+                  || (request.resource.data.nightlyPrice is number
+                      && request.resource.data.nightlyPrice >= 0))
+            && (!('totalPrice' in request.resource.data.keys())
+                || (request.resource.data.totalPrice is number
+                    && request.resource.data.totalPrice >= 0));
+        }
+
         allow get, list: if true;
-        allow create, update, delete: if isAdmin();
+        allow create, update: if isAdmin()
+          && validOfferCurrency()
+          && validOfferPrices();
+        allow delete: if isAdmin();
       }
 
       // ----------------------------------------------------------------

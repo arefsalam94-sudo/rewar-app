@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/favorite_item.dart';
 import '../models/hotel.dart';
+import '../services/currency_rates_service.dart';
 import '../services/favorites_service.dart';
 import '../services/firestore_hotel_service.dart';
 import '../services/hotel_service.dart';
+import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/canonical_date_time_picker.dart';
@@ -24,12 +26,20 @@ class HotelScreen extends StatefulWidget {
     super.key,
     this.service,
     this.favoritesService,
+    this.currencyRatesService,
+    this.userProfileService,
   });
 
   /// Injectable for tests. Defaults to the Firestore-backed catalogue, which
   /// falls back to the bundled preview data when Firebase is unavailable.
   /// Nullable because a Firestore-backed service cannot be a `const` default.
   final HotelService? service;
+
+  /// Injectable for tests; both default to the live services. Together they
+  /// decide what currency a card's nightly price is DRAWN in — never what it
+  /// is stored in.
+  final CurrencyRatesService? currencyRatesService;
+  final UserProfileService? userProfileService;
 
   /// Backs the heart on the featured and trending cards. Where to Stay is one
   /// of the only two screens that can save anything — see [FavoritesService].
@@ -43,6 +53,40 @@ class _HotelScreenState extends State<HotelScreen>
     with SingleTickerProviderStateMixin, FavoriteToggleMixin<HotelScreen> {
   late final HotelService _resolvedService =
       widget.service ?? FirestoreHotelService();
+  late final CurrencyRatesService _ratesService =
+      widget.currencyRatesService ?? CurrencyRatesService();
+  late final UserProfileService _profileService =
+      widget.userProfileService ?? UserProfileService();
+
+  // --- display currency -------------------------------------------------
+  //
+  // A hotel stores one authoritative starting price in the property's own
+  // currency; this converts it for display only (DATA_MODEL.md). Both loads
+  // are allowed to fail silently — a hotel list that refused to draw because
+  // a rate table was missing would be a far worse bug than an unconverted
+  // price, which is always a true price.
+  CurrencyRates _rates = CurrencyRates.empty;
+  AppCurrency _displayCurrency = AppCurrency.usd;
+
+  HotelPricing get _pricing =>
+      HotelPricing(rates: _rates, displayCurrency: _displayCurrency.code);
+
+  Future<void> _loadDisplayCurrency() async {
+    try {
+      final rates = await _ratesService.fetchLatest();
+      if (mounted) setState(() => _rates = rates);
+    } catch (error) {
+      debugPrint('Could not load currency rates: $error');
+    }
+    try {
+      final profile = await _profileService.fetchProfile();
+      if (mounted && profile != null) {
+        setState(() => _displayCurrency = profile.currency);
+      }
+    } catch (error) {
+      debugPrint('Could not load the currency preference: $error');
+    }
+  }
 
   @override
   late final FavoritesService favoritesService =
@@ -66,6 +110,7 @@ class _HotelScreenState extends State<HotelScreen>
       checkOut: today.add(const Duration(days: 3)),
     );
     _hotels = _resolvedService.trendingHotels();
+    _loadDisplayCurrency();
     loadFavoriteIds();
   }
 
@@ -295,6 +340,7 @@ class _HotelScreenState extends State<HotelScreen>
                                     child: _TrendingHotelCard(
                                       hotel: hotel,
                                       criteria: _criteria,
+                                      pricing: _pricing,
                                       language: language,
                                       onTap: () => _openDetail(hotel),
                                       isFavorite: isFavorite(hotel.id),
@@ -1208,10 +1254,15 @@ class _TrendingHotelCard extends StatelessWidget {
     required this.isFavorite,
     required this.favoritePending,
     required this.onFavorite,
+    this.pricing = HotelPricing.unconverted,
   });
 
   final Hotel hotel;
   final HotelSearchCriteria criteria;
+
+  /// Renders the nightly price in the user's chosen currency. Defaults to
+  /// [HotelPricing.unconverted], which shows the property's own currency.
+  final HotelPricing pricing;
   final String language;
   final VoidCallback onTap;
   final bool isFavorite;
@@ -1377,7 +1428,7 @@ class _TrendingHotelCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 7),
                       Text(
-                        formatHotelPrice(hotel),
+                        formatHotelPrice(hotel, pricing),
                         textDirection: TextDirection.ltr,
                         style: TextStyle(
                           color: AppColors.heading(context),

@@ -68,6 +68,28 @@ class FeaturedService {
 
   static const int bundledNatureSpotCount = 120;
 
+  /// The slides preview mode serves before Firebase exists.
+  ///
+  /// **Must stay in sync with `tool/seed_home_screen.js`** — these are the
+  /// same three slides, and a divergence means the app shows one front page in
+  /// preview and another in production.
+  ///
+  /// Rewritten 2026-09-15. The previous bundled set carried three slides that
+  /// referenced documents which do not exist in any live collection:
+  /// `greenwheels-rentals` (no such car or company), `astra-ebl-ist` (the
+  /// `flights` collection is empty and flights are release-gated as Coming
+  /// Soon), and `zagros-camp` (no such tour — and the live collection had
+  /// drifted further still, seeding `moraine-lake`, a lake in Banff, Canada,
+  /// as a Kurdistan tour).
+  ///
+  /// **No slide carries a rating.** The referenced documents have no rating
+  /// aggregate — those are server-owned and the Cloud Function that derives
+  /// them is not deployed — so a number here would be invented. [FeaturedItem]
+  /// treats a null rating as "hide the pill", which is the honest rendering.
+  ///
+  /// Three slides, not four: there are only three live documents whose content
+  /// genuinely matches a carousel card. The carousel sizes itself to whatever
+  /// it is given rather than assuming four.
   static List<FeaturedItem> bundledFeatured() => const [
     FeaturedItem(
       id: 'preview-nature',
@@ -76,7 +98,7 @@ class FeaturedService {
       titles: {
         'en': 'Rawanduz Canyon',
         'ku': 'دەربەندی ڕەواندز',
-        'ar': 'وادي رواندوز',
+        'ar': 'وادي راوندوز',
       },
       subtitles: {
         'en': 'Erbil  •  Nature escape',
@@ -84,62 +106,41 @@ class FeaturedService {
         'ar': 'أربيل  •  رحلة طبيعية',
       },
       imageAsset: 'assets/images/featured-rawanduz.png',
-      rating: 4.8,
       order: 1,
     ),
     FeaturedItem(
-      id: 'preview-car',
-      type: FeaturedType.car,
-      referenceId: 'greenwheels-rentals',
+      id: 'preview-tour-gali-alibag',
+      type: FeaturedType.tour,
+      referenceId: 'gali-alibag-waterfall',
       titles: {
-        'en': 'GreenWheels Rentals',
-        'ku': 'گرینویلز بۆ بەکرێدان',
-        'ar': 'غرين ويلز للتأجير',
+        'en': 'Gali Alibag Waterfall',
+        'ku': 'ئاوشاری گەلی عەلی بەگ',
+        'ar': 'شلال كلي علي بك',
       },
       subtitles: {
-        'en': 'Erbil  •  Car rental',
-        'ku': 'هەولێر  •  بەکرێدانی ئۆتۆمبێل',
-        'ar': 'أربيل  •  تأجير سيارات',
+        'en': 'Rawanduz, Erbil  •  Guided tour',
+        'ku': 'ڕەواندز، هەولێر  •  گەشتی ڕێبەرایەتیکراو',
+        'ar': 'راوندوز، أربيل  •  جولة بمرشد',
       },
-      imageAsset: 'assets/images/journey-car.png',
-      rating: 4.6,
+      imageAsset: 'assets/images/journey-tours.png',
       order: 2,
     ),
     FeaturedItem(
-      id: 'preview-flight',
-      type: FeaturedType.flight,
-      referenceId: 'astra-ebl-ist',
-      titles: {
-        'en': 'Astra Airlines',
-        'ku': 'ئاسترا ئێرلاینز',
-        'ar': 'أسترا للطيران',
-      },
-      subtitles: {
-        'en': 'Erbil → Istanbul  •  Flight',
-        'ku': 'هەولێر ← ئەستەنبوڵ  •  فڕین',
-        'ar': 'أربيل ← إسطنبول  •  رحلة جوية',
-      },
-      imageAsset: 'assets/images/journey-flight.png',
-      rating: 4.5,
-      order: 3,
-    ),
-    FeaturedItem(
-      id: 'preview-tour',
+      id: 'preview-tour-korek',
       type: FeaturedType.tour,
-      referenceId: 'zagros-camp',
+      referenceId: 'korek-mountain-day',
       titles: {
-        'en': 'Zagros Highland Camp',
-        'ku': 'کەمپی بەرزایی زاگرۆس',
-        'ar': 'مخيم مرتفعات زاغروس',
+        'en': 'Korek Mountain Day Trip',
+        'ku': 'گەشتی ڕۆژانەی چیای کۆڕەک',
+        'ar': 'رحلة يوم إلى جبل كورك',
       },
       subtitles: {
-        'en': '3 days  •  Guided tour',
-        'ku': '٣ ڕۆژان  •  گەشتی ڕێبەرایەتیکراو',
-        'ar': '٣ أيام  •  جولة بمرشد',
+        'en': 'Rawanduz, Erbil  •  Guided tour',
+        'ku': 'ڕەواندز، هەولێر  •  گەشتی ڕێبەرایەتیکراو',
+        'ar': 'راوندوز، أربيل  •  جولة بمرشد',
       },
       imageAsset: 'assets/images/journey-tours.png',
-      rating: 4.7,
-      order: 4,
+      order: 3,
     ),
   ];
 }

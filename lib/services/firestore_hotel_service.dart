@@ -24,9 +24,20 @@ import 'hotel_service.dart';
 ///
 /// `distanceFromCenterKm` is deliberately absent from `hotels` and stays null
 /// here, so the card hides that line rather than inventing a number.
-/// `currencyCode` defaults to USD for the list card's "from" price; the real
-/// currency of a bookable rate lives on the offer, which is what checkout
-/// reads.
+///
+/// ## Price and currency
+///
+/// A hotel carries **one authoritative starting price** in the currency the
+/// property quotes — `pricePerNightFrom` + `currencyCode`, USD or IQD — and a
+/// bookable rate carries its own `currency` on the offer. Nothing here assumes
+/// a currency: a hotel or an offer with no usable code is **rejected** rather
+/// than defaulted, because reading a missing code as USD would misprice an IQD
+/// property by roughly 1300x, which is worse than showing no card at all.
+///
+/// Conversion to the user's display currency belongs at render time, through
+/// `CurrencyRatesService` and `HotelPricing`, and stays indicative — a charge
+/// is settled by the payment processor, never at a rate this app stored
+/// (SECURITY.md 5).
 class FirestoreHotelService implements HotelService {
   FirestoreHotelService({
     FirebaseFirestore? firestore,
@@ -42,6 +53,10 @@ class FirestoreHotelService implements HotelService {
       _firestoreOverride ?? FirebaseFirestore.instance;
 
   static const String collection = 'hotels';
+
+  /// The currencies the app can display. Mirrors `firestore.rules`; a hotel or
+  /// an offer quoted in anything else is dropped rather than shown wrongly.
+  static const List<String> supportedCurrencies = ['USD', 'IQD'];
 
   /// Card image used until `imageUrls` carries real Storage URLs. The seeded
   /// documents leave that array empty on purpose (SEED_DATA.md).
@@ -208,6 +223,19 @@ class FirestoreHotelService implements HotelService {
     // A document with no name or city cannot be drawn as a card at all.
     if (name == null || city == null) return null;
 
+    // A starting price with no supported currency is not shown at all.
+    // Defaulting to USD would misprice an IQD property by roughly 1300x.
+    final currency = data['currencyCode'];
+    if (currency is! String || !supportedCurrencies.contains(currency)) {
+      debugPrint('hotels/$id has unsupported currency "$currency" — skipped.');
+      return null;
+    }
+    final price = data['pricePerNightFrom'];
+    if (price is! num || price < 0) {
+      debugPrint('hotels/$id has a bad pricePerNightFrom — skipped.');
+      return null;
+    }
+
     final location = data['location'];
     final images = _stringList(data['imageUrls']);
 
@@ -225,8 +253,8 @@ class FirestoreHotelService implements HotelService {
       reviewCount: _int(data['ratingCount']),
       // Deliberately null — see the class doc.
       distanceFromCenterKm: null,
-      pricePerNight: _double(data['pricePerNightFrom']),
-      currencyCode: 'USD',
+      pricePerNight: price.toDouble(),
+      currencyCode: currency,
       amenities: _amenitiesFrom(data['amenities']),
       highlighted: data['highlighted'] == true,
       latitude: location is GeoPoint ? location.latitude : null,
@@ -256,18 +284,36 @@ class FirestoreHotelService implements HotelService {
     );
   }
 
+  @visibleForTesting
+  static HotelRoomOffer? offerFrom(String id, Map<String, dynamic> data) =>
+      _offerFrom(id, data);
+
   static HotelRoomOffer? _offerFrom(String id, Map<String, dynamic> data) {
     final roomTypeId = data['roomTypeId'];
     if (roomTypeId is! String || roomTypeId.isEmpty) return null;
+
+    // Same rule as the hotel above, and it matters more here: this is the
+    // figure a checkout quotes against. An offer whose currency is missing or
+    // unsupported is dropped, never read as USD.
+    final currency = data['currency'];
+    if (currency is! String || !supportedCurrencies.contains(currency)) {
+      debugPrint('offer $id has unsupported currency "$currency" — skipped.');
+      return null;
+    }
+    final nightly = data['nightlyPrice'];
+    final total = data['totalPrice'];
+    if (nightly is! num || nightly < 0 || total is! num || total < 0) {
+      debugPrint('offer $id has a bad price — skipped.');
+      return null;
+    }
+
     final deadline = data['cancellationDeadline'];
     return HotelRoomOffer(
       id: id,
       roomTypeId: roomTypeId,
-      currencyCode: data['currency'] is String
-          ? data['currency'] as String
-          : 'USD',
-      nightlyPrice: _double(data['nightlyPrice']),
-      totalPrice: _double(data['totalPrice']),
+      currencyCode: currency,
+      nightlyPrice: nightly.toDouble(),
+      totalPrice: total.toDouble(),
       taxes: _double(data['taxes']),
       fees: _double(data['fees']),
       // Stored, never inferred (DATA_MODEL.md) — the UI must always be able to

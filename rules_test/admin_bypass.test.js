@@ -47,7 +47,12 @@ beforeEach(async () => {
   await seed(env, async (db) => {
     await setDoc(doc(db, 'nature_spots', 'rawanduz-canyon'), { active: true });
     await setDoc(doc(db, 'tours', 'gali-sherana'), { active: true });
-    await setDoc(doc(db, 'featured', 'slide-1'), { order: 1 });
+    // A VALID slide: `featured` now requires a supported `type` and a
+    // non-empty `referenceId` (2026-09-15), and these tests are about who may
+    // write, not about shape.
+    await setDoc(doc(db, 'featured', 'slide-1'), {
+      order: 1, type: 'tour', referenceId: 'gali-sherana',
+    });
     await setDoc(doc(db, 'legal_documents', 'terms_of_service'), { version: 1 });
     await setDoc(doc(db, 'currency_rates', 'latest'), { base: 'USD' });
     await setDoc(doc(db, 'help_topics', 'account_signin'), validHelpTopic());

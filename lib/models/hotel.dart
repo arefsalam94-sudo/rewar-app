@@ -74,6 +74,13 @@ class Hotel {
   /// real property.
   final double? distanceFromCenterKm;
   final double pricePerNight;
+
+  /// The currency [pricePerNight] is quoted in — `USD` or `IQD`
+  /// (`FirestoreHotelService.supportedCurrencies`). **Never defaulted**: a
+  /// document with no supported code is dropped by the service rather than
+  /// read as dollars, because a nightly rate shown in the wrong currency is
+  /// off by roughly 1300x. The user's Settings preference converts this for
+  /// display only — see `HotelPricing`.
   final String currencyCode;
   final Set<HotelAmenity> amenities;
   final bool highlighted;
@@ -115,7 +122,6 @@ class HotelSearchCriteria {
     this.rooms = 1,
     this.beds = 1,
     this.amenities = const <HotelAmenity>{},
-    this.currencyCode = 'USD',
     this.localeCode = 'en',
   }) : assert(adults >= 1),
        assert(children >= 0),
@@ -131,7 +137,6 @@ class HotelSearchCriteria {
   final int rooms;
   final int beds;
   final Set<HotelAmenity> amenities;
-  final String currencyCode;
   final String localeCode;
 
   /// Nights in the stay — the multiplier every future price total needs.
@@ -146,7 +151,6 @@ class HotelSearchCriteria {
     int? rooms,
     int? beds,
     Set<HotelAmenity>? amenities,
-    String? currencyCode,
     String? localeCode,
   }) => HotelSearchCriteria(
     destination: destination ?? this.destination,
@@ -157,7 +161,6 @@ class HotelSearchCriteria {
     rooms: rooms ?? this.rooms,
     beds: beds ?? this.beds,
     amenities: Set<HotelAmenity>.unmodifiable(amenities ?? this.amenities),
-    currencyCode: currencyCode ?? this.currencyCode,
     localeCode: localeCode ?? this.localeCode,
   );
 }

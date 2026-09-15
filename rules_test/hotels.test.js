@@ -8,8 +8,8 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
 import { assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import {
-  doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where,
-  serverTimestamp, Timestamp,
+  doc, getDoc, setDoc, updateDoc, deleteDoc, deleteField, collection, getDocs,
+  query, where, serverTimestamp, Timestamp,
 } from 'firebase/firestore';
 import { makeEnv, seed, ALICE, BOB } from './harness.js';
 
@@ -19,16 +19,20 @@ const HOTEL = 'divan-erbil';
 const ROOM = 'deluxe-king';
 const OFFER = 'deluxe-king-flex';
 
-const hotelDoc = () => ({
+const hotelDoc = (over = {}) => ({
   name: { en: 'Divan Erbil', ku: 'دیڤان', ar: 'ديفان' },
   city: { en: 'Erbil', ku: 'هەولێر', ar: 'أربيل' },
   region: 'Erbil',
   country: 'Iraq',
   starRating: 5,
   pricePerNightFrom: 120,
+  // Required since 2026-09-15. `pricePerNightFrom` states no currency of its
+  // own, so a document without this is a price denominated in nothing.
+  currencyCode: 'USD',
   amenities: ['wifi', 'parking'],
   checkInTime: '14:00',
   checkOutTime: '12:00',
+  ...over,
 });
 
 const roomDoc = () => ({
@@ -39,7 +43,7 @@ const roomDoc = () => ({
   bedConfiguration: [{ type: 'king', count: 1 }],
 });
 
-const offerDoc = () => ({
+const offerDoc = (over = {}) => ({
   roomTypeId: ROOM,
   currency: 'USD',
   nightlyPrice: 120,
@@ -52,6 +56,7 @@ const offerDoc = () => ({
   prepayment: 'none',
   paymentTiming: 'payLater',
   availableQuantity: 3,
+  ...over,
 });
 
 const reviewDoc = (uid = ALICE, over = {}) => ({
@@ -131,13 +136,17 @@ describe('hotels — public catalog reads', () => {
 describe('hotels — catalog writes are admin-only', () => {
   beforeEach(async () => reset(seedCatalog));
 
+  // The fourth entry is a VALID document for that collection. A hotel and an
+  // offer must now state a supported currency, so `{ a: 1 }` is no longer a
+  // creatable shape for either — that is the point of the currency rule, and
+  // the dedicated describe block below pins it.
   const paths = [
-    ['hotel', 'hotels', HOTEL, { starRating: 1 }],
-    ['room', `hotels/${HOTEL}/rooms`, ROOM, { maxOccupancy: 99 }],
-    ['offer', `hotels/${HOTEL}/offers`, OFFER, { nightlyPrice: 0 }],
+    ['hotel', 'hotels', HOTEL, { starRating: 1 }, hotelDoc()],
+    ['room', `hotels/${HOTEL}/rooms`, ROOM, { maxOccupancy: 99 }, roomDoc()],
+    ['offer', `hotels/${HOTEL}/offers`, OFFER, { nightlyPrice: 0 }, offerDoc()],
   ];
 
-  for (const [label, col, id, patch] of paths) {
+  for (const [label, col, id, patch, valid] of paths) {
     test(`a guest may NOT write a ${label}`, async () => {
       await assertFails(updateDoc(doc(guest, col, id), patch));
     });
@@ -151,7 +160,7 @@ describe('hotels — catalog writes are admin-only', () => {
       await assertSucceeds(updateDoc(doc(admin, col, id), patch));
     });
     test(`a simulated admin MAY create a ${label}`, async () => {
-      await assertSucceeds(setDoc(doc(admin, col, `${id}-2`), { a: 1 }));
+      await assertSucceeds(setDoc(doc(admin, col, `${id}-2`), valid));
     });
     test(`a simulated admin MAY delete a ${label}`, async () => {
       await assertSucceeds(deleteDoc(doc(admin, col, id)));
@@ -386,6 +395,112 @@ describe('hotels — highlighted and active (approved 2026-09-13)', () => {
     await assertSucceeds(updateDoc(doc(admin, 'hotels', 'retired'), {
       active: true, highlighted: true,
     }));
+  });
+});
+
+describe('hotels — currency is required and restricted (approved 2026-09-15)', () => {
+  // Mirrors the `cars` currency block. Validated in the RULES and not only in
+  // the client, because an unsupported or absent code renders a price nobody
+  // can act on: a reader that filled the gap with USD would misprice an IQD
+  // property by roughly 1300x.
+  beforeEach(async () => reset(seedCatalog));
+
+  for (const currency of ['USD', 'IQD']) {
+    test(`an admin may publish a hotel priced in ${currency}`, async () => {
+      await assertSucceeds(setDoc(doc(admin, 'hotels', `h-${currency}`), hotelDoc({
+        currencyCode: currency,
+        pricePerNightFrom: currency === 'IQD' ? 157200 : 120,
+      })));
+    });
+
+    test(`an admin may publish an offer priced in ${currency}`, async () => {
+      await assertSucceeds(setDoc(doc(admin, `hotels/${HOTEL}/offers`, `o-${currency}`), offerDoc({
+        currency,
+        nightlyPrice: currency === 'IQD' ? 157200 : 120,
+        totalPrice: currency === 'IQD' ? 314400 : 240,
+      })));
+    });
+  }
+
+  for (const currency of ['EUR', 'GBP', 'usd', 'US', '', 'BTC']) {
+    test(`even an admin may NOT publish a hotel in currency "${currency}"`, async () => {
+      await assertFails(setDoc(doc(admin, 'hotels', 'bad'), hotelDoc({
+        currencyCode: currency,
+      })));
+    });
+
+    test(`even an admin may NOT publish an offer in currency "${currency}"`, async () => {
+      await assertFails(setDoc(doc(admin, `hotels/${HOTEL}/offers`, 'bad'), offerDoc({
+        currency,
+      })));
+    });
+  }
+
+  test('a hotel with NO currencyCode is rejected outright', async () => {
+    // Required, not optional: the whole point is that a missing code must not
+    // fall through to a default anywhere in the stack.
+    const { currencyCode, ...withoutCurrency } = hotelDoc();
+    await assertFails(setDoc(doc(admin, 'hotels', 'bad'), withoutCurrency));
+  });
+
+  test('an offer with NO currency is rejected outright', async () => {
+    const { currency, ...withoutCurrency } = offerDoc();
+    await assertFails(setDoc(doc(admin, `hotels/${HOTEL}/offers`, 'bad'), withoutCurrency));
+  });
+
+  test('a non-string currency is rejected on both', async () => {
+    await assertFails(setDoc(doc(admin, 'hotels', 'bad'), hotelDoc({ currencyCode: 1 })));
+    await assertFails(setDoc(doc(admin, `hotels/${HOTEL}/offers`, 'bad'), offerDoc({ currency: 1 })));
+  });
+
+  test('an admin may NOT strip the currency off an existing hotel', async () => {
+    // `request.resource.data` on an update is the MERGED document, so this only
+    // fails if the field is actually being removed.
+    await assertFails(updateDoc(doc(admin, 'hotels', HOTEL), {
+      currencyCode: deleteField(),
+    }));
+  });
+
+  test('a partial update carrying a bad currency is still rejected', async () => {
+    await assertFails(updateDoc(doc(admin, 'hotels', HOTEL), { currencyCode: 'EUR' }));
+    await assertFails(updateDoc(doc(admin, `hotels/${HOTEL}/offers`, OFFER), { currency: 'EUR' }));
+  });
+
+  test('an admin may switch a hotel between the two supported currencies', async () => {
+    await assertSucceeds(updateDoc(doc(admin, 'hotels', HOTEL), {
+      currencyCode: 'IQD', pricePerNightFrom: 157200,
+    }));
+  });
+
+  test('a normal user may not switch the currency a price is stated in', async () => {
+    await assertFails(updateDoc(doc(alice, 'hotels', HOTEL), { currencyCode: 'IQD' }));
+    await assertFails(updateDoc(doc(alice, `hotels/${HOTEL}/offers`, OFFER), { currency: 'IQD' }));
+  });
+
+  test('a price stated as a string is rejected', async () => {
+    // It would render as a price and compare as text.
+    await assertFails(setDoc(doc(admin, 'hotels', 'bad'), hotelDoc({
+      pricePerNightFrom: '120',
+    })));
+    await assertFails(setDoc(doc(admin, `hotels/${HOTEL}/offers`, 'bad'), offerDoc({
+      nightlyPrice: '120',
+    })));
+  });
+
+  test('a negative price is rejected', async () => {
+    await assertFails(setDoc(doc(admin, 'hotels', 'bad'), hotelDoc({
+      pricePerNightFrom: -1,
+    })));
+    await assertFails(setDoc(doc(admin, `hotels/${HOTEL}/offers`, 'bad'), offerDoc({
+      totalPrice: -1,
+    })));
+  });
+
+  test('a guest still reads a currency-bearing hotel and offer', async () => {
+    // The rule is a write gate, not a read gate — Where to Stay stays
+    // browsable by a guest.
+    await assertSucceeds(getDoc(doc(guest, 'hotels', HOTEL)));
+    await assertSucceeds(getDoc(doc(guest, `hotels/${HOTEL}/offers`, OFFER)));
   });
 });
 

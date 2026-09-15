@@ -322,7 +322,9 @@ Open questions, to settle when the content arrives:
 
 ## `featured` *(added for the Home screen)*
 
-The home screen's carousel — the four slides at the top of the dashboard.
+The home screen's carousel — the slides at the top of the dashboard
+(**three** as of 2026-09-15; it was four until the placeholder slides were
+removed, and the UI sizes itself to whatever it is given).
 A **curated collection** rather than a query across `nature_spots` / `cars` /
 `tours` / `flights`, for three reasons: one read instead of four, the admin
 panel controls exactly what appears and in what order, and a single slide can
@@ -334,18 +336,45 @@ that could write here could put anything on the app's front page.
 
 | field | type | notes |
 |---|---|---|
-| type | string | `"nature_spot"` \| `"hotel"` \| `"car"` \| `"tour"` \| `"flight"` — which collection `referenceId` points into |
-| referenceId | string | id of the document in that collection, so Explore can open the right detail screen |
+| type | string | **required**, `"nature_spot"` \| `"hotel"` \| `"car"` \| `"tour"` \| `"flight"` — which collection `referenceId` points into. *(restricted in `firestore.rules` 2026-09-15)* |
+| referenceId | string | **required**, non-empty. Id of the document in that collection, so Explore can open the right detail screen. **Must name a document that actually exists** — see below |
 | title | map | keyed by locale: `{ en, ku, ar }`. A **map, not a string** — the app is trilingual and switching language must not cost a second read. Missing locale falls back to `en` |
 | subtitle | map | same shape; the location/context line, e.g. "Erbil • Nature escape" |
 | imageUrl | string | Firebase Storage download URL for the slide photo |
-| rating | number | 0–5, shown as a star pill. **Optional** — absent hides the pill rather than drawing a zero, since an unrated item is not a badly rated one |
+| rating | number | 0–5, shown as a star pill. **Optional** — absent hides the pill rather than drawing a zero, since an unrated item is not a badly rated one. **No seeded slide sets it**: the referenced documents' rating aggregates are server-owned and the Cloud Function is not deployed, so any number here would be invented |
 | order | number | ascending display order |
 | active | boolean | false pulls a slide off the front page without deleting it |
 
 Query: `.where('active', == true).orderBy('order').limit(8)`. That
 combination needs a **composite index** — already declared in
 `firestore.indexes.json`.
+
+### A slide must reference a document that exists
+
+*(added 2026-09-15, after the launch-readiness audit)* `referenceId` is not
+decoration — it is what Explore opens. Three of the four original slides named
+documents that were not in any live collection, including a tour called
+"Moraine Lake", which is in Banff, Canada.
+
+Enforcement is split, because no single layer can do it all:
+
+* **`firestore.rules`** require `type` to be one of the five values above and
+  `referenceId` to be a non-empty string. Rules cannot read another document to
+  check the target is real, so this is the most they can do.
+* **`tool/seed_home_screen.js`** does the read: one `get()` per slide against
+  the collection its `type` names, and it refuses the entire run if any
+  reference is missing or points at an `active: false` document.
+* **`test/services/featured_integrity_test.dart`** resolves every bundled slide
+  against the bundled catalogues, and keeps the seeder and `bundledFeatured()`
+  in sync.
+
+**No flight slide may be seeded while `flights` is empty.** Flights are
+release-gated as Coming Soon; a front-page card for a product the app does not
+sell is worse than one fewer slide. The `flight` *type* stays legal in the
+schema for when inventory exists.
+
+If there are not enough valid documents for four slides, **the carousel shows
+fewer** — it is driven by its data, never padded to a fixed count.
 
 ## `nature_spots`
 
@@ -505,13 +534,12 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 
 ## `hotels`
 
-> **Nothing reads this collection yet.** Where to Stay and the Hotel Details
-> page both read `PreviewHotelService` (see `SEED_DATA.md`), so the shape below
-> is the agreed target, not a live schema. It is written down now because the
-> Dart model layer added for the Hotel Details page (2026-08-25) already has
-> these fields, and the two must not drift.
+> **Live since 2026-09-13.** Where to Stay, Hotel Details, Room Selection and
+> the hotel reviews pages all read this collection first, with
+> `PreviewHotelService` as the offline/failure fallback (see `SEED_DATA.md`).
 >
-> Nothing here is a destructive change: the collection has no documents.
+> **Revised 2026-09-15:** `currencyCode` was added and constrained, and is
+> **required** — see *Price and currency* below.
 
 | field | type | notes |
 |---|---|---|
@@ -531,7 +559,8 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 | categoryScores | map<category, number> | 0–10 per category, server-owned or provider-supplied |
 | checkInTime | string | `HH:mm` wall-clock at the property, not a timestamp |
 | checkOutTime | string | `HH:mm` |
-| pricePerNightFrom | number | list-card display only — never the charged price |
+| pricePerNightFrom | number | the **authoritative** starting price, in `currencyCode`. List-card display only — never the charged price |
+| currencyCode | string | *(approved 2026-09-15)* **required**, `USD` \| `IQD` only, enforced in `firestore.rules` |
 | amenities | array<string> | the seven filter chips on the search screen |
 | facilities | array<{id, iconKey, name{en,ku,ar}, category}> | the detail page's Facilities card |
 | nearby | array<{id, name{}, placeType, distanceMeters, minutes, lat, lng}> | the Nearby card |
@@ -539,6 +568,37 @@ place geopoint so the detail card cannot show stale catalog temperatures.
 
 `starRating` and `reviewScore` are **two different measurements** and are drawn
 as two separate badges. Never merge them.
+
+### Price and currency — one authoritative pair, never duplicated
+
+*(approved 2026-09-15)* Same model as `cars`, `tours` and `flights`. A hotel
+stores **the starting price the property actually quotes, in the currency they
+quote it in**: `pricePerNightFrom: 120, currencyCode: "USD"` or
+`pricePerNightFrom: 157200, currencyCode: "IQD"`. A bookable rate carries its
+own `currency` on the offer (below), because an offer may be quoted by a
+provider in a currency the property's own "from" price is not.
+
+`currencyCode` is **required**. `pricePerNightFrom` states no currency of its
+own, so a hotel without a code is a price denominated in nothing.
+
+**There are deliberately no `priceUSD` / `priceIQD` fields.** Two stored prices
+are two things to keep in step, and the moment a rate moves they disagree —
+with no way to tell which one the property is actually honouring. Conversion to
+the user's chosen display currency happens at render time through
+`CurrencyRatesService` and `HotelPricing`, and every converted figure is
+prefixed with `≈` because it is indicative, not a quote (SECURITY.md 5: a
+charge is settled by the processor, never at a rate this app stored). **Hotel
+checkout deliberately does not convert** — it prints the offer's own currency,
+which is what the hold was taken in.
+
+**Nothing in the service or UI layer may assume USD.** The currency is read
+from the document, and a hotel or an offer whose code is missing or unsupported
+is **dropped by the reader**, not defaulted — a nightly rate shown in the wrong
+one of these two currencies is off by roughly 1300x, which is worse than no
+card at all.
+
+`currencyCode` on the hotel and `currency` on the offer are both constrained to
+`USD`/`IQD` **in the rules**, not only in the client.
 
 **There is deliberately no `distanceFromCenterKm`.** It was proposed when the
 Firestore wiring was built and **declined**: no collection holds a city-centre
@@ -584,9 +644,9 @@ number on a permanent document is worse than no number.
 | field | type | notes |
 |---|---|---|
 | roomTypeId | string | our id, from `rooms` |
-| currency | string | |
-| nightlyPrice | number | |
-| totalPrice | number | for the searched stay |
+| currency | string | *(restricted 2026-09-15)* **required**, `USD` \| `IQD` only, enforced in `firestore.rules`. The currency every money field on this offer is stated in |
+| nightlyPrice | number | in `currency` |
+| totalPrice | number | for the searched stay, in `currency` |
 | taxes | number | |
 | fees | number | |
 | taxesIncluded | bool | **stored, not inferred** — the UI must always be able to state which figure it is showing |
@@ -602,6 +662,11 @@ number on a permanent document is worse than no number.
 Provider ids are kept separate from our own so a room can be re-priced or booked
 through whichever provider supplied it **without any provider-specific branch
 reaching a widget** — normalization belongs in the repository layer.
+
+`nightlyPrice`, `totalPrice`, `taxes`, `fees` and `cancellationPenalty` are
+**all** stated in this offer's `currency`. There is no second currency field
+anywhere on the offer, and the user's Settings preference is display-only — it
+never changes what the property is owed.
 
 Taxes and fees are never silently omitted. The checkout rule that already
 applies to tours applies here too: the charge must be re-priced and
