@@ -75,6 +75,167 @@ Future<void> _pump(WidgetTester tester, Widget app) async {
 }
 
 void main() {
+  group('the stay row and Change pill are canonical Liquid Glass', () {
+    const checkInKey = ValueKey('sheet-check-in');
+    const checkOutKey = ValueKey('sheet-check-out');
+    const changeKey = ValueKey('hotel-change-stay');
+
+    /// The `AppLiquidGlass` that paints [inside]'s own surface.
+    AppLiquidGlass glassOf(WidgetTester tester, Finder inside) =>
+        tester.widget<AppLiquidGlass>(
+          find
+              .ancestor(of: inside, matching: find.byType(AppLiquidGlass))
+              .first,
+        );
+
+    testWidgets('Check-In and Check-Out are real canonical glass fields', (
+      tester,
+    ) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      for (final key in const [checkInKey, checkOutKey]) {
+        final field = find.byKey(key);
+        expect(field, findsOneWidget, reason: '$key');
+
+        final glass = glassOf(tester, field);
+        expect(glass.useCanonicalGlass, isTrue, reason: '$key');
+        // The real shader, not the tint-only embedded treatment.
+        expect(glass.layer, GlassLayer.surface, reason: '$key');
+        expect(glass.borderRadius, 20, reason: '$key');
+
+        // It really renders the shader.
+        final shell = tester.widget<CanonicalGlassShell>(
+          find
+              .ancestor(of: field, matching: find.byType(CanonicalGlassShell))
+              .first,
+        );
+        expect(shell.borderRadius, 20, reason: '$key');
+      }
+
+      // Content unchanged: the calendar icon, the label and the date.
+      expect(find.text('Check-In'), findsOneWidget);
+      expect(find.text('Check-Out'), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_month_outlined), findsNWidgets(2));
+    });
+
+    testWidgets('Change is a real canonical glass pill', (tester) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      final change = find.byKey(changeKey);
+      expect(change, findsOneWidget);
+
+      final glass = tester.widget<AppLiquidGlass>(
+        find.descendant(of: change, matching: find.byType(AppLiquidGlass)),
+      );
+      expect(glass.useCanonicalGlass, isTrue);
+      expect(glass.layer, GlassLayer.surface);
+      expect(glass.borderRadius, 22);
+      expect(
+        find.descendant(of: change, matching: find.byType(CanonicalGlassShell)),
+        findsOneWidget,
+      );
+      // Icon and label unchanged.
+      expect(
+        find.descendant(of: change, matching: find.byIcon(Icons.edit_outlined)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: change, matching: find.text('Change')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the other pills stay embedded — only Change changed', (
+      tester,
+    ) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      // `_PillButton`'s default is still embedded, so the "See all" header
+      // pill (nested inside its own card's real glass) is untouched.
+      final seeAll = find.byKey(const ValueKey('hotel-facilities-see-all'));
+      if (seeAll.evaluate().isNotEmpty) {
+        final glass = tester.widget<AppLiquidGlass>(
+          find.descendant(of: seeAll, matching: find.byType(AppLiquidGlass)),
+        );
+        expect(glass.layer, GlassLayer.embedded);
+      }
+    });
+
+    testWidgets('no real glass surface is nested inside another one', (
+      tester,
+    ) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      // The Summary card paints its glass as a sibling of its content, so the
+      // fields and the pill have no real-glass ancestor. A nested shader
+      // would paint stretched and offset on Android.
+      final shells = find.byType(CanonicalGlassShell);
+      expect(shells, findsWidgets);
+      for (var i = 0; i < shells.evaluate().length; i++) {
+        expect(
+          find.descendant(
+            of: shells.at(i),
+            matching: find.byType(CanonicalGlassShell),
+          ),
+          findsNothing,
+          reason: 'glass shell $i contains another real glass shell',
+        );
+      }
+    });
+
+    testWidgets('positions and sizes are unchanged', (tester) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      final summary = tester.getRect(
+        find.byKey(const ValueKey('hotel-stay-summary')),
+      );
+      // The card's glass fills the card exactly — content sizes it, glass
+      // follows.
+      expect(
+        tester.getRect(find.byKey(const ValueKey('hotel-stay-summary-glass'))),
+        summary,
+      );
+
+      final checkIn = tester.getRect(find.byKey(checkInKey));
+      final checkOut = tester.getRect(find.byKey(checkOutKey));
+      // Side by side, equal widths and heights, the original 10dp gap.
+      expect(checkIn.top, checkOut.top);
+      expect(checkIn.height, checkOut.height);
+      expect(checkIn.width, checkOut.width);
+      expect(checkOut.left - checkIn.right, closeTo(10, 0.5));
+      // Both stay inside the card, and the glass adds no width of its own.
+      expect(checkIn.left, greaterThanOrEqualTo(summary.left));
+      expect(checkOut.right, lessThanOrEqualTo(summary.right));
+
+      // The Change pill stays centred in the card and below the dates.
+      final change = tester.getRect(find.byKey(changeKey));
+      expect(change.top, greaterThan(checkIn.bottom));
+      expect(change.center.dx, closeTo(summary.center.dx, 1));
+      expect(change.height, greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('tap behaviour is unchanged', (tester) async {
+      _sizePhone(tester);
+      await _pump(tester, _app());
+
+      // Change still opens the editor in place, replacing itself with Apply.
+      await tester.tap(find.byKey(changeKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(changeKey), findsNothing);
+      expect(find.byKey(const ValueKey('hotel-change-apply')), findsOneWidget);
+
+      // And the date field still opens the canonical date picker.
+      await tester.tap(find.byKey(checkInKey));
+      await tester.pumpAndSettle();
+      expect(find.text('Done'), findsOneWidget);
+    });
+  });
+
   testWidgets('coming back from the reviews page re-reads without throwing', (
     tester,
   ) async {

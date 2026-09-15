@@ -700,190 +700,212 @@ class _SummaryCard extends StatelessWidget {
         hotel.address?.forLanguage(language) ??
         hotel.city.forLanguage(language);
 
-    return AppLiquidGlass(
+    // The card's glass is painted as a **sibling** of its content, never as
+    // its ancestor, so the Check-In/Check-Out fields and the Change pill can
+    // be real canonical surfaces of their own. A real `OCLiquidGlass` pushes
+    // its own `BackdropFilterLayer` and positions its shapes with scene-space
+    // uniforms; a second real surface inside that layer paints stretched and
+    // offset (`07_DESIGN_EXCEPTIONS.md` §19, and why `_PickerBackdrop` is a
+    // sibling of its sheet). `StackFit.passthrough` leaves the content in
+    // charge of the size — same radius 28, same 16dp padding, same bounds.
+    return Stack(
       key: const ValueKey('hotel-stay-summary'),
-      // Standalone information card — the final canonical surface.
-      useCanonicalGlass: true,
-      borderRadius: 28,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: AppLiquidGlass(
+            key: const ValueKey('hotel-stay-summary-glass'),
+            // Standalone information card — the final canonical surface.
+            useCanonicalGlass: true,
+            borderRadius: 28,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hotel.name.forLanguage(language),
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.heading(context),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.place_outlined,
-                          size: 18,
-                          color: AppColors.accent(context),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            location,
-                            style: TextStyle(
-                              color: AppColors.secondaryTextV3(context),
-                              fontSize: 13,
-                              height: 18 / 13,
-                            ),
+                        Text(
+                          hotel.name.forLanguage(language),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.heading(context),
                           ),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.place_outlined,
+                              size: 18,
+                              color: AppColors.accent(context),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  color: AppColors.secondaryTextV3(context),
+                                  fontSize: 13,
+                                  height: 18 / 13,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              HotelCompactRatingPair(
-                key: const ValueKey('hotel-detail-rating'),
-                score: hotel.reviewScore,
-                starRating: hotel.starRating,
-              ),
-            ],
-          ),
-          const Divider(height: 26),
-          Row(
-            children: [
-              const HotelCircleIcon(icon: Icons.groups_outlined, size: 38),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  l10n.hotelGuestSummary(
-                    criteria.adults,
-                    criteria.children,
-                    criteria.rooms,
-                    criteria.beds,
                   ),
-                  style: TextStyle(
-                    color: AppColors.heading(context),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final checkIn = _StayDate(
-                label: l10n.hotelCheckIn,
-                value: formatter.formatMediumDate(criteria.checkIn),
-                controlKey: 'sheet-check-in',
-                onTap: editing ? onCheckIn : null,
-              );
-              final checkOut = _StayDate(
-                label: l10n.hotelCheckOut,
-                value: formatter.formatMediumDate(criteria.checkOut),
-                controlKey: 'sheet-check-out',
-                onTap: editing ? onCheckOut : null,
-              );
-              // Below this width two date cards squeeze the localized labels
-              // into two-line ellipses, so they stack instead of shrinking.
-              if (constraints.maxWidth < 340) {
-                return Column(
-                  children: [checkIn, const SizedBox(height: 10), checkOut],
-                );
-              }
-              // IntrinsicHeight, not a fixed height: the two cards match each
-              // other even when a localized label wraps, and neither is
-              // clipped when it does.
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: checkIn),
-                    const SizedBox(width: 10),
-                    Expanded(child: checkOut),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          if (editing) ...[
-            AppLiquidGlass(
-              // Nested inside the Summary card's own visible glass surface.
-              useCanonicalGlass: true,
-              layer: GlassLayer.embedded,
-              key: const ValueKey('hotel-change-guests-panel'),
-              borderRadius: 26,
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  HotelCounterRow(
-                    icon: Icons.person_outline,
-                    label: l10n.hotelAdult,
-                    value: criteria.adults,
-                    minimum: 1,
-                    maximum: adultMaximum,
-                    controlKey: 'sheet-adult',
-                    onChanged: onAdultsChanged,
-                  ),
-                  HotelCounterRow(
-                    icon: Icons.child_care,
-                    label: l10n.hotelChild,
-                    value: criteria.children,
-                    minimum: 0,
-                    maximum: childMaximum,
-                    controlKey: 'sheet-child',
-                    onChanged: onChildrenChanged,
-                  ),
-                  HotelCounterRow(
-                    icon: Icons.meeting_room_outlined,
-                    label: l10n.hotelRoom,
-                    value: criteria.rooms,
-                    minimum: 1,
-                    controlKey: 'sheet-room',
-                    onChanged: onRoomsChanged,
-                  ),
-                  HotelCounterRow(
-                    icon: Icons.bed_outlined,
-                    label: l10n.hotelBed,
-                    value: criteria.beds,
-                    minimum: 1,
-                    controlKey: 'sheet-bed',
-                    last: true,
-                    onChanged: onBedsChanged,
+                  const SizedBox(width: 10),
+                  HotelCompactRatingPair(
+                    key: const ValueKey('hotel-detail-rating'),
+                    score: hotel.reviewScore,
+                    starRating: hotel.starRating,
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: PrimaryButton(
-                key: const ValueKey('hotel-change-apply'),
-                label: l10n.hotelUpdateStayApply,
-                onTap: onApply,
+              const Divider(height: 26),
+              Row(
+                children: [
+                  const HotelCircleIcon(icon: Icons.groups_outlined, size: 38),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.hotelGuestSummary(
+                        criteria.adults,
+                        criteria.children,
+                        criteria.rooms,
+                        criteria.beds,
+                      ),
+                      style: TextStyle(
+                        color: AppColors.heading(context),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ] else
-            Center(
-              child: _PillButton(
-                key: const ValueKey('hotel-change-stay'),
-                icon: Icons.edit_outlined,
-                label: l10n.hotelChange,
-                onTap: onChange,
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final checkIn = _StayDate(
+                    label: l10n.hotelCheckIn,
+                    value: formatter.formatMediumDate(criteria.checkIn),
+                    controlKey: 'sheet-check-in',
+                    onTap: editing ? onCheckIn : null,
+                  );
+                  final checkOut = _StayDate(
+                    label: l10n.hotelCheckOut,
+                    value: formatter.formatMediumDate(criteria.checkOut),
+                    controlKey: 'sheet-check-out',
+                    onTap: editing ? onCheckOut : null,
+                  );
+                  // Below this width two date cards squeeze the localized labels
+                  // into two-line ellipses, so they stack instead of shrinking.
+                  if (constraints.maxWidth < 340) {
+                    return Column(
+                      children: [checkIn, const SizedBox(height: 10), checkOut],
+                    );
+                  }
+                  // IntrinsicHeight, not a fixed height: the two cards match each
+                  // other even when a localized label wraps, and neither is
+                  // clipped when it does.
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: checkIn),
+                        const SizedBox(width: 10),
+                        Expanded(child: checkOut),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ),
-        ],
-      ),
+              const SizedBox(height: 12),
+              if (editing) ...[
+                AppLiquidGlass(
+                  // Nested inside the Summary card's own visible glass surface.
+                  useCanonicalGlass: true,
+                  layer: GlassLayer.embedded,
+                  key: const ValueKey('hotel-change-guests-panel'),
+                  borderRadius: 26,
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    children: [
+                      HotelCounterRow(
+                        icon: Icons.person_outline,
+                        label: l10n.hotelAdult,
+                        value: criteria.adults,
+                        minimum: 1,
+                        maximum: adultMaximum,
+                        controlKey: 'sheet-adult',
+                        onChanged: onAdultsChanged,
+                      ),
+                      HotelCounterRow(
+                        icon: Icons.child_care,
+                        label: l10n.hotelChild,
+                        value: criteria.children,
+                        minimum: 0,
+                        maximum: childMaximum,
+                        controlKey: 'sheet-child',
+                        onChanged: onChildrenChanged,
+                      ),
+                      HotelCounterRow(
+                        icon: Icons.meeting_room_outlined,
+                        label: l10n.hotelRoom,
+                        value: criteria.rooms,
+                        minimum: 1,
+                        controlKey: 'sheet-room',
+                        onChanged: onRoomsChanged,
+                      ),
+                      HotelCounterRow(
+                        icon: Icons.bed_outlined,
+                        label: l10n.hotelBed,
+                        value: criteria.beds,
+                        minimum: 1,
+                        controlKey: 'sheet-bed',
+                        last: true,
+                        onChanged: onBedsChanged,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: PrimaryButton(
+                    key: const ValueKey('hotel-change-apply'),
+                    label: l10n.hotelUpdateStayApply,
+                    onTap: onApply,
+                  ),
+                ),
+              ] else
+                Center(
+                  child: _PillButton(
+                    key: const ValueKey('hotel-change-stay'),
+                    icon: Icons.edit_outlined,
+                    label: l10n.hotelChange,
+                    // Its own real canonical glass — the Summary card's glass is
+                    // a sibling, so nothing is nested.
+                    layer: GlassLayer.surface,
+                    onTap: onChange,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -903,10 +925,12 @@ class _StayDate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppLiquidGlass(
-    // Nested inside the Summary card's own visible glass surface — embedded,
-    // not a second shader.
+    // A compact canonical glass field, the same real surface the app's other
+    // small glass controls use. Safe here because the Summary card's glass is
+    // a sibling of this content rather than its ancestor — see `_SummaryCard`.
+    // Radius, padding, icon, labels and tap target are unchanged.
     useCanonicalGlass: true,
-    layer: GlassLayer.embedded,
+    layer: GlassLayer.surface,
     borderRadius: 20,
     child: Material(
       color: Colors.transparent,
@@ -1030,12 +1054,21 @@ class _PillButton extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.trailingChevron = false,
+    this.layer = GlassLayer.embedded,
   });
 
   final String label;
   final VoidCallback onTap;
   final IconData? icon;
   final bool trailingChevron;
+
+  /// Nesting role for this pill's glass. Defaults to [GlassLayer.embedded],
+  /// which is correct for the callers that still sit inside another card's
+  /// own real glass surface (the "See all" header pill, the retry button).
+  /// The Change pill passes [GlassLayer.surface]: the Summary card paints its
+  /// glass as a sibling, so that pill has no real-glass ancestor and renders
+  /// as its own compact canonical glass button.
+  final GlassLayer layer;
 
   @override
   Widget build(BuildContext context) {
@@ -1051,7 +1084,7 @@ class _PillButton extends StatelessWidget {
             // visible glass surface — embedded, not a second shader.
             child: AppLiquidGlass(
               useCanonicalGlass: true,
-              layer: GlassLayer.embedded,
+              layer: layer,
               borderRadius: 22,
               onTap: onTap,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
