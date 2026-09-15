@@ -19,6 +19,14 @@ import 'hotel_assets.dart';
 const Key chooseRoomReserveKey = ValueKey('choose-room-reserve');
 Key chooseRoomRateKey(String id) => ValueKey('choose-room-rate-$id');
 
+/// The one main glass panel wrapping a single room type's whole block.
+Key chooseRoomCardKey(String roomId) => ValueKey('choose-room-card-$roomId');
+
+/// The panel's glass surface itself — a sibling painted behind the room's
+/// content, not an ancestor of it. See the comment in `_RoomCard.build`.
+Key chooseRoomCardGlassKey(String roomId) =>
+    ValueKey('choose-room-card-glass-$roomId');
+
 enum ChooseRoomStatus {
   loading,
   loaded,
@@ -392,128 +400,151 @@ class _RoomCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final language = Localizations.localeOf(context).languageCode;
-    return AppLiquidGlass(
-      // NOT a real standalone shader surface, despite being the visible
-      // "room card" boundary: each room can carry 2-4 independent real-glass
-      // `_RateCard`s in the Wrap below, and rooms stack only 14dp apart —
-      // the exact topology (dense real-glass children nested inside another
-      // real-glass parent, closely packed) confirmed to corrupt on Android
-      // for Register's fields. `GlassLayer.embedded` keeps the same
-      // canonical tint/card presence without a second shader stacking under
-      // the rate cards' own; the rate cards themselves stay real glass
-      // (Design_system_CANONICAL.md §16 — a large selectable card's own
-      // surface), since removing shader depth from the room card is what
-      // fixes the nesting, not flattening the selectable options.
-      useCanonicalGlass: true,
-      layer: GlassLayer.embedded,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: Image.asset(
-                room.images.isEmpty ? hotelBackgroundAsset : room.images.first,
-                fit: BoxFit.cover,
-              ),
-            ),
+    // ## Why this is a Stack and not `AppLiquidGlass(child: Column(...))`
+    //
+    // The room panel's glass is painted as a **sibling** of the room's
+    // content, never as its ancestor. A real `OCLiquidGlass` surface pushes
+    // its own `BackdropFilterLayer`, and the shader positions its shapes with
+    // *scene*-space uniforms. Put a second real surface **inside** that layer
+    // and its uniforms no longer agree with the offscreen buffer they are
+    // sampled against, so its glass paints stretched and offset — the
+    // black-band/stray-surface corruption documented in
+    // `07_DESIGN_EXCEPTIONS.md` §19, and the reason `_PickerBackdrop` in
+    // `canonical_date_time_picker.dart` is likewise a sibling of its sheet.
+    //
+    // As siblings, the facility chips and rate cards simply sample the
+    // already-painted room glass behind them, which is exactly the intended
+    // look — and nothing is nested.
+    //
+    // `StackFit.passthrough` keeps the *content* in charge of the size: the
+    // Column measures exactly as it did before, and `Positioned.fill` makes
+    // the glass follow it. The panel's radius, padding, dimensions and optics
+    // are unchanged — only the paint order is.
+    return Stack(
+      key: chooseRoomCardKey(room.id),
+      fit: StackFit.passthrough,
+      children: [
+        Positioned.fill(
+          child: AppLiquidGlass(
+            key: chooseRoomCardGlassKey(room.id),
+            useCanonicalGlass: true,
+            layer: GlassLayer.surface,
+            child: const SizedBox.expand(),
           ),
-          const SizedBox(height: 14),
-          Text(
-            room.name.forLanguage(language),
-            style: TextStyle(
-              color: AppColors.heading(context),
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final bed in room.beds)
-                _InfoChip(
-                  icon: Icons.bed_outlined,
-                  label: hotelBedConfigurationLabel(l10n, bed),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: Image.asset(
+                    room.images.isEmpty
+                        ? hotelBackgroundAsset
+                        : room.images.first,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              if (room.sizeSqm != null)
-                _InfoChip(
-                  icon: Icons.square_foot_outlined,
-                  label: '${room.sizeSqm!.toStringAsFixed(0)} m²',
+              ),
+              const SizedBox(height: 14),
+              Text(
+                room.name.forLanguage(language),
+                style: TextStyle(
+                  color: AppColors.heading(context),
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
                 ),
-              for (final facility in room.facilities.take(4))
-                _InfoChip(
-                  icon: hotelFacilityIcon(facility.iconKey),
-                  label: facility.name.forLanguage(language),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final bed in room.beds)
+                    _InfoChip(
+                      icon: Icons.bed_outlined,
+                      label: hotelBedConfigurationLabel(l10n, bed),
+                    ),
+                  if (room.sizeSqm != null)
+                    _InfoChip(
+                      icon: Icons.square_foot_outlined,
+                      label: '${room.sizeSqm!.toStringAsFixed(0)} m²',
+                    ),
+                  for (final facility in room.facilities.take(4))
+                    _InfoChip(
+                      icon: hotelFacilityIcon(facility.iconKey),
+                      label: facility.name.forLanguage(language),
+                    ),
+                ],
+              ),
+              TextButton(
+                onPressed: onDetails,
+                child: Text(l10n.hotelSeeRoomDetails),
+              ),
+              Builder(
+                builder: (context) {
+                  // The two rates sit side by side, as the reference shows. A
+                  // raised system font size — or an unexpected third rate — falls
+                  // back to a single column, where half a phone width can no
+                  // longer hold a rate's wording.
+                  final stack =
+                      offers.length != 2 ||
+                      MediaQuery.textScalerOf(context).scale(1) > 1.3;
+                  final cards = [
+                    for (final offer in offers)
+                      _RateCard(
+                        offer: offer,
+                        nights: nights,
+                        selected: offer.id == selectedOfferId,
+                        onTap: () => onSelect(offer),
+                      ),
+                  ];
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var index = 0; index < cards.length; index++) ...[
+                          if (index > 0) const SizedBox(height: 12),
+                          cards[index],
+                        ],
+                      ],
+                    );
+                  }
+                  // IntrinsicHeight with a stretched cross axis: the rate whose
+                  // wording wraps to an extra line sets the height, and the other
+                  // card matches it instead of ending short.
+                  return IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 12),
+                        Expanded(child: cards[1]),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  l10n.hotelRoomsLeft(offers.first.availableQuantity),
+                  // Informational/secondary availability text
+                  // (Design_system_CANONICAL.md — no dedicated
+                  // availability/success token exists app-wide, so this follows
+                  // the same canonical secondary role every other metadata line
+                  // in this flow uses).
+                  style: TextStyle(color: AppColors.secondaryTextV3(context)),
                 ),
+              ),
             ],
           ),
-          TextButton(
-            onPressed: onDetails,
-            child: Text(l10n.hotelSeeRoomDetails),
-          ),
-          Builder(
-            builder: (context) {
-              // The two rates sit side by side, as the reference shows. A
-              // raised system font size — or an unexpected third rate — falls
-              // back to a single column, where half a phone width can no
-              // longer hold a rate's wording.
-              final stack =
-                  offers.length != 2 ||
-                  MediaQuery.textScalerOf(context).scale(1) > 1.3;
-              final cards = [
-                for (final offer in offers)
-                  _RateCard(
-                    offer: offer,
-                    nights: nights,
-                    selected: offer.id == selectedOfferId,
-                    onTap: () => onSelect(offer),
-                  ),
-              ];
-              if (stack) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (var index = 0; index < cards.length; index++) ...[
-                      if (index > 0) const SizedBox(height: 12),
-                      cards[index],
-                    ],
-                  ],
-                );
-              }
-              // IntrinsicHeight with a stretched cross axis: the rate whose
-              // wording wraps to an extra line sets the height, and the other
-              // card matches it instead of ending short.
-              return IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: cards[0]),
-                    const SizedBox(width: 12),
-                    Expanded(child: cards[1]),
-                  ],
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              l10n.hotelRoomsLeft(offers.first.availableQuantity),
-              // Informational/secondary availability text
-              // (Design_system_CANONICAL.md — no dedicated
-              // availability/success token exists app-wide, so this follows
-              // the same canonical secondary role every other metadata line
-              // in this flow uses).
-              style: TextStyle(color: AppColors.secondaryTextV3(context)),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -542,17 +573,25 @@ class _RateCard extends StatelessWidget {
         key: chooseRoomRateKey(offer.id),
         onTap: onTap,
         // A rate/package option inside the room card — dense informational
-        // content (meal plan, cancellation, price), so it follows the
-        // large-selectable-card rule (Design_system_CANONICAL.md §16)
-        // rather than the compact-chip rule: its own real canonical Liquid
-        // Glass surface. The room card itself now renders as
-        // GlassLayer.embedded (no shader) specifically so this can stay a
-        // real surface without stacking shader-on-shader — see the comment
-        // on _RoomCard. Still glass when selected — a visible non-shader
-        // cue (the radio glyph) marks selection rather than a solid fill
-        // that would hide it.
+        // content (meal plan, cancellation, price), so it keeps the
+        // large-selectable-card rule (Design_system_CANONICAL.md §16) rather
+        // than the compact-chip rule: same geometry, same radius, same
+        // padding, same selection behaviour.
+        //
+        // The real canonical Liquid Glass surface — the app's one shared
+        // recipe (`AppLiquidGlass(useCanonicalGlass: true)` →
+        // `CanonicalGlassShell` + `canonicalGlassBodyTint` + the canonical
+        // floating shadow), the same treatment that produced the approved
+        // room-option appearance. Not an imitation built from gradients.
+        //
+        // Nested under the room panel's own real surface, which is the
+        // arrangement Customize Filters already ships and Android already
+        // renders — 15 real chip shells inside a real modal surface, in a
+        // scroll view. See `07_DESIGN_EXCEPTIONS.md` §2. Still glass when
+        // selected: the radio glyph marks selection, never a solid fill.
         child: AppLiquidGlass(
           useCanonicalGlass: true,
+          layer: GlassLayer.surface,
           borderRadius: 22,
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -633,28 +672,54 @@ class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
+  /// Chip radius. Choose Room's own value, unchanged.
+  static const double radius = 18;
+
   @override
-  Widget build(BuildContext context) => AppLiquidGlass(
-    // Nested inside the room card's own visible glass surface.
-    useCanonicalGlass: true,
-    layer: GlassLayer.embedded,
-    borderRadius: 18,
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-    // Flexible, not fixed: at a raised system font size a feature label is
-    // wider than the chip row it sits in, and would otherwise overflow.
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 17, color: AppColors.accent(context)),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: AppColors.heading(context)),
+  // The Explore Nature filter chip's recipe, reused exactly
+  // (`customize_filters_screen.dart` `_FilterChoiceChip`): a real
+  // `CanonicalGlassShell` with **no** shadow — small chips packed in a `Wrap`
+  // must not each cast one — over the shared `canonicalGlassBodyTint` at
+  // `canonicalGlassBodyTintOpacity`, then padding, then a transparent
+  // `Material`. Same widget, same composition, same tokens; only this
+  // screen's own radius and padding are kept, so the chip row does not move.
+  //
+  // Real glass nested under the room panel's real surface is the arrangement
+  // Customize Filters already ships and Android already renders: 15 chip
+  // shells inside a real modal surface, in a scroll view. See
+  // `07_DESIGN_EXCEPTIONS.md` §2.
+  Widget build(BuildContext context) => CanonicalGlassShell(
+    borderRadius: radius,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        color: AppColors.canonicalGlassBodyTint.withValues(
+          alpha: AppColors.canonicalGlassBodyTintOpacity(context),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+        child: Material(
+          color: Colors.transparent,
+          // Flexible, not fixed: at a raised system font size a feature label
+          // is wider than the chip row it sits in, and would otherwise
+          // overflow.
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 17, color: AppColors.accent(context)),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColors.heading(context)),
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     ),
   );
 }

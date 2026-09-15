@@ -8,6 +8,7 @@ import '../services/user_profile_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_liquid_glass.dart';
 import '../widgets/glass_back_button.dart';
+import '../widgets/glass_menu_popover.dart';
 import '../widgets/liquid_glass_surface.dart';
 import '../widgets/page_background.dart';
 import '../widgets/primary_button.dart';
@@ -1124,87 +1125,88 @@ class _HelpfulButton extends StatelessWidget {
 }
 
 /// The "Most Recent ⌄" control beside the All Reviews heading.
-class _SortControl extends StatelessWidget {
+class _SortControl extends StatefulWidget {
   const _SortControl({required this.current, required this.onChanged});
 
   final ReviewSort current;
   final ValueChanged<ReviewSort> onChanged;
 
   @override
+  State<_SortControl> createState() => _SortControlState();
+}
+
+class _SortControlState extends State<_SortControl> {
+  /// Anchors the menu to this exact pill, the way `PopupMenuPosition.under`
+  /// used to. Held on the State so it survives rebuilds.
+  final GlobalKey _anchorKey = GlobalKey();
+
+  Future<void> _openMenu() async {
+    final l10n = AppLocalizations.of(context);
+    final selected = await showGlassMenu<ReviewSort>(
+      context: context,
+      anchorKey: _anchorKey,
+      semanticLabel: l10n.sortReviewsBy,
+      menuKey: const ValueKey('reviews-sort-menu'),
+      itemBuilder: (menuContext) => [
+        for (final sort in ReviewSort.values)
+          GlassMenuOption(
+            key: ValueKey('reviews-sort-option-${sort.name}'),
+            label: l10n.reviewSortLabel(sort),
+            selected: sort == widget.current,
+            onTap: () => Navigator.of(menuContext).pop(sort),
+          ),
+      ],
+    );
+    if (selected != null) widget.onChanged(selected);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Semantics(
+      key: _anchorKey,
       button: true,
-      label: '${l10n.sortReviewsBy}: ${l10n.reviewSortLabel(current)}',
+      label: '${l10n.sortReviewsBy}: ${l10n.reviewSortLabel(widget.current)}',
       excludeSemantics: true,
-      // Standalone trigger pill — the final canonical surface. The popup
-      // menu itself is a native `PopupMenuButton` overlay route, not a
-      // widget in this tree we can wrap in `AppLiquidGlass` — its own
-      // `color`/`shape` are left exactly as they were; see the migration
-      // report for this architectural gap.
+      // Standalone trigger pill — the final canonical surface. The menu it
+      // opens is now the shared `GlassMenuPopover` (the Home language popup's
+      // recipe) instead of Material's opaque `PopupMenuButton` sheet, closing
+      // the architectural gap the migration report noted: a native popup route
+      // could never be wrapped in `AppLiquidGlass` from this tree.
       child: AppLiquidGlass(
+        key: const ValueKey('reviews-sort-button'),
         useCanonicalGlass: true,
         borderRadius: 999,
         padding: EdgeInsets.zero,
-        child: PopupMenuButton<ReviewSort>(
-          key: const ValueKey('reviews-sort-button'),
-          initialValue: current,
-          onSelected: onChanged,
-          tooltip: l10n.sortReviewsBy,
-          position: PopupMenuPosition.under,
-          // The popup is a floating surface, so it inherits the glass system's
-          // colours rather than Material's default opaque sheet
-          // (DESIGN_SYSTEM 15).
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.darkGlassBottom
-              : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          itemBuilder: (context) => [
-            for (final sort in ReviewSort.values)
-              PopupMenuItem<ReviewSort>(
-                value: sort,
-                child: Text(
-                  l10n.reviewSortLabel(sort),
-                  style: TextStyle(
-                    fontWeight: sort == current
-                        ? FontWeight.w700
-                        : FontWeight.w400,
-                    color: AppColors.heading(context),
-                  ),
-                ),
-              ),
-          ],
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      l10n.reviewSortLabel(current),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.heading(context),
-                      ),
+        onTap: _openMenu,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    l10n.reviewSortLabel(widget.current),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.heading(context),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  // `icon-accent` / dropdown icon
-                  // (Design_system_CANONICAL.md §6/§13) — navy/mint, not the
-                  // value's `heading` color.
-                  Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.accent(context),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 4),
+                // `icon-accent` / dropdown icon
+                // (Design_system_CANONICAL.md §6/§13) — navy/mint, not the
+                // value's `heading` color.
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.accent(context),
+                ),
+              ],
             ),
           ),
         ),
